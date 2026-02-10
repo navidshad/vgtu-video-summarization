@@ -1176,5 +1176,3 @@ nvm use 20.9.0
 - Higher threshold = fewer keyframes
 
 ---
-
-**Good luck with your assignment! 🎬✨**
