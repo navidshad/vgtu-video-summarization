@@ -24,6 +24,7 @@
   "dependencies": {
     "@codebridger/lib-vue-components": "latest",
     "@vueuse/core": "^10.9.0",
+    "pinia": "^3.0.4",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },
