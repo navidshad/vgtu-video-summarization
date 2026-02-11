@@ -1,16 +1,16 @@
 <template>
-  <div class="h-full flex flex-col bg-transparent overflow-hidden text-zinc-200">
+  <div class="h-full flex flex-col bg-transparent overflow-hidden text-zinc-900 dark:text-zinc-200 transition-colors">
     <!-- Header: Simple -->
-    <header class="p-6 flex items-center justify-between border-b border-zinc-800/50 backdrop-blur-md z-10">
+    <header class="p-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
       <div class="flex items-center space-x-4">
-        <div class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-400" viewBox="0 0 24 24" fill="none"
+        <div class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </div>
         <div>
-          <h2 class="text-sm font-bold tracking-tight text-white">{{ videoStore.currentVideoName || 'AI Video Assistant' }}</h2>
+          <h2 class="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">{{ videoStore.currentVideoName || 'AI Video Assistant' }}</h2>
         </div>
       </div>
     </header>
@@ -24,10 +24,10 @@
 
           <!-- Message Bubble -->
           <Card :class="[
-            '!rounded-2xl !p-6 shadow-xl max-w-[80%]',
+            '!rounded-2xl !p-6 shadow-sm dark:shadow-xl max-w-[80%] transition-colors',
             msg.role === 'user'
-              ? '!bg-zinc-100 !text-zinc-950 !border-0'
-              : '!bg-zinc-900 !text-zinc-200 !border-zinc-800',
+              ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
+              : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
             msg.isPending ? 'opacity-50 animate-pulse' : ''
           ]">
             <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
@@ -38,19 +38,19 @@
             :class="msg.role === 'user' ? 'items-end' : 'items-start'">
             <template v-for="file in msg.files" :key="file.url">
               <Card
-                class="!bg-zinc-900/50 border !border-zinc-800 !p-1.5 shadow-2xl backdrop-blur-sm group cursor-pointer hover:!border-blue-500/30 transition-all overflow-hidden"
+                class="!bg-white dark:!bg-zinc-900/50 border !border-zinc-200 dark:!border-zinc-800 !p-1.5 shadow-md dark:shadow-2xl backdrop-blur-sm group cursor-pointer hover:!border-blue-500/30 transition-all overflow-hidden"
                 :class="msg.role === 'user' ? 'w-80 !rounded-2xl' : 'w-[420px] !rounded-3xl !p-2'">
 
-                <div class="aspect-video bg-zinc-950 flex items-center justify-center relative overflow-hidden"
+                <div class="aspect-video bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center relative overflow-hidden"
                   :class="msg.role === 'user' ? 'rounded-xl' : 'rounded-2xl'">
                   <div class="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors"></div>
 
                   <!-- Play/Preview Icon -->
                   <div
                     class="rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
-                    :class="msg.role === 'user' ? 'w-10 h-10 bg-zinc-900 border border-zinc-800' : 'w-16 h-16 bg-white/10 backdrop-blur-md border border-white/20'">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="text-zinc-300"
-                      :class="msg.role === 'user' ? 'w-5 h-5' : 'w-8 h-8 text-white fill-current'" viewBox="0 0 24 24"
+                    :class="msg.role === 'user' ? 'w-10 h-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800' : 'w-16 h-16 bg-white/80 dark:bg-white/10 backdrop-blur-md border border-white/20'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="text-zinc-500 dark:text-zinc-300"
+                      :class="msg.role === 'user' ? 'w-5 h-5' : 'w-8 h-8 text-zinc-900 dark:text-white fill-current'" viewBox="0 0 24 24"
                       fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <template v-if="msg.role === 'user'">
                         <path
@@ -67,7 +67,7 @@
                 <!-- Footer info for AI files -->
                 <div v-if="msg.role === 'ai'" class="p-4 flex items-center justify-between">
                   <div>
-                    <h3 class="text-xs font-bold text-white uppercase tracking-widest">{{ file.type === 'preview' ?
+                    <h3 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">{{ file.type === 'preview' ?
                       'Preview Summary' :
                       'Final Summary' }}</h3>
                     <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === 'preview' ? 'Generating...' :
@@ -76,7 +76,7 @@
                   </div>
                   <div class="flex items-center space-x-2">
                     <Button variant="ghost"
-                      class="!px-3 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-white">Download</Button>
+                      class="!px-3 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
                     <Button variant="primary"
                       class="!px-4 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest">Open</Button>
                   </div>
@@ -95,11 +95,11 @@
     </main>
 
     <!-- Chat Input: Central Bottom -->
-    <footer class="p-8 border-t border-zinc-800/50 bg-zinc-950/20 backdrop-blur-xl z-20">
+    <footer class="p-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
       <div class="max-w-4xl mx-auto flex items-end space-x-4">
         <!-- Attachment Button -->
         <button
-          class="w-14 h-14 bg-zinc-900 border border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all shadow-xl group">
+          class="w-14 h-14 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all shadow-md dark:shadow-xl group">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:rotate-12 transition-transform"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round">
@@ -111,12 +111,12 @@
         <!-- Main Input area using Textarea -->
         <div class="flex-1 relative group">
           <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="3"
-            class="!bg-zinc-900 border !border-zinc-800 !rounded-3xl shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar" />
+            class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100" />
 
           <!-- Send Button (Circular) -->
           <div class="absolute right-4 bottom-4">
             <Button variant="primary" @click="sendMessage"
-              class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-white text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
+              class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
               <svg xmlns="http://www.w3.org/2000/svg"
                 class="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
@@ -237,9 +237,14 @@ onMounted(() => {
   background: #52525b;
 }
 
+
 :deep(.form-textarea) {
   border-radius: 1.5rem !important;
-  border-color: #27272a !important;
+  border-color: #e4e4e7 !important; /* zinc-200 */
+}
+
+:global(.dark) :deep(.form-textarea) {
+  border-color: #27272a !important; /* zinc-800 */
 }
 
 :deep(.form-textarea:focus) {
