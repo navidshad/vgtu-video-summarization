@@ -65,11 +65,19 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	const currentVideoName = ref('')
+
+	const setVideoName = (name: string) => {
+		currentVideoName.value = name
+	}
+
 	return {
 		messages,
+		currentVideoName,
 		addMessage,
 		updateMessage,
 		clearMessages,
-		startProcessing
+		startProcessing,
+		setVideoName
 	}
 })
