@@ -1,4 +1,8 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { Pipeline } from './pipeline'
+import * as extraction from './pipeline/phases/extraction'
+import * as generation from './pipeline/phases/generation'
+import * as assembly from './pipeline/phases/assembly'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
@@ -9,7 +13,7 @@ function createWindow(): void {
 		show: false,
 		autoHideMenuBar: true,
 		webPreferences: {
-			preload: join(__dirname, '../preload/index.js'),
+			preload: join(__dirname, '../preload/index.cjs'),
 			sandbox: false
 		}
 	})
@@ -38,6 +42,24 @@ app.whenReady().then(() => {
 	})
 
 	createWindow()
+
+	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath }) => {
+		const window = BrowserWindow.fromWebContents(event.sender)
+		if (!window) return
+
+		const pipeline = new Pipeline(window, messageId)
+
+		pipeline
+			.register(extraction.convertToAudio)
+			.register(extraction.extractTranscript)
+			.register(extraction.extractSceneTiming)
+			.register(extraction.generateSceneDescription)
+			.register(generation.buildShorterTimeline)
+			.register(assembly.splitVideoParts)
+			.register(assembly.joinVideoParts)
+
+		await pipeline.start({ videoPath })
+	})
 
 	app.on('activate', function () {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow()

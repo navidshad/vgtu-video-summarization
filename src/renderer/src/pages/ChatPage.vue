@@ -72,7 +72,7 @@
                       'Final Summary' }}</h3>
                     <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === 'preview' ? 'Generating...' :
                       'Ready for review'
-                      }}</p>
+                    }}</p>
                   </div>
                   <div class="flex items-center space-x-2">
                     <Button variant="ghost"
@@ -161,60 +161,15 @@ const sendMessage = async () => {
     role: 'user',
     content: userPrompt.value
   })
-  const prompt = userPrompt.value
   userPrompt.value = ''
-  await mimicAIProcessing(prompt)
-}
-
-const mimicAIProcessing = async (prompt: string) => {
-  const states = [
-    { label: 'Extracting frames...', msg: 'The system is currently extracting high-quality frames from your video file.' },
-    { label: 'Analyzing scenes...', msg: 'AI is analyzing visual patterns and identifying key events in the footage.' },
-    { label: 'Generating transcript...', msg: 'Generating an intelligent transcript of audio and visual elements.', hasPreview: true },
-    { label: 'Synthesizing summary...', msg: 'Almost there! Creating the final condensed summary of the video content.' },
-    { label: 'Finalizing video render...', msg: 'Processing complete. Your video summary is ready.', isFinal: true }
-  ]
-
-  // Create a single AI message for the whole process
-  const id = videoStore.addMessage({
-    role: 'ai',
-    content: 'Initializing...',
-    isPending: true
-  })
-
-  for (const [index, step] of states.entries()) {
-    // Update the message with the current step's label or progress
-    videoStore.updateMessage(id, {
-      content: step.label,
-      isPending: true
-    })
-
-    // Simulate work
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    // Prepare update for the message
-    const update: any = {
-      content: step.msg,
-      isPending: !step.isFinal // Stay pending until final step
-    }
-
-    if (step.hasPreview) {
-      update.files = [{ url: 'preview_summary.mp4', type: 'preview' }]
-    }
-
-    if (step.isFinal) {
-      update.files = [{ url: 'final_summary.mp4', type: 'actual' }]
-    }
-
-    videoStore.updateMessage(id, update)
-  }
+  await videoStore.startProcessing()
 }
 
 onMounted(() => {
   scrollToBottom()
   // If there's already a message (from UploadPage), start processing
   if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
-    mimicAIProcessing(videoStore.messages[0].content)
+    videoStore.startProcessing()
   }
 })
 </script>
