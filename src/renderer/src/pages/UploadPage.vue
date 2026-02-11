@@ -20,10 +20,11 @@
       </div>
 
       <div v-if="fileSelected" class="w-full space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <TextArea v-model="prompt" placeholder="What would you like to focus on in this summary? (Optional)"
-          :rows="4" />
+        <TextArea v-model="prompt"
+          placeholder="What would you like to focus on in this summary? (e.g. 'Summarize key takeaways')" :rows="4" />
 
-        <Button @click="startCreation" variant="primary" class="w-full py-4 font-bold active:scale-[0.99]">
+        <Button @click="startCreation" variant="primary" :disabled="!prompt.trim()"
+          class="w-full py-4 font-bold active:scale-[0.99]">
           Create Summary
         </Button>
       </div>
@@ -36,8 +37,10 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
+import { useVideoStore } from '../stores/videoStore'
 
 const router = useRouter()
+const videoStore = useVideoStore()
 const fileSelected = ref(false)
 const fileName = ref('')
 const prompt = ref('')
@@ -49,7 +52,13 @@ const selectFile = () => {
 }
 
 const startCreation = () => {
-  if (fileSelected.value) {
+  if (fileSelected.value && prompt.value.trim()) {
+    videoStore.clearMessages()
+    videoStore.addMessage({
+      role: 'user',
+      content: prompt.value.trim(),
+      files: [{ url: 'presentation_video.mp4', type: 'actual' }]
+    })
     router.push('/chat')
   }
 }
