@@ -1,0 +1,67 @@
+# https://github.com/vblagoje/pr-auto
+# How to use:
+# 1. Create a new pull request and save it.
+# 2. Wait for the workflow `Generate PR Description` to finish.
+# 3. Then copy past the generated title for the PR title.
+
+name: Generate PR Description
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+env:
+  TEMPLATE_FILE_PATH: .github/pr-description-template.md
+
+jobs:
+  generate-description:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read template content
+        id: read-template
+        run: |
+          content=$(cat ${{ env.TEMPLATE_FILE_PATH }} | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "template_content=$content" >> $GITHUB_OUTPUT
+
+      - name: Get Commit Messages
+        id: commit_messages
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          COMMITS=$(git log --oneline origin/${{ github.event.pull_request.base.ref }}..${{ github.event.pull_request.head.sha }})
+          echo "commits=$(echo "$COMMITS" | jq -sRr @uri)" >> $GITHUB_OUTPUT
+          echo "=== COMMIT MESSAGES ==="
+          echo "$COMMITS"
+          echo "=== END COMMIT MESSAGES ==="
+
+      - name: Generate PR Description
+        id: generate_desc
+        uses: navidshad/pull-request-description@master
+        with:
+          api_key: ${{ secrets.OPENAI_API_KEY_FOR_PR_DESC_GENERATOR }}
+          prompt: ${{ steps.read-template.outputs.template_content }}
+          git_diff: ${{ steps.commit_messages.outputs.commits }}
+          model: gpt-4.1-mini-2025-04-14
+
+      - name: Update PR Description
+        uses: actions/github-script@v6
+        env:
+          PR_DESCRIPTION: ${{ steps.generate_desc.outputs.description }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: context.payload.pull_request.number,
+              body: process.env.PR_DESCRIPTION
+            });
