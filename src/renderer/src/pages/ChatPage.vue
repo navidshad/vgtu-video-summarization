@@ -1,78 +1,108 @@
 <template>
-  <div class="h-full bg-transparent p-8 relative overflow-hidden text-zinc-200">
-    <!-- Top Left: System State using a Card container -->
-    <div class="absolute top-8 left-8">
-      <Card
-        class="!bg-zinc-900/80 border !border-zinc-800 !rounded-xl !px-5 !py-3 shadow-xl backdrop-blur-md flex items-center space-x-3 transition-all duration-500">
-        <div class="w-2.5 h-2.5 rounded-full"
-          :class="currentState === 'Ready' ? 'bg-green-500' : 'bg-blue-500 animate-pulse'"></div>
-        <span class="font-medium text-sm tracking-wide">System State: {{ currentState }}</span>
-      </Card>
-    </div>
-
-    <!-- Top Right: Messages Area -->
-    <div class="absolute top-8 right-8 w-80 flex flex-col space-y-4 items-end">
-      <!-- Chat Message Bubble using Card -->
-      <Card v-for="(msg, i) in messages" :key="i"
-        class="!bg-zinc-900 border !border-zinc-800 !rounded-2xl !p-4 shadow-lg animate-in slide-in-from-right-4 duration-500 max-w-full">
-        <div class="flex flex-col space-y-1">
-          <div class="h-1 w-12 bg-zinc-700 rounded-full mb-1"></div>
-          <div class="h-1 w-16 bg-zinc-700 rounded-full opacity-50"></div>
-          <p class="text-xs text-zinc-300 mt-2 leading-relaxed">{{ msg }}</p>
-        </div>
-      </Card>
-
-      <!-- Playback Preview using Card -->
-      <Card v-if="videoReady"
-        class="!bg-zinc-900 border !border-zinc-800 !rounded-2xl !p-3 shadow-xl w-48 group cursor-pointer hover:!border-blue-500/50 transition-all animate-in zoom-in-95 duration-700">
-        <div class="aspect-video bg-zinc-950 rounded-xl flex items-center justify-center relative overflow-hidden">
-          <div class="absolute inset-0 bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors"></div>
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
-            <path d="m7 4 12 8-12 8V4z" />
+  <div class="h-full flex flex-col bg-transparent overflow-hidden text-zinc-900 dark:text-zinc-200 transition-colors">
+    <!-- Header: Simple -->
+    <header class="p-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
+      <div class="flex items-center space-x-4">
+        <div class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </div>
-      </Card>
-    </div>
+        <div>
+          <h2 class="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">{{ videoStore.currentVideoName || 'AI Video Assistant' }}</h2>
+        </div>
+      </div>
+    </header>
 
-    <!-- Mid Left: Video Preview Card -->
-    <div class="absolute top-1/2 -translate-y-1/2 left-8 flex flex-col space-y-4">
-      <Card
-        class="w-[380px] !bg-zinc-900/50 !rounded-[2.5rem] border !border-zinc-800/80 !p-1.5 shadow-2xl backdrop-blur-sm group">
-        <div
-          class="aspect-video bg-zinc-950 rounded-[2.2rem] flex items-center justify-center relative overflow-hidden shadow-inner">
-          <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-          <!-- Eye Icon -->
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 text-zinc-300" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path
-                d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
+    <!-- Chat Messages Stack -->
+    <main ref="scrollContainer" class="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar">
+      <div class="max-w-4xl mx-auto space-y-10">
+        <div v-for="(msg, i) in videoStore.messages" :key="i"
+          class="flex flex-col animate-in slide-in-from-bottom-4 duration-500"
+          :class="msg.role === 'user' ? 'items-end' : 'items-start'">
+
+          <!-- Message Bubble -->
+          <Card :class="[
+            '!rounded-2xl !p-6 shadow-sm dark:shadow-xl max-w-[80%] transition-colors',
+            msg.role === 'user'
+              ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
+              : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
+            msg.isPending ? 'opacity-50 animate-pulse' : ''
+          ]">
+            <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+          </Card>
+
+          <!-- Attachments (Videos) -->
+          <div v-if="msg.files && msg.files.length > 0" class="mt-4 flex flex-col space-y-3"
+            :class="msg.role === 'user' ? 'items-end' : 'items-start'">
+            <template v-for="file in msg.files" :key="file.url">
+              <Card
+                class="!bg-white dark:!bg-zinc-900/50 border !border-zinc-200 dark:!border-zinc-800 !p-1.5 shadow-md dark:shadow-2xl backdrop-blur-sm group cursor-pointer hover:!border-blue-500/30 transition-all overflow-hidden"
+                :class="msg.role === 'user' ? 'w-80 !rounded-2xl' : 'w-[420px] !rounded-3xl !p-2'">
+
+                <div class="aspect-video bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center relative overflow-hidden"
+                  :class="msg.role === 'user' ? 'rounded-xl' : 'rounded-2xl'">
+                  <div class="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors"></div>
+
+                  <!-- Play/Preview Icon -->
+                  <div
+                    class="rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
+                    :class="msg.role === 'user' ? 'w-10 h-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800' : 'w-16 h-16 bg-white/80 dark:bg-white/10 backdrop-blur-md border border-white/20'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="text-zinc-500 dark:text-zinc-300"
+                      :class="msg.role === 'user' ? 'w-5 h-5' : 'w-8 h-8 text-zinc-900 dark:text-white fill-current'" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <template v-if="msg.role === 'user'">
+                        <path
+                          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </template>
+                      <template v-else>
+                        <path d="m7 4 12 8-12 8V4z" />
+                      </template>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Footer info for AI files -->
+                <div v-if="msg.role === 'ai'" class="p-4 flex items-center justify-between">
+                  <div>
+                    <h3 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">{{ file.type === 'preview' ?
+                      'Preview Summary' :
+                      'Final Summary' }}</h3>
+                    <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === 'preview' ? 'Generating...' :
+                      'Ready for review'
+                    }}</p>
+                  </div>
+                  <div class="flex items-center space-x-2">
+                    <Button variant="ghost"
+                      class="!px-3 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
+                    <Button variant="primary"
+                      class="!px-4 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest">Open</Button>
+                  </div>
+                </div>
+
+                <!-- Simple label for User files -->
+                <div v-else class="px-2 py-2 flex justify-between items-center">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Original Video</span>
+                  <span class="text-[10px] font-bold text-blue-500/70 capitalize">{{ file.type }}</span>
+                </div>
+              </Card>
+            </template>
           </div>
         </div>
-      </Card>
-
-      <!-- Sub Buttons: Edit / Render Final -->
-      <div class="flex items-center space-x-2 w-[380px] bg-zinc-900/30 p-1 rounded-2xl border border-zinc-800/50">
-        <Button variant="ghost"
-          class="flex-1 py-3 text-xs uppercase tracking-widest font-bold text-zinc-400 hover:text-white rounded-xl">Edit</Button>
-        <div class="w-px h-6 bg-zinc-800"></div>
-        <Button variant="ghost"
-          class="flex-1 py-3 text-xs uppercase tracking-widest font-bold text-zinc-400 hover:text-white rounded-xl">Render
-          Final</Button>
       </div>
-    </div>
+    </main>
 
-    <!-- Bottom: Central Chat Input -->
-    <div class="absolute bottom-12 left-1/2 -translate-x-1/2 w-full max-w-4xl px-8">
-      <div class="flex items-center space-x-6">
-        <!-- Attachment Icon -->
+    <!-- Chat Input: Central Bottom -->
+    <footer class="p-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
+      <div class="max-w-4xl mx-auto flex items-end space-x-4">
+        <!-- Attachment Button -->
         <button
-          class="w-14 h-14 bg-zinc-900/80 border border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all shadow-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          class="w-14 h-14 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all shadow-md dark:shadow-xl group">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:rotate-12 transition-transform"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
             <path
               d="M21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48" />
           </svg>
@@ -80,14 +110,17 @@
 
         <!-- Main Input area using Textarea -->
         <div class="flex-1 relative group">
-          <TextArea v-model="userPrompt" placeholder="Ask me anything about the video..." :rows="3"
-            class="!bg-zinc-900/80 border !border-zinc-800 !rounded-[2rem] shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16" />
+          <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="3"
+            class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100" />
+
           <!-- Send Button (Circular) -->
           <div class="absolute right-4 bottom-4">
-            <Button variant="primary"
-              class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-white text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <Button variant="primary" @click="sendMessage"
+              class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
+              <svg xmlns="http://www.w3.org/2000/svg"
+                class="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                stroke-linejoin="round">
                 <path d="m5 12 7-7 7 7" />
                 <path d="M12 19V5" />
               </svg>
@@ -95,57 +128,81 @@
           </div>
         </div>
       </div>
-    </div>
+    </footer>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { Card, Button } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
+import { useVideoStore } from '../stores/videoStore'
 
-const currentState = ref('Initializing...')
-const messages = ref<string[]>([])
-const videoReady = ref(false)
+const videoStore = useVideoStore()
 const userPrompt = ref('')
+const scrollContainer = ref<HTMLElement | null>(null)
 
-const states = [
-  'Extracting frames...',
-  'Analyzing scenes...',
-  'Generating transcript...',
-  'Synthesizing summary...',
-  'Finalizing video render...'
-]
+const scrollToBottom = async () => {
+  await nextTick()
+  if (scrollContainer.value) {
+    scrollContainer.value.scrollTo({
+      top: scrollContainer.value.scrollHeight,
+      behavior: 'smooth'
+    })
+  }
+}
 
-const stateMessages = [
-  'The system is currently extracting high-quality frames from your video file.',
-  'AI is analyzing visual patterns and identifying key events in the footage.',
-  'Generating an intelligent transcript of audio and visual elements.',
-  'Almost there! Creating the final condensed summary of the video content.'
-]
+// Auto-scroll when new messages arrive
+watch(() => videoStore.messages.length, scrollToBottom)
+
+const sendMessage = async () => {
+  if (!userPrompt.value.trim()) return
+  videoStore.addMessage({
+    role: 'user',
+    content: userPrompt.value
+  })
+  userPrompt.value = ''
+  await videoStore.startProcessing()
+}
 
 onMounted(() => {
-  let step = 0
-  const interval = setInterval(() => {
-    if (step < states.length) {
-      currentState.value = states[step]
-      if (stateMessages[step]) {
-        messages.value.push(stateMessages[step])
-      }
-      step++
-    } else {
-      videoReady.value = true
-      currentState.value = 'Ready'
-      clearInterval(interval)
-    }
-  }, 3000)
+  scrollToBottom()
+  // If there's already a message (from UploadPage), start processing
+  if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
+    videoStore.startProcessing()
+  }
 })
 </script>
 
 <style scoped>
-/* Custom overrides to match wireframe exactly while using library components */
-:deep(.form-textarea) {
-  border-radius: 2rem !important;
-  padding-right: 4rem !important;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
 }
-</style>
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+
+:deep(.form-textarea) {
+  border-radius: 1.5rem !important;
+  border-color: #e4e4e7 !important; /* zinc-200 */
+}
+
+:global(.dark) :deep(.form-textarea) {
+  border-color: #27272a !important; /* zinc-800 */
+}
+
+:deep(.form-textarea:focus) {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+}
+</style>>

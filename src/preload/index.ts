@@ -1,13 +1,28 @@
-import { contextBridge } from 'electron'
-import { exposeElectronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
 
 if (process.contextIsolated) {
 	try {
-		exposeElectronAPI()
+		contextBridge.exposeInMainWorld('api', {
+			startPipeline: (data: { messageId: string; videoPath?: string }) =>
+				ipcRenderer.invoke('start-pipeline', data),
+			onPipelineUpdate: (callback: (data: any) => void) => {
+				const listener = (_event: any, data: any) => callback(data)
+				ipcRenderer.on('pipeline-update', listener)
+				return () => ipcRenderer.removeListener('pipeline-update', listener)
+			}
+		})
 	} catch (error) {
 		console.error(error)
 	}
 } else {
-	// @ts-ignore (define in dts)
-	window.electron = exposeElectronAPI()
+	// @ts-ignore
+	window.api = {
+		startPipeline: (data: { messageId: string; videoPath?: string }) =>
+			ipcRenderer.invoke('start-pipeline', data),
+		onPipelineUpdate: (callback: (data: any) => void) => {
+			const listener = (_event: any, data: any) => callback(data)
+			ipcRenderer.on('pipeline-update', listener)
+			return () => ipcRenderer.removeListener('pipeline-update', listener)
+		}
+	}
 }
