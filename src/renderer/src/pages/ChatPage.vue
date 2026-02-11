@@ -162,7 +162,7 @@ const sendMessage = async () => {
     content: userPrompt.value
   })
   userPrompt.value = ''
-  await videoStore.startProcessing()
+  await videoStore.startProcessing(undefined, userPrompt.value, 90)
 }
 
 onMounted(() => {

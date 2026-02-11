@@ -43,7 +43,7 @@ app.whenReady().then(() => {
 
 	createWindow()
 
-	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath }) => {
+	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath, userPrompt, duration }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
@@ -58,7 +58,7 @@ app.whenReady().then(() => {
 			.register(assembly.splitVideoParts)
 			.register(assembly.joinVideoParts)
 
-		await pipeline.start({ videoPath })
+		await pipeline.start({ videoPath, userPrompt, duration })
 	})
 
 	app.on('activate', function () {

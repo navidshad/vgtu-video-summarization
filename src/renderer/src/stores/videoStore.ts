@@ -39,7 +39,7 @@ export const useVideoStore = defineStore('video', () => {
 		messages.value = []
 	}
 
-	const startProcessing = async (videoPath?: string) => {
+	const startProcessing = async (videoPath?: string, prompt?: string, duration?: number) => {
 		const id = addMessage({
 			role: 'ai',
 			content: 'Initializing pipeline...',
@@ -61,7 +61,12 @@ export const useVideoStore = defineStore('video', () => {
 				}
 			})
 
-			await (window as any).api.startPipeline({ messageId: id, videoPath })
+			await (window as any).api.startPipeline({ 
+				messageId: id, 
+				videoPath,
+				userPrompt: prompt,
+				duration: duration
+			})
 		}
 	}
 
