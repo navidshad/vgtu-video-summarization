@@ -39,10 +39,45 @@ export const useVideoStore = defineStore('video', () => {
 		messages.value = []
 	}
 
+	const startProcessing = async (videoPath?: string) => {
+		const id = addMessage({
+			role: 'ai',
+			content: 'Initializing pipeline...',
+			isPending: true
+		})
+
+		if ((window as any).api) {
+			; (window as any).api.onPipelineUpdate((data: any) => {
+				if (data.id === id) {
+					if (data.type === 'status') {
+						updateMessage(id, { content: data.content })
+					} else if (data.type === 'finish') {
+						updateMessage(id, {
+							content: data.content,
+							isPending: false,
+							files: data.videoFile ? [{ url: data.videoFile, type: 'actual' } as Attachment] : []
+						})
+					}
+				}
+			})
+
+			await (window as any).api.startPipeline({ messageId: id, videoPath })
+		}
+	}
+
+	const currentVideoName = ref('')
+
+	const setVideoName = (name: string) => {
+		currentVideoName.value = name
+	}
+
 	return {
 		messages,
+		currentVideoName,
 		addMessage,
 		updateMessage,
-		clearMessages
+		clearMessages,
+		startProcessing,
+		setVideoName
 	}
 })
