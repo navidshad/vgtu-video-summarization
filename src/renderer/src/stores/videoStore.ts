@@ -39,10 +39,18 @@ export const useVideoStore = defineStore('video', () => {
 		messages.value = []
 	}
 
+	const currentVideoName = ref('')
+
+	const setVideoName = (name: string) => {
+		currentVideoName.value = name
+	}
+
 	return {
 		messages,
+		currentVideoName,
 		addMessage,
 		updateMessage,
-		clearMessages
+		clearMessages,
+		setVideoName
 	}
 })

@@ -1,5 +1,12 @@
 <template>
   <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8">
+    <input
+      type="file"
+      ref="fileInput"
+      class="hidden"
+      accept="video/*"
+      @change="handleFileChange"
+    />
     <div class="text-center">
       <h1 class="text-3xl font-bold mb-2 text-white">Video Summarizer</h1>
       <p class="text-zinc-400">Select a video to begin the AI analysis</p>
@@ -41,14 +48,26 @@ import { useVideoStore } from '../stores/videoStore'
 
 const router = useRouter()
 const videoStore = useVideoStore()
+const fileInput = ref<HTMLInputElement | null>(null)
 const fileSelected = ref(false)
 const fileName = ref('')
 const prompt = ref('')
 
 const selectFile = () => {
-  // Mock file selection
-  fileName.value = 'presentation_video.mp4'
-  fileSelected.value = true
+  fileInput.value?.click()
+}
+
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    const file = target.files[0]
+    fileName.value = file.name
+    fileSelected.value = true
+    // In Electron, File object has a 'path' property
+    // For now we just need the name for the title as per requirements, 
+    // but we can store the path if needed for processing later.
+    videoStore.setVideoName(file.name)
+  }
 }
 
 const startCreation = () => {
@@ -57,7 +76,7 @@ const startCreation = () => {
     videoStore.addMessage({
       role: 'user',
       content: prompt.value.trim(),
-      files: [{ url: 'presentation_video.mp4', type: 'actual' }]
+      files: [{ url: fileName.value, type: 'actual' }]
     })
     router.push('/chat')
   }

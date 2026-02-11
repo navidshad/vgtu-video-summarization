@@ -10,16 +10,8 @@
           </svg>
         </div>
         <div>
-          <h2 class="text-sm font-bold tracking-tight text-white uppercase opacity-50">Conversation</h2>
-          <p class="text-sm font-medium text-zinc-400">AI Video Assistant</p>
+          <h2 class="text-sm font-bold tracking-tight text-white">{{ videoStore.currentVideoName || 'AI Video Assistant' }}</h2>
         </div>
-      </div>
-
-      <div class="flex items-center space-x-2">
-        <Button variant="ghost" @click="videoStore.clearMessages"
-          class="text-xs font-bold uppercase tracking-widest text-zinc-400 hover:text-white">
-          Reset
-        </Button>
       </div>
     </header>
 
