@@ -35,6 +35,4 @@ release
 # macOS
 .DS_Store
 
-# .agent
-.agent/
 .npmrc
