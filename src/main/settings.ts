@@ -5,6 +5,7 @@ import os from 'os'
 
 interface Settings {
 	tempDir: string
+	geminiApiKey?: string
 }
 
 class SettingsManager {
@@ -25,7 +26,8 @@ class SettingsManager {
 				const data = readFileSync(this.settingsPath, 'utf-8')
 				const parsed = JSON.parse(data)
 				return {
-					tempDir: parsed.tempDir || defaultTempDir
+					tempDir: parsed.tempDir || defaultTempDir,
+					geminiApiKey: parsed.geminiApiKey
 				}
 			}
 		} catch (error) {
@@ -58,6 +60,15 @@ class SettingsManager {
 		if (!existsSync(path)) {
 			mkdirSync(path, { recursive: true })
 		}
+	}
+
+	getGeminiApiKey(): string | undefined {
+		return this.settings.geminiApiKey
+	}
+
+	setGeminiApiKey(key: string): void {
+		this.settings.geminiApiKey = key
+		this.saveSettings()
 	}
 }
 
