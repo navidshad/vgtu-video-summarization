@@ -63,12 +63,19 @@ graph TD
    cd vgtu-video-summarization
    ```
 
-2. Install dependencies:
+2. **NPM Configuration**:
+   Create a `.npmrc` file in the root directory with the following content to access the `@codebridger` component library:
+   ```text
+   @codebridger:registry=https://npm.pkg.github.com
+   //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+   ```
+
+3. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Start the development server:
+4. Start the development server:
    ```bash
    npm run dev
    ```

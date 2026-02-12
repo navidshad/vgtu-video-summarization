@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { Pipeline } from './pipeline'
+import { settingsManager } from './settings'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as assembly from './pipeline/phases/assembly'
@@ -46,7 +47,7 @@ app.whenReady().then(() => {
 	ipcMain.handle('select-video', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov'] }]
+			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }]
 		})
 
 		if (result.canceled || result.filePaths.length === 0) {
@@ -66,6 +67,7 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, messageId)
 
 		pipeline
+			.register(extraction.ensureLowResolution)
 			.register(extraction.convertToAudio)
 			.register(extraction.extractTranscript)
 			.register(extraction.extractSceneTiming)
@@ -75,6 +77,29 @@ app.whenReady().then(() => {
 			.register(assembly.joinVideoParts)
 
 		await pipeline.start({ videoPath })
+	})
+
+	ipcMain.handle('get-temp-dir', () => {
+		return settingsManager.getTempDir()
+	})
+
+	ipcMain.handle('set-temp-dir', async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ['openDirectory', 'createDirectory']
+		})
+
+		if (result.canceled || result.filePaths.length === 0) {
+			return null
+		}
+
+		const newPath = result.filePaths[0]
+		settingsManager.setTempDir(newPath)
+		return newPath
+	})
+
+	ipcMain.handle('open-temp-dir', async () => {
+		const dir = settingsManager.getTempDir()
+		await shell.openPath(dir)
 	})
 
 	app.on('activate', function () {
