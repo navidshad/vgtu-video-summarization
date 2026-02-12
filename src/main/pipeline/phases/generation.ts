@@ -57,7 +57,7 @@ const parseSRT = (content: string): TimelineSegment[] => {
 }
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
-  context.updateStatus('Phase 2: Building shorter timeline (Iterative)...')
+  context.updateStatus('Phase 2: Building shorter timeline (Iterative Simulation)...')
 
   // 1. Load Local SRT
   const resourcePath = app.isPackaged
@@ -71,53 +71,67 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
     const fullTimeline = parseSRT(srtContent)
     
     // 2. Setup Loop Variables
-    const TARGET_DURATION = data.duration || 90 // seconds
+    const TARGET_DURATION = data.duration || 90 // seconds (Dynamic or Default)
     let currentDuration = 0
     const selectedIndices: number[] = []
     let iterationCount = 0
     
-    // Use user prompt if available
-    if (data.userPrompt) {
-      console.log('Using user prompt:', data.userPrompt)
-      context.updateStatus(`Phase 2: analyzing with prompt: "${data.userPrompt.substring(0, 30)}..."`)
-      await new Promise(resolve => setTimeout(resolve, 1000))
-    }
-    
-    // Simulating "Next Available" cursor
-    let nextAvailableIndex = 0
+    // Mocked responses for simulation
+    const mockResponses = [
+      [3, 7, 11],
+      [15, 20, 25]
+    ]
 
     // 3. Iterative Selection Loop
-    while (currentDuration < TARGET_DURATION && nextAvailableIndex < fullTimeline.length) {
+    while (currentDuration < TARGET_DURATION) {
       iterationCount++
-      context.updateStatus(`Phase 2: Iteration ${iterationCount} (Current Duration: ${currentDuration.toFixed(1)}s / ${TARGET_DURATION}s)`)
+      const currentSelectionInfo = selectedIndices.length > 0 
+        ? `Selected: [${selectedIndices.join(', ')}] (${currentDuration.toFixed(1)}s)`
+        : 'None'
+
+      context.updateStatus(`Phase 2: Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${TARGET_DURATION}s`)
       
+      // Construct Prompt Structure (Simulation)
+      const userExpectation = data.userPrompt || "Create a highlight reel of the most impactful moments"
+      
+      const promptContext = `
+      Context:
+      - User Expectation: "${userExpectation}"
+      - Full Timeline: ${JSON.stringify(fullTimeline.map(s => ({ i: s.index, text: s.text.substring(0, 20) + '...' })))}
+      - Current Selection: ${currentSelectionInfo}
+      - Remaining Needed: ${(TARGET_DURATION - currentDuration).toFixed(1)}s
+      
+      Task: Pick the next best segments to add.
+      `
+      
+      console.log(`--- Iteration ${iterationCount} Prompt Construction ---`)
+      console.log(promptContext)
+      console.log('------------------------------------------------')
+
       // Simulate Gemini Processing Delay
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Construct Prompt (Simulation)
-      // On real implementation, we would send:
-      // - User Expectation: "Create a highlight reel..."
-      // - Previously Selected: selectedIndices
-      // - Remaining Timeline: fullTimeline.slice(nextAvailableIndex)
+      // Get Mock Response
+      const mockBatch = mockResponses[iterationCount - 1]
       
-      // Simulate Gemini Response: Pick next 3 available segments
-      // In reality, Gemini would analyze text and pick best matches
-      const batchSize = 3
-      const candidates = fullTimeline.slice(nextAvailableIndex, nextAvailableIndex + batchSize)
-      
-      if (candidates.length === 0) break
+      if (!mockBatch) {
+        console.log('Simulation: No more mock responses available. Stopping loop.')
+        break
+      }
 
-      const newPicks = candidates.map(c => c.index)
+      console.log(`Simulation: Gemini chose indices [${mockBatch.join(', ')}]`)
+
+      // Logic to parse response and validate indices would go here in real implementation
+      // For now, we take the mock batch
+      
+      const newSegments = fullTimeline.filter(s => mockBatch.includes(s.index))
       
       // Update State
-      selectedIndices.push(...newPicks)
-      const addedDuration = candidates.reduce((sum, c) => sum + c.duration, 0)
+      selectedIndices.push(...mockBatch)
+      const addedDuration = newSegments.reduce((sum, s) => sum + s.duration, 0)
       currentDuration += addedDuration
       
-      // Advance cursor
-      nextAvailableIndex += batchSize
-      
-      console.log(`Iteration ${iterationCount}: Added indices ${newPicks.join(', ')}. Duration added: ${addedDuration.toFixed(1)}s. Total: ${currentDuration.toFixed(1)}s`)
+      console.log(`Iteration ${iterationCount}: Added ${addedDuration.toFixed(1)}s. New Total: ${currentDuration.toFixed(1)}s`)
     }
 
     context.updateStatus(`Phase 2: Complete. Selected ${selectedIndices.length} segments. Total Duration: ${currentDuration.toFixed(1)}s`)
@@ -125,7 +139,7 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
     
     // 4. Pass to Next Phase
     context.next({
-      originalData: data,
+      ...data,
       detailedTimeline: fullTimeline,
       selectedIndices: selectedIndices
     })
