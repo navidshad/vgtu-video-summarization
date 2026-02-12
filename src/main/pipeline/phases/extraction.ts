@@ -1,4 +1,5 @@
 import { PipelineFunction } from '../index'
+import { settingsManager } from '../../settings'
 
 export const convertToAudio: PipelineFunction = async (data, context) => {
 	context.updateStatus('Phase 1: Converting video to audio...')

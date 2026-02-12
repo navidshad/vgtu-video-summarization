@@ -8,7 +8,10 @@ const api = {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('pipeline-update', listener)
 		return () => ipcRenderer.removeListener('pipeline-update', listener)
-	}
+	},
+	getTempDir: () => ipcRenderer.invoke('get-temp-dir'),
+	setTempDir: () => ipcRenderer.invoke('set-temp-dir'),
+	openTempDir: () => ipcRenderer.invoke('open-temp-dir')
 }
 
 if (process.contextIsolated) {

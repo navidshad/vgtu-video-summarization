@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import ApiKeyPage from './pages/ApiKeyPage.vue'
 import UploadPage from './pages/UploadPage.vue'
 import ChatPage from './pages/ChatPage.vue'
+import SettingsPage from './pages/SettingsPage.vue'
 
 const routes = [
 	{
@@ -22,6 +23,10 @@ const routes = [
 	{
 		path: '/chat',
 		component: ChatPage
+	},
+	{
+		path: '/settings',
+		component: SettingsPage
 	}
 ]
 
