@@ -13,6 +13,8 @@ export const extractTranscript: PipelineFunction = async (data, context) => {
 }
 
 export const extractSceneTiming: PipelineFunction = async (data, context) => {
+	const { videoPath } = data
+
 	context.updateStatus('Phase 1: Extracting scene timings...')
 	await new Promise(resolve => setTimeout(resolve, 2000))
 	context.next(data)
