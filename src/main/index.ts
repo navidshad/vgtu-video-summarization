@@ -47,7 +47,7 @@ app.whenReady().then(() => {
 	ipcMain.handle('select-video', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov'] }]
+			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }]
 		})
 
 		if (result.canceled || result.filePaths.length === 0) {
@@ -67,6 +67,7 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, messageId)
 
 		pipeline
+			.register(extraction.ensureLowResolution)
 			.register(extraction.convertToAudio)
 			.register(extraction.extractTranscript)
 			.register(extraction.extractSceneTiming)
