@@ -14,8 +14,6 @@ out
 *.local
 
 # Editor directories and files
-.vscode/*
-!.vscode/extensions.json
 .idea
 .DS_Store
 *.suo
@@ -35,6 +33,4 @@ release
 # macOS
 .DS_Store
 
-# .agent
-.agent/
 .npmrc

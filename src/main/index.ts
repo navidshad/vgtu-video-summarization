@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { Pipeline } from './pipeline'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
@@ -42,6 +42,22 @@ app.whenReady().then(() => {
 	})
 
 	createWindow()
+
+	ipcMain.handle('select-video', async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ['openFile'],
+			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov'] }]
+		})
+
+		if (result.canceled || result.filePaths.length === 0) {
+			return null
+		}
+
+		return {
+			path: result.filePaths[0],
+			name: result.filePaths[0].split('/').pop() || ''
+		}
+	})
 
 	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)

@@ -4,11 +4,15 @@ import { resolve } from 'path'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      sourcemap: true
+    }
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
     build: {
+      sourcemap: true,
       rollupOptions: {
         output: {
           format: 'cjs',

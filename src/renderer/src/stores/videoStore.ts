@@ -16,6 +16,8 @@ export interface Message {
 
 export const useVideoStore = defineStore('video', () => {
 	const messages = ref<Message[]>([])
+	const currentVideoName = ref('')
+	const currentVideoPath = ref('')
 
 	const addMessage = (message: Omit<Message, 'id' | 'isPending'> & { isPending?: boolean }) => {
 		const id = Math.random().toString(36).substring(2, 9)
@@ -40,6 +42,12 @@ export const useVideoStore = defineStore('video', () => {
 	}
 
 	const startProcessing = async (videoPath?: string) => {
+		const path = videoPath || currentVideoPath.value
+		if (!path) {
+			console.error('No video path available for processing')
+			return
+		}
+
 		const id = addMessage({
 			role: 'ai',
 			content: 'Initializing pipeline...',
@@ -61,23 +69,28 @@ export const useVideoStore = defineStore('video', () => {
 				}
 			})
 
-			await (window as any).api.startPipeline({ messageId: id, videoPath })
+			await (window as any).api.startPipeline({ messageId: id, videoPath: path })
 		}
 	}
 
-	const currentVideoName = ref('')
 
 	const setVideoName = (name: string) => {
 		currentVideoName.value = name
 	}
 
+	const setVideoPath = (path: string) => {
+		currentVideoPath.value = path
+	}
+
 	return {
 		messages,
 		currentVideoName,
+		currentVideoPath,
 		addMessage,
 		updateMessage,
 		clearMessages,
 		startProcessing,
-		setVideoName
+		setVideoName,
+		setVideoPath
 	}
 })

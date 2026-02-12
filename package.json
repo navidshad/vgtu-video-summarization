@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@codebridger/lib-vue-components": "latest",
+    "@google/genai": "^1.40.0",
     "@vueuse/core": "^10.9.0",
     "pinia": "^3.0.4",
     "vue": "^3.4.21",
