@@ -148,10 +148,18 @@ export const useVideoStore = defineStore('video', () => {
 				}
 			})
 
+			// Find the last user message to use as prompt
+			const lastUserMessage = currentThread.value.messages
+				.slice()
+				.reverse()
+				.find((m) => m.role === 'user')
+			
 			await (window as any).api.startPipeline({
 				threadId,
 				messageId: id,
-				videoPath: currentThread.value.videoPath
+				videoPath: currentThread.value.videoPath,
+				userPrompt: lastUserMessage?.content,
+				duration: 90
 			})
 		}
 	}

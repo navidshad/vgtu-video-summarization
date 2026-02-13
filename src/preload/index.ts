@@ -2,8 +2,13 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
 	selectVideo: () => ipcRenderer.invoke('select-video'),
-	startPipeline: (data: { threadId: string; messageId: string; videoPath?: string }) =>
-		ipcRenderer.invoke('start-pipeline', data),
+	startPipeline: (data: {
+		threadId: string
+		messageId: string
+		videoPath?: string
+		userPrompt?: string
+		duration?: number
+	}) => ipcRenderer.invoke('start-pipeline', data),
 	onPipelineUpdate: (callback: (data: any) => void) => {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('pipeline-update', listener)
@@ -27,27 +32,11 @@ const api = {
 
 if (process.contextIsolated) {
 	try {
-		contextBridge.exposeInMainWorld('api', {
-    startPipeline: (data: { messageId: string; videoPath?: string; userPrompt?: string; duration?: number }) =>
-      ipcRenderer.invoke('start-pipeline', data),
-    onPipelineUpdate: (callback: (data: any) => void) => {
-      const listener = (_event: any, data: any) => callback(data)
-      ipcRenderer.on('pipeline-update', listener)
-      return () => ipcRenderer.removeListener('pipeline-update', listener)
-    }
-  })
-} catch (error) {
-  console.error(error)
-}
+		contextBridge.exposeInMainWorld('api', api)
+	} catch (error) {
+		console.error('[Preload] Failed to expose API:', error)
+	}
 } else {
-// @ts-ignore
-window.api = {
-  startPipeline: (data: { messageId: string; videoPath?: string; userPrompt?: string; duration?: number }) =>
-    ipcRenderer.invoke('start-pipeline', data),
-  onPipelineUpdate: (callback: (data: any) => void) => {
-    const listener = (_event: any, data: any) => callback(data)
-    ipcRenderer.on('pipeline-update', listener)
-    return () => ipcRenderer.removeListener('pipeline-update', listener)
-  }
-}
+	// @ts-ignore
+	window.api = api
 }
