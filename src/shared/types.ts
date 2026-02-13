@@ -39,3 +39,11 @@ export interface Thread {
 	createdAt: number
 	updatedAt: number
 }
+
+export interface TimelineSegment {
+  index: number
+  start: string
+  end: string
+  text: string
+  duration: number
+}

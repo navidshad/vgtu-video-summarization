@@ -61,7 +61,7 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, messageId, contextMessageId }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, userPromptMessageId, editReferenceMessageId }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
@@ -70,12 +70,12 @@ app.whenReady().then(() => {
 
 		// Prepare the context
 		// User message is the context for the pipeline
-		const context = thread.messages.find(m => m.id === contextMessageId)?.content || ''
+		const context = thread.messages.find(m => m.id === userPromptMessageId)?.content || ''
 
 		// Prepare the base timeline
-		const baseTimeline = thread.messages.find(m => m.id === contextMessageId)?.timeline || undefined;
+		const baseTimeline = editReferenceMessageId ? thread.messages.find(m => m.id === editReferenceMessageId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, messageId, threadId, context, baseTimeline)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline)
 
 		pipeline
 			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })

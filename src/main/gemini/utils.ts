@@ -25,7 +25,7 @@ Rules:
 /**
  * Parses SRT text into TranscriptItem array.
  */
-function parseSRT(srt: string): TranscriptItem[] {
+export function parseSRT(srt: string): TranscriptItem[] {
 	const items: TranscriptItem[] = []
 
 	// Remove markdown code blocks or stray backticks more aggressively
