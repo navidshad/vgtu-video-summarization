@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface Attachment {
 	url: string
-	type: 'preview' | 'actual'
+	type: 'preview' | 'actual' | 'original'
 }
 
 export interface Message {
@@ -12,42 +12,127 @@ export interface Message {
 	content: string
 	isPending: boolean
 	files?: Attachment[]
+	timeline?: any
+	createdAt: number
+}
+
+export interface Thread {
+	id: string
+	title: string
+	videoPath: string
+	preprocessing: {
+		audioPath?: string
+		lowResVideoPath?: string;
+		transcript?: any;
+	}
+	messages: Message[]
+	createdAt: number
+	updatedAt: number
 }
 
 export const useVideoStore = defineStore('video', () => {
-	const messages = ref<Message[]>([])
+	const threads = ref<Thread[]>([])
+	const currentThreadId = ref<string | null>(null)
 
-	const addMessage = (message: Omit<Message, 'id' | 'isPending'> & { isPending?: boolean }) => {
-		const id = Math.random().toString(36).substring(2, 9)
-		const newMessage: Message = {
-			...message,
-			id,
-			isPending: message.isPending ?? false
+	const currentThread = computed(() =>
+		threads.value.find(t => t.id === currentThreadId.value) || null
+	)
+
+	const messages = computed(() => {
+		if (!currentThread.value) return []
+		const msgs = [...currentThread.value.messages]
+
+		// Inject the original video into the first message if it's a user message and has no files
+		if (msgs.length > 0 && msgs[0].role === 'user' && (!msgs[0].files || msgs[0].files.length === 0) && currentThread.value.videoPath) {
+			// Create a shallow copy of the first message to avoid mutating the source of truth directly (though safe here as we cloned array)
+			// But we need to be careful not to mutate the object ref if it confuses Vue, ensuring reactivity.
+			// Actually best to return a new object for the modified message.
+			msgs[0] = {
+				...msgs[0],
+				files: [{ url: 'file://' + currentThread.value.videoPath, type: 'original' }]
+			}
 		}
-		messages.value.push(newMessage)
-		return id
+
+		return msgs
+	})
+
+	const currentVideoName = computed(() => currentThread.value?.title || '')
+	const currentVideoPath = computed(() => currentThread.value?.videoPath || '')
+
+	const fetchThreads = async () => {
+		threads.value = await (window as any).api.getAllThreads()
 	}
 
-	const updateMessage = (id: string, partial: Partial<Omit<Message, 'id'>>) => {
-		const index = messages.value.findIndex((m) => m.id === id)
-		if (index !== -1) {
-			messages.value[index] = { ...messages.value[index], ...partial }
+	const createThread = async (videoPath: string, videoName: string) => {
+		const newThread = await (window as any).api.createThread(videoPath, videoName)
+		threads.value.unshift(newThread)
+		currentThreadId.value = newThread.id
+		return newThread.id
+	}
+
+	const selectThread = async (id: string) => {
+		const thread = await (window as any).api.getThread(id)
+		if (thread) {
+			const index = threads.value.findIndex(t => t.id === id)
+			if (index !== -1) {
+				threads.value[index] = thread
+			} else {
+				threads.value.unshift(thread)
+			}
+			currentThreadId.value = id
 		}
+	}
+
+	const addMessage = async (content: string, role: 'user' | 'ai') => {
+		if (!currentThreadId.value) return
+
+		const message = {
+			role,
+			content,
+			isPending: role === 'ai'
+		}
+
+		const newMessage = await (window as any).api.addMessage(currentThreadId.value, message)
+
+		// Update local state
+		if (currentThread.value) {
+			currentThread.value.messages.push(newMessage)
+		}
+
+		return newMessage.id
 	}
 
 	const clearMessages = () => {
-		messages.value = []
+		// Not used in thread mode, but kept for compatibility or cleanup
 	}
 
-	const startProcessing = async (videoPath?: string, prompt?: string, duration?: number) => {
-		const id = addMessage({
-			role: 'ai',
-			content: 'Initializing pipeline...',
-			isPending: true
-		})
+	// Used when pipeline updates status
+	const updateMessage = (id: string, partial: Partial<Omit<Message, 'id'>>) => {
+		if (!currentThread.value) return
+
+		const index = currentThread.value.messages.findIndex((m) => m.id === id)
+		if (index !== -1) {
+			currentThread.value.messages[index] = {
+				...currentThread.value.messages[index],
+				...partial
+			}
+		}
+	}
+
+	const startProcessing = async (threadId: string) => {
+		if (!threadId) return
+
+		// Ensure we are working with fresh data
+		await selectThread(threadId)
+
+		if (!currentThread.value) return
+
+		// Add initial AI status message
+		const id = await addMessage('Initializing pipeline...', 'ai')
 
 		if ((window as any).api) {
-			; (window as any).api.onPipelineUpdate((data: any) => {
+			// Setup listener
+			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
 				if (data.id === id) {
 					if (data.type === 'status') {
 						updateMessage(id, { content: data.content })
@@ -55,34 +140,57 @@ export const useVideoStore = defineStore('video', () => {
 						updateMessage(id, {
 							content: data.content,
 							isPending: false,
-							files: data.videoFile ? [{ url: data.videoFile, type: 'actual' } as Attachment] : []
+							files: data.video ? [{ url: data.video.path, type: data.video.type } as Attachment] : [],
+							timeline: data.timeline
 						})
+						cleanup() // Remove listener when done
 					}
 				}
 			})
 
-			await (window as any).api.startPipeline({ 
-				messageId: id, 
-				videoPath,
-				userPrompt: prompt,
-				duration: duration
+			await (window as any).api.startPipeline({
+				threadId,
+				messageId: id,
+				videoPath: currentThread.value.videoPath
 			})
 		}
 	}
 
-	const currentVideoName = ref('')
+	const deleteThread = async (id: string) => {
+		const success = await (window as any).api.deleteThread(id)
+		if (success) {
+			threads.value = threads.value.filter(t => t.id !== id)
+			if (currentThreadId.value === id) {
+				currentThreadId.value = null
+			}
+		}
+		return success
+	}
 
-	const setVideoName = (name: string) => {
-		currentVideoName.value = name
+	const deleteAllThreads = async () => {
+		const success = await (window as any).api.deleteAllThreads()
+		if (success) {
+			threads.value = []
+			currentThreadId.value = null
+		}
+		return success
 	}
 
 	return {
+		threads,
+		currentThreadId,
+		currentThread,
 		messages,
 		currentVideoName,
+
+		fetchThreads,
+		createThread,
+		selectThread,
 		addMessage,
-		updateMessage,
 		clearMessages,
 		startProcessing,
-		setVideoName
+		deleteThread,
+		deleteAllThreads,
+		updateMessage
 	}
 })

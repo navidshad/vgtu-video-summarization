@@ -9,5 +9,8 @@ export const splitVideoParts: PipelineFunction = async (data, context) => {
 export const joinVideoParts: PipelineFunction = async (data, context) => {
 	context.updateStatus('Phase 3: Joining video parts...')
 	await new Promise(resolve => setTimeout(resolve, 2000))
-	context.finish('Processing complete. Your video summary is ready.', 'final_summary.mp4')
+	context.finish('Processing complete. Your video summary is ready.', {
+		path: 'final_summary.mp4',
+		type: 'actual'
+	})
 }
