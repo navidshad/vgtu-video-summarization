@@ -93,7 +93,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const startProcessing = async (threadId: string, contextMessageId?: string) => {
+	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
 		if (!threadId) return
 
 		// Ensure we are working with fresh data
@@ -102,22 +102,20 @@ export const useVideoStore = defineStore('video', () => {
 		if (!currentThread.value) return
 
 		// Identify the user message that triggered this processing (usually the last one before we add the AI placeholder)
-		// If contextMessageId is NOT provided, we default to using the latest user message as the context point.
-		// The backend can then walk back from there to find the relevant timeline.
-		const defaultContextId = currentThread.value.messages[currentThread.value.messages.length - 1]?.id
-		const finalContextId = contextMessageId || defaultContextId
+		// If editReferenceMessageId is provided, we still need the latest user prompt as the instructions.
+		const userPromptMessageId = currentThread.value.messages[currentThread.value.messages.length - 1]?.id
 
 		// Add initial AI status message
-		const id = await addMessage('Initializing pipeline...', MessageRole.AI)
+		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI)
 
 		if ((window as any).api) {
 			// Setup listener
 			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
-				if (data.id === id) {
+				if (data.id === newAiMessageId) {
 					if (data.type === 'status') {
-						updateMessage(id, { content: data.content })
+						updateMessage(newAiMessageId, { content: data.content })
 					} else if (data.type === 'finish') {
-						updateMessage(id, {
+						updateMessage(newAiMessageId, {
 							content: data.content,
 							isPending: false,
 							files: data.video ? [{ url: data.video.path, type: data.video.type } as Attachment] : [],
@@ -130,8 +128,9 @@ export const useVideoStore = defineStore('video', () => {
 
 			await (window as any).api.startPipeline({
 				threadId,
-				messageId: id,
-				contextMessageId: finalContextId
+				newAiMessageId,
+				userPromptMessageId,
+				editReferenceMessageId
 			})
 		}
 	}
