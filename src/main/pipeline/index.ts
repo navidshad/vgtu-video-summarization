@@ -14,23 +14,29 @@ export interface PipelineContext {
 	videoPath: string;
 	tempDir: string;
 	preprocessing: Thread['preprocessing'];
+	baseTimeline?: any; // The timeline to based this generation on
+	context: string;   // Full conversation history as text
 }
 
 export class Pipeline {
-	private steps: PipelineFunction[] = []
+	private steps: { fn: PipelineFunction; options?: { skipIf?: (context: PipelineContext) => boolean } }[] = []
 	private currentStepIndex = 0
 	private browserWindow: BrowserWindow
 	private messageId: string
 	private threadId: string
+	private context: string
+	private baseTimeline?: any
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
+		this.context = context
+		this.baseTimeline = baseTimeline
 	}
 
-	register(fn: PipelineFunction): this {
-		this.steps.push(fn);
+	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
+		this.steps.push({ fn, options });
 		return this;
 	}
 
@@ -52,12 +58,38 @@ export class Pipeline {
 			return
 		}
 
-		const fn = this.steps[this.currentStepIndex];
+		const step = this.steps[this.currentStepIndex];
+
+		// check if we should skip this step
+		if (step.options?.skipIf) {
+			const contextForCheck: PipelineContext = {
+				threadId: this.threadId,
+				videoPath: thread.videoPath,
+				tempDir: thread.tempDir,
+				preprocessing: thread.preprocessing,
+				context: this.context,
+				baseTimeline: undefined, // baseTimeline is not ready/needed for this check usually, or we can resolve it if needed. 
+				// Minimally mocking the context for the check.
+				// However, if skipIf depends on baseTimeline, we need to resolve it early.
+				// Let's copy the full context resolution logic or move it up.
+				// Better to resolve context once.
+				updateStatus: () => { },
+				next: () => { },
+				finish: () => { },
+				savePreprocessing: () => { }
+			}
+
+			// We need the REAL context to check conditions properly (especially `preprocessing` which is there)
+			// But creating the full context object (with callbacks) before checking skip might be needed.
+		}
+
 		const context: PipelineContext = {
 			threadId: this.threadId,
 			videoPath: thread.videoPath,
 			tempDir: thread.tempDir,
 			preprocessing: thread.preprocessing,
+			context: this.context,
+			baseTimeline: this.baseTimeline,
 			updateStatus: (status: string) => {
 				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {
@@ -118,8 +150,16 @@ export class Pipeline {
 			}
 		}
 
+		// Check skip condition
+		if (step.options?.skipIf && step.options.skipIf(context)) {
+			// Skip this step and proceed to next immediately with SAME data
+			this.currentStepIndex++
+			this.runStep(data)
+			return
+		}
+
 		try {
-			await fn(data, context);
+			await step.fn(data, context);
 		} catch (error) {
 			console.error('Pipeline step failed:', error);
 			context.updateStatus(`Error: ${error instanceof Error ? error.message : String(error)}`);
