@@ -24,3 +24,18 @@ export interface Message {
 	timeline?: any;
 	createdAt: number;
 }
+
+export interface Thread {
+	id: string
+	title: string
+	videoPath: string
+	preprocessing: {
+		audioPath?: string
+		lowResVideoPath?: string;
+		srtPath?: string;
+	}
+	tempDir: string
+	messages: Message[]
+	createdAt: number
+	updatedAt: number
+}

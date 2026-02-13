@@ -74,6 +74,15 @@ class SettingsManager {
 		return this.defaultTempDir
 	}
 
+	getThreadTempDir(threadId: string): string {
+		const baseDir = this.getTempDir()
+		const threadDir = join(baseDir, threadId)
+		if (!existsSync(threadDir)) {
+			mkdirSync(threadDir, { recursive: true })
+		}
+		return threadDir
+	}
+
 	getGeminiApiKey(): string | undefined {
 		return this.settings.geminiApiKey
 	}

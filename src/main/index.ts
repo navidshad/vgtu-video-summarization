@@ -61,7 +61,7 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, messageId, videoPath }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, messageId }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
@@ -77,7 +77,7 @@ app.whenReady().then(() => {
 			.register(assembly.splitVideoParts)
 			.register(assembly.joinVideoParts)
 
-		await pipeline.start({ videoPath })
+		await pipeline.start({})
 	})
 
 	ipcMain.handle('get-temp-dir', () => {
