@@ -2,13 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
 	selectVideo: () => ipcRenderer.invoke('select-video'),
-	startPipeline: (data: {
-		threadId: string
-		messageId: string
-		videoPath?: string
-		userPrompt?: string
-		duration?: number
-	}) => ipcRenderer.invoke('start-pipeline', data),
+	startPipeline: (data: { threadId: string; messageId: string; videoPath?: string }) =>
+		ipcRenderer.invoke('start-pipeline', data),
 	onPipelineUpdate: (callback: (data: any) => void) => {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('pipeline-update', listener)

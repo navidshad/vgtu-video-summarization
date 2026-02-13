@@ -1,7 +1,5 @@
 import { PipelineFunction } from '../index'
 import fs from 'fs'
-import path from 'path'
-import { app } from 'electron'
 
 interface TimelineSegment {
   index: number
@@ -59,10 +57,12 @@ const parseSRT = (content: string): TimelineSegment[] => {
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Phase 2: Building shorter timeline (Iterative Simulation)...')
 
-  // 1. Load Local SRT
-  const resourcePath = app.isPackaged
-    ? path.join(process.resourcesPath, 'resources/sample-str.str')
-    : path.join(__dirname, '../../resources/sample-str.str')
+  // 1. Load SRT
+  const resourcePath = context.preprocessing?.srtPath
+
+  if (!resourcePath || !fs.existsSync(resourcePath)) {
+    throw new Error(`Generated SRT file not found at: ${resourcePath}`)
+  }
 
   console.log('Loading SRT from:', resourcePath)
   
@@ -137,11 +137,11 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
     context.updateStatus(`Phase 2: Complete. Selected ${selectedIndices.length} segments. Total Duration: ${currentDuration.toFixed(1)}s`)
     await new Promise(resolve => setTimeout(resolve, 1000)) // Let user see status
     
-    // 4. Pass to Next Phase
-    context.next({
-      ...data,
+    // 4. Finish Pipeline
+    context.finish('Processing complete. Short timeline generated.', undefined, {
       detailedTimeline: fullTimeline,
-      selectedIndices: selectedIndices
+      selectedIndices: selectedIndices,
+      duration: currentDuration
     })
 
   } catch (error) {
