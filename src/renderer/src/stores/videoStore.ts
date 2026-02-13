@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 
 export interface Attachment {
 	url: string
-	type: 'preview' | 'actual'
+	type: 'preview' | 'actual' | 'original'
 }
 
 export interface Message {
@@ -37,7 +37,24 @@ export const useVideoStore = defineStore('video', () => {
 		threads.value.find(t => t.id === currentThreadId.value) || null
 	)
 
-	const messages = computed(() => currentThread.value?.messages || [])
+	const messages = computed(() => {
+		if (!currentThread.value) return []
+		const msgs = [...currentThread.value.messages]
+
+		// Inject the original video into the first message if it's a user message and has no files
+		if (msgs.length > 0 && msgs[0].role === 'user' && (!msgs[0].files || msgs[0].files.length === 0) && currentThread.value.videoPath) {
+			// Create a shallow copy of the first message to avoid mutating the source of truth directly (though safe here as we cloned array)
+			// But we need to be careful not to mutate the object ref if it confuses Vue, ensuring reactivity.
+			// Actually best to return a new object for the modified message.
+			msgs[0] = {
+				...msgs[0],
+				files: [{ url: 'file://' + currentThread.value.videoPath, type: 'original' }]
+			}
+		}
+
+		return msgs
+	})
+
 	const currentVideoName = computed(() => currentThread.value?.title || '')
 	const currentVideoPath = computed(() => currentThread.value?.videoPath || '')
 

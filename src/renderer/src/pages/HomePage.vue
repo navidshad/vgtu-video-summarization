@@ -48,41 +48,43 @@
 					<p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Start a new video analysis</p>
 				</div>
 
-				<Card 
+				<div 
 					v-for="thread in videoStore.threads" 
 					:key="thread.id"
 					class="group cursor-pointer hover:-translate-y-1 transition-all duration-300"
 					@click="openThread(thread.id)"
 				>
-					<div class="p-5 flex flex-col h-full">
-						<div class="flex items-start justify-between mb-4">
-							<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500">
-								<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<polygon points="23 7 16 12 23 17 23 7"/>
-									<rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-								</svg>
+					<Card class="h-full border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
+						<div class="p-5 flex flex-col h-full">
+							<div class="flex items-start justify-between mb-4">
+								<div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500">
+									<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<polygon points="23 7 16 12 23 17 23 7"/>
+										<rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+									</svg>
+								</div>
+								<div class="text-xs font-bold uppercase tracking-wider text-zinc-400">
+									{{ formatDate(thread.updatedAt) }}
+								</div>
 							</div>
-							<div class="text-xs font-bold uppercase tracking-wider text-zinc-400">
-								{{ formatDate(thread.updatedAt) }}
-							</div>
-						</div>
-						
-						<h3 class="font-bold text-lg text-zinc-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-							{{ thread.title }}
-						</h3>
-						
-						<p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 flex-grow">
-							{{ getLastMessage(thread) }}
-						</p>
+							
+							<h3 class="font-bold text-lg text-zinc-900 dark:text-white mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+								{{ thread.title }}
+							</h3>
+							
+							<p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 flex-grow">
+								{{ getLastMessage(thread) }}
+							</p>
 
-						<div class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center text-sm text-zinc-500 dark:text-zinc-400">
-							<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-							</svg>
-							{{ thread.messages.length }} messages
+							<div class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center text-sm text-zinc-500 dark:text-zinc-400">
+								<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+								</svg>
+								{{ thread.messages.length }} messages
+							</div>
 						</div>
-					</div>
-				</Card>
+					</Card>
+				</div>
 			</div>
 		</div>
 	</div>
