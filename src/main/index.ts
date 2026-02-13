@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { Pipeline } from './pipeline'
 import { settingsManager } from './settings'
+import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as assembly from './pipeline/phases/assembly'
@@ -60,11 +61,11 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, messageId, videoPath }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
-		const pipeline = new Pipeline(window, messageId)
+		const pipeline = new Pipeline(window, messageId, threadId)
 
 		pipeline
 			.register(extraction.ensureLowResolution)
@@ -97,6 +98,10 @@ app.whenReady().then(() => {
 		return newPath
 	})
 
+	ipcMain.handle('reset-temp-dir', () => {
+		return settingsManager.resetTempDir()
+	})
+
 	ipcMain.handle('open-temp-dir', async () => {
 		const dir = settingsManager.getTempDir()
 		await shell.openPath(dir)
@@ -108,6 +113,31 @@ app.whenReady().then(() => {
 
 	ipcMain.handle('set-gemini-api-key', (_event, key: string) => {
 		settingsManager.setGeminiApiKey(key)
+	})
+
+	// Thread Management
+	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
+		return threadManager.createThread(videoPath, videoName)
+	})
+
+	ipcMain.handle('get-all-threads', () => {
+		return threadManager.getAllThreads()
+	})
+
+	ipcMain.handle('get-thread', (_event, id) => {
+		return threadManager.getThread(id)
+	})
+
+	ipcMain.handle('delete-thread', (_event, id) => {
+		return threadManager.deleteThread(id)
+	})
+
+	ipcMain.handle('delete-all-threads', () => {
+		return threadManager.deleteAllThreads()
+	})
+
+	ipcMain.handle('add-message', (_event, { threadId, message }) => {
+		return threadManager.addMessageToThread(threadId, message)
 	})
 
 	app.on('activate', function () {

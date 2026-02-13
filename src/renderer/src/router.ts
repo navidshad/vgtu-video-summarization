@@ -3,14 +3,19 @@ import ApiKeyPage from './pages/ApiKeyPage.vue'
 import UploadPage from './pages/UploadPage.vue'
 import ChatPage from './pages/ChatPage.vue'
 import SettingsPage from './pages/SettingsPage.vue'
+import HomePage from './pages/HomePage.vue'
 
 const routes = [
 	{
 		path: '/',
 		redirect: () => {
 			const key = localStorage.getItem('gemini_api_key')
-			return key ? '/upload' : '/api-key'
+			return key ? '/home' : '/api-key'
 		}
+	},
+	{
+		path: '/home',
+		component: HomePage
 	},
 	{
 		path: '/api-key',
@@ -21,7 +26,7 @@ const routes = [
 		component: UploadPage
 	},
 	{
-		path: '/chat',
+		path: '/chat/:id',
 		component: ChatPage
 	},
 	{

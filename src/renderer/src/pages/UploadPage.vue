@@ -1,5 +1,15 @@
 <template>
-  <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8">
+  <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8 relative">
+    <!-- Back Button -->
+    <div class="absolute top-0 left-0 p-6">
+      <button @click="router.back()" 
+        class="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 shadow-sm active:scale-95 group">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </button>
+    </div>
+
     <div class="text-center">
       <h1 class="text-3xl font-bold mb-2 text-zinc-900 dark:text-white transition-colors">Video Summarizer</h1>
       <p class="text-zinc-500 dark:text-zinc-400 transition-colors">Select a video to begin the AI analysis</p>
@@ -75,43 +85,38 @@ const router = useRouter()
 const videoStore = useVideoStore()
 const fileSelected = ref(false)
 const fileName = ref('')
+const filePath = ref('')
 const prompt = ref('')
 
 const handleNativeSelect = async () => {
   const result = await (window as any).api?.selectVideo()
   if (result) {
     fileName.value = result.name
+    filePath.value = result.path
     fileSelected.value = true
-    videoStore.setVideoName(result.name)
-    videoStore.setVideoPath(result.path)
   }
 }
 
 const resetSelection = () => {
   fileSelected.value = false
   fileName.value = ''
-  videoStore.setVideoName('')
+  filePath.value = ''
 }
 
-const startCreation = () => {
+const startCreation = async () => {
   if (fileSelected.value && prompt.value.trim()) {
-    videoStore.clearMessages()
-    videoStore.addMessage({
-      role: 'user',
-      content: prompt.value.trim(),
-      files: [{ url: fileName.value, type: 'actual' }]
-    })
-    router.push('/chat')
+    // 1. Create a new thread
+    const threadId = await videoStore.createThread(filePath.value, fileName.value)
+    
+    // 2. Add the user message
+    await videoStore.addMessage(prompt.value.trim(), 'user')
+    
+    // 3. Navigate to chat with thread ID
+    router.push(`/chat/${threadId}`)
   }
 }
 </script>
 
 <style scoped>
-:global(.dark) :deep(.text-gray-900) {
-  color: #f4f4f5 !important;
-}
-
-:global(.dark) :deep(.text-gray-500) {
-  color: #a1a1aa !important;
-}
+/* Scoped styles if needed */
 </style>
