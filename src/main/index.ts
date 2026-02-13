@@ -98,6 +98,10 @@ app.whenReady().then(() => {
 		return newPath
 	})
 
+	ipcMain.handle('reset-temp-dir', () => {
+		return settingsManager.resetTempDir()
+	})
+
 	ipcMain.handle('open-temp-dir', async () => {
 		const dir = settingsManager.getTempDir()
 		await shell.openPath(dir)
