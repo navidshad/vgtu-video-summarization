@@ -1,4 +1,5 @@
 import { PipelineFunction } from '../index'
+import { SceneDetector } from '../../scenedetect'
 
 export const convertToAudio: PipelineFunction = async (data, context) => {
 	context.updateStatus('Phase 1: Converting video to audio...')
@@ -15,8 +16,12 @@ export const extractTranscript: PipelineFunction = async (data, context) => {
 export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	const { videoPath } = data
 
-	context.updateStatus('Phase 1: Extracting scene timings...')
-	await new Promise(resolve => setTimeout(resolve, 2000))
+	context.updateStatus('Phase 1: Detecting scenes...')
+	const detector = new SceneDetector()
+	const scenes = await detector.detectScenes(videoPath)
+	context.updateStatus(`Phase 1: Scene detection complete (${scenes.length} scenes).`)
+
+	data.scenes = scenes
 	context.next(data)
 }
 
