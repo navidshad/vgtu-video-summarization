@@ -73,7 +73,7 @@ app.whenReady().then(() => {
 		const context = thread.messages.find(m => m.id === contextMessageId)?.content || ''
 
 		// Prepare the base timeline
-		const baseTimeline = thread.messages.find(m => m.id === contextMessageId)?.timeline || undefined;
+		const baseTimeline = thread.messages.find(m => m.id === messageId)?.timeline || undefined;
 
 		const pipeline = new Pipeline(window, messageId, threadId, context, baseTimeline)
 
