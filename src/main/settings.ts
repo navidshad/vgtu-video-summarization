@@ -11,22 +11,23 @@ interface Settings {
 class SettingsManager {
 	private settingsPath: string
 	private settings: Settings
+	private defaultTempDir: string
 
 	constructor() {
 		const userDataPath = app.getPath('userData')
 		this.settingsPath = join(userDataPath, 'settings.json')
+		this.defaultTempDir = join(os.tmpdir(), 'vgtu-video-summarization')
 		this.settings = this.loadSettings()
 	}
 
 	private loadSettings(): Settings {
-		const defaultTempDir = join(os.tmpdir(), 'vgtu-video-summarization')
 
 		try {
 			if (existsSync(this.settingsPath)) {
 				const data = readFileSync(this.settingsPath, 'utf-8')
 				const parsed = JSON.parse(data)
 				return {
-					tempDir: parsed.tempDir || defaultTempDir,
+					tempDir: parsed.tempDir || this.defaultTempDir,
 					geminiApiKey: parsed.geminiApiKey
 				}
 			}
@@ -34,7 +35,7 @@ class SettingsManager {
 			console.error('Failed to load settings:', error)
 		}
 
-		return { tempDir: defaultTempDir }
+		return { tempDir: this.defaultTempDir }
 	}
 
 	private saveSettings(): void {
@@ -60,6 +61,17 @@ class SettingsManager {
 		if (!existsSync(path)) {
 			mkdirSync(path, { recursive: true })
 		}
+	}
+
+	resetTempDir(): string {
+		this.settings.tempDir = this.defaultTempDir
+		this.saveSettings()
+
+		if (!existsSync(this.defaultTempDir)) {
+			mkdirSync(this.defaultTempDir, { recursive: true })
+		}
+
+		return this.defaultTempDir
 	}
 
 	getGeminiApiKey(): string | undefined {
