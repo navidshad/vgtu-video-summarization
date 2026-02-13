@@ -3,6 +3,11 @@
     <!-- Header: Simple -->
     <header class="p-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
       <div class="flex items-center space-x-4">
+        <button @click="handleBack" class="p-2 -ml-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
         <div class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -28,9 +33,31 @@
             msg.role === 'user'
               ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
               : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
-            msg.isPending ? 'opacity-50 animate-pulse' : ''
+            msg.isPending ? 'opacity-80' : ''
           ]">
-            <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+            <div class="flex items-start space-x-3">
+              <div v-if="msg.isPending" class="mt-1">
+                <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div class="space-y-4 w-full">
+                <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+
+                <!-- Timeline Display -->
+                <div v-if="msg.timeline" class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Video Timeline</h4>
+                  <div class="space-y-2">
+                    <div v-for="(item, idx) in msg.timeline" :key="idx" 
+                         class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
+                      <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time || item.timestamp }}</span>
+                      <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </Card>
 
           <!-- Attachments (Videos) -->
@@ -134,13 +161,20 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Card, Button } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
 import { useVideoStore } from '../stores/videoStore'
 
+const route = useRoute()
+const router = useRouter()
 const videoStore = useVideoStore()
 const userPrompt = ref('')
 const scrollContainer = ref<HTMLElement | null>(null)
+
+const handleBack = () => {
+    router.push('/home')
+}
 
 const scrollToBottom = async () => {
   await nextTick()
@@ -157,20 +191,25 @@ watch(() => videoStore.messages.length, scrollToBottom)
 
 const sendMessage = async () => {
   if (!userPrompt.value.trim()) return
-  videoStore.addMessage({
-    role: 'user',
-    content: userPrompt.value
-  })
+  // The store action handles adding to current thread
+  await videoStore.addMessage(userPrompt.value, 'user')
   userPrompt.value = ''
-  await videoStore.startProcessing()
+  if (videoStore.currentThreadId) {
+    await videoStore.startProcessing(videoStore.currentThreadId)
+  }
 }
 
-onMounted(() => {
-  scrollToBottom()
-  // If there's already a message (from UploadPage), start processing
-  if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
-    videoStore.startProcessing()
+onMounted(async () => {
+  const threadId = route.params.id as string
+  if (threadId) {
+    await videoStore.selectThread(threadId)
+    // If we just created it and it has 1 message (user), start processing
+    if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
+        videoStore.startProcessing(threadId)
+    }
   }
+  
+  scrollToBottom()
 })
 </script>
 
