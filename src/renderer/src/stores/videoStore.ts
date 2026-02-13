@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 export interface Attachment {
 	url: string
@@ -12,50 +12,109 @@ export interface Message {
 	content: string
 	isPending: boolean
 	files?: Attachment[]
+	createdAt: number
+}
+
+export interface Thread {
+	id: string
+	title: string
+	videoPath: string
+	preprocessing: {
+		audioPath?: string
+		lowResVideoPath?: string;
+		transcript?: any;
+	}
+	messages: Message[]
+	createdAt: number
+	updatedAt: number
 }
 
 export const useVideoStore = defineStore('video', () => {
-	const messages = ref<Message[]>([])
-	const currentVideoName = ref('')
-	const currentVideoPath = ref('')
+	const threads = ref<Thread[]>([])
+	const currentThreadId = ref<string | null>(null)
 
-	const addMessage = (message: Omit<Message, 'id' | 'isPending'> & { isPending?: boolean }) => {
-		const id = Math.random().toString(36).substring(2, 9)
-		const newMessage: Message = {
-			...message,
-			id,
-			isPending: message.isPending ?? false
-		}
-		messages.value.push(newMessage)
-		return id
+	const currentThread = computed(() =>
+		threads.value.find(t => t.id === currentThreadId.value) || null
+	)
+
+	const messages = computed(() => currentThread.value?.messages || [])
+	const currentVideoName = computed(() => currentThread.value?.title || '')
+	const currentVideoPath = computed(() => currentThread.value?.videoPath || '')
+
+	const fetchThreads = async () => {
+		threads.value = await (window as any).api.getAllThreads()
 	}
 
-	const updateMessage = (id: string, partial: Partial<Omit<Message, 'id'>>) => {
-		const index = messages.value.findIndex((m) => m.id === id)
-		if (index !== -1) {
-			messages.value[index] = { ...messages.value[index], ...partial }
+	const createThread = async (videoPath: string, videoName: string) => {
+		const newThread = await (window as any).api.createThread(videoPath, videoName)
+		threads.value.unshift(newThread)
+		currentThreadId.value = newThread.id
+		return newThread.id
+	}
+
+	const selectThread = async (id: string) => {
+		const thread = await (window as any).api.getThread(id)
+		if (thread) {
+			const index = threads.value.findIndex(t => t.id === id)
+			if (index !== -1) {
+				threads.value[index] = thread
+			} else {
+				threads.value.unshift(thread)
+			}
+			currentThreadId.value = id
 		}
+	}
+
+	const addMessage = async (content: string, role: 'user' | 'ai') => {
+		if (!currentThreadId.value) return
+
+		const message = {
+			role,
+			content,
+			isPending: role === 'ai'
+		}
+
+		const newMessage = await (window as any).api.addMessage(currentThreadId.value, message)
+
+		// Update local state
+		if (currentThread.value) {
+			currentThread.value.messages.push(newMessage)
+		}
+
+		return newMessage.id
 	}
 
 	const clearMessages = () => {
-		messages.value = []
+		// Not used in thread mode, but kept for compatibility or cleanup
 	}
 
-	const startProcessing = async (videoPath?: string) => {
-		const path = videoPath || currentVideoPath.value
-		if (!path) {
-			console.error('No video path available for processing')
-			return
-		}
+	// Used when pipeline updates status
+	const updateMessage = (id: string, partial: Partial<Omit<Message, 'id'>>) => {
+		if (!currentThread.value) return
 
-		const id = addMessage({
-			role: 'ai',
-			content: 'Initializing pipeline...',
-			isPending: true
-		})
+		const index = currentThread.value.messages.findIndex((m) => m.id === id)
+		if (index !== -1) {
+			currentThread.value.messages[index] = {
+				...currentThread.value.messages[index],
+				...partial
+			}
+		}
+	}
+
+	const startProcessing = async (threadId: string) => {
+		if (!threadId) return
+
+		// Ensure we are working with fresh data
+		await selectThread(threadId)
+
+		if (!currentThread.value) return
+
+		// Add initial AI status message
+		const id = await addMessage('Initializing pipeline...', 'ai')
 
 		if ((window as any).api) {
-			; (window as any).api.onPipelineUpdate((data: any) => {
+			// Setup listener
+			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
 				if (data.id === id) {
 					if (data.type === 'status') {
 						updateMessage(id, { content: data.content })
@@ -65,32 +124,54 @@ export const useVideoStore = defineStore('video', () => {
 							isPending: false,
 							files: data.videoFile ? [{ url: data.videoFile, type: 'actual' } as Attachment] : []
 						})
+						cleanup() // Remove listener when done
 					}
 				}
 			})
 
-			await (window as any).api.startPipeline({ messageId: id, videoPath: path })
+			await (window as any).api.startPipeline({
+				threadId,
+				messageId: id,
+				videoPath: currentThread.value.videoPath
+			})
 		}
 	}
 
-
-	const setVideoName = (name: string) => {
-		currentVideoName.value = name
+	const deleteThread = async (id: string) => {
+		const success = await (window as any).api.deleteThread(id)
+		if (success) {
+			threads.value = threads.value.filter(t => t.id !== id)
+			if (currentThreadId.value === id) {
+				currentThreadId.value = null
+			}
+		}
+		return success
 	}
 
-	const setVideoPath = (path: string) => {
-		currentVideoPath.value = path
+	const deleteAllThreads = async () => {
+		const success = await (window as any).api.deleteAllThreads()
+		if (success) {
+			threads.value = []
+			currentThreadId.value = null
+		}
+		return success
 	}
 
 	return {
+		threads,
+		currentThreadId,
+		currentThread,
 		messages,
 		currentVideoName,
-		currentVideoPath,
+
+		fetchThreads,
+		createThread,
+		selectThread,
 		addMessage,
-		updateMessage,
 		clearMessages,
 		startProcessing,
-		setVideoName,
-		setVideoPath
+		deleteThread,
+		deleteAllThreads,
+		updateMessage
 	}
 })

@@ -8,15 +8,19 @@ export interface PipelineContext {
 	finish: (message: string, videoFile?: string) => void;
 }
 
-export class Pipeline {
-	private steps: PipelineFunction[] = [];
-	private currentStepIndex = 0;
-	private browserWindow: BrowserWindow;
-	private aiMessageId: string;
+import { threadManager } from '../threads'
 
-	constructor(browserWindow: BrowserWindow, aiMessageId: string) {
-		this.browserWindow = browserWindow;
-		this.aiMessageId = aiMessageId;
+export class Pipeline {
+	private steps: PipelineFunction[] = []
+	private currentStepIndex = 0
+	private browserWindow: BrowserWindow
+	private messageId: string
+	private threadId: string
+
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string) {
+		this.browserWindow = browserWindow
+		this.messageId = messageId
+		this.threadId = threadId
 	}
 
 	register(fn: PipelineFunction): this {
@@ -39,25 +43,49 @@ export class Pipeline {
 		const fn = this.steps[this.currentStepIndex];
 		const context: PipelineContext = {
 			updateStatus: (status: string) => {
+				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {
-					id: this.aiMessageId,
+					id: this.messageId,
 					type: 'status',
 					content: status
-				});
+				})
+
+				// Persist to Thread
+				if (this.threadId) {
+					threadManager.updateMessageInThread(this.threadId, this.messageId, {
+						content: status,
+						isPending: true
+					})
+				}
 			},
 			next: (nextData: any) => {
-				this.currentStepIndex++;
-				this.runStep(nextData);
+				this.currentStepIndex++
+				this.runStep(nextData)
 			},
 			finish: (message: string, videoFile?: string) => {
+				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
-					id: this.aiMessageId,
+					id: this.messageId,
 					type: 'finish',
 					content: message,
 					videoFile
-				});
+				})
+
+				// Persist to Thread
+				if (this.threadId) {
+					const updates: any = {
+						content: message,
+						isPending: false
+					}
+
+					if (videoFile) {
+						updates.files = [{ url: videoFile, type: 'actual' }]
+					}
+
+					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
+				}
 			}
-		};
+		}
 
 		try {
 			await fn(data, context);

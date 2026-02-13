@@ -3,6 +3,11 @@
     <!-- Header: Simple -->
     <header class="p-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
       <div class="flex items-center space-x-4">
+        <button @click="handleBack" class="p-2 -ml-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+            </svg>
+        </button>
         <div class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -134,13 +139,20 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Card, Button } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
 import { useVideoStore } from '../stores/videoStore'
 
+const route = useRoute()
+const router = useRouter()
 const videoStore = useVideoStore()
 const userPrompt = ref('')
 const scrollContainer = ref<HTMLElement | null>(null)
+
+const handleBack = () => {
+    router.push('/home')
+}
 
 const scrollToBottom = async () => {
   await nextTick()
@@ -157,20 +169,25 @@ watch(() => videoStore.messages.length, scrollToBottom)
 
 const sendMessage = async () => {
   if (!userPrompt.value.trim()) return
-  videoStore.addMessage({
-    role: 'user',
-    content: userPrompt.value
-  })
+  // The store action handles adding to current thread
+  await videoStore.addMessage(userPrompt.value, 'user')
   userPrompt.value = ''
-  await videoStore.startProcessing()
+  if (videoStore.currentThreadId) {
+    await videoStore.startProcessing(videoStore.currentThreadId)
+  }
 }
 
-onMounted(() => {
-  scrollToBottom()
-  // If there's already a message (from UploadPage), start processing
-  if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
-    videoStore.startProcessing()
+onMounted(async () => {
+  const threadId = route.params.id as string
+  if (threadId) {
+    await videoStore.selectThread(threadId)
+    // If we just created it and it has 1 message (user), start processing
+    if (videoStore.messages.length === 1 && videoStore.messages[0].role === 'user') {
+        videoStore.startProcessing(threadId)
+    }
   }
+  
+  scrollToBottom()
 })
 </script>
 

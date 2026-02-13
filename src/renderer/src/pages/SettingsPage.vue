@@ -83,6 +83,31 @@
 					</Button>
 				</div>
 			</div>
+			<!-- Danger Zone -->
+			<div class="bg-white dark:bg-zinc-900 rounded-2xl border border-red-200 dark:border-red-900/30 p-6 shadow-sm">
+				<div class="flex items-center space-x-3 mb-6">
+					<div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400">
+						<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M3 6h18"/>
+							<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+							<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+						</svg>
+					</div>
+					<div>
+						<h3 class="font-bold text-red-600 dark:text-red-400">Danger Zone</h3>
+						<p class="text-xs text-red-500/70 dark:text-red-400/70">Irreversible actions</p>
+					</div>
+				</div>
+
+				<div class="space-y-4">
+					<p class="text-sm text-zinc-600 dark:text-zinc-400">
+						Permanently delete all chats, video summaries, and cached files. This action cannot be undone.
+					</p>
+					<Button @click="handleDeleteAll" variant="ghost" class="w-full border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30">
+						Delete All Data
+					</Button>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -92,8 +117,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@codebridger/lib-vue-components/elements'
 import { Input } from '@codebridger/lib-vue-components/form'
+import { useVideoStore } from '../stores/videoStore'
 
 const router = useRouter()
+const videoStore = useVideoStore()
 const tempDir = ref('')
 const apiKey = ref('')
 const initialApiKey = ref('')
@@ -122,7 +149,13 @@ const handleSaveApiKey = async () => {
 	if (apiKey.value) {
 		await (window as any).api.setGeminiApiKey(apiKey.value)
 		initialApiKey.value = apiKey.value
-		// Optional: add a toast or success feedback
+	}
+}
+
+const handleDeleteAll = async () => {
+	if (confirm('Are you sure you want to delete all data? This cannot be undone.')) {
+		await videoStore.deleteAllThreads()
+		alert('All data deleted successfully.')
 	}
 }
 
