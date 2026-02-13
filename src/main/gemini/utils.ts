@@ -89,6 +89,25 @@ function parseSRT(srt: string): TranscriptItem[] {
 }
 
 /**
+ * Generates standard SRT text from TranscriptItem array.
+ */
+export function generateSRT(items: TranscriptItem[]): string {
+	return items.map((item, index) => {
+		const start = item.start.includes(':') ? item.start : `00:${item.start}`
+		const end = item.end.includes(':') ? item.end : `00:${item.end}`
+
+		// Ensure HH:MM:SS,mmm format if possible, but keep it simple if it was already simplified
+		const formatTime = (t: string) => {
+			const parts = t.split(':')
+			if (parts.length === 2) return `00:${parts[0]}:${parts[1]},000`
+			return t.includes(',') ? t : `${t},000`
+		}
+
+		return `${index + 1}\n${formatTime(start)} --> ${formatTime(end)}\n${item.text}\n`
+	}).join('\n')
+}
+
+/**
  * Extracts a transcript from an audio file using Gemini.
  */
 export async function extractTranscriptStructured(

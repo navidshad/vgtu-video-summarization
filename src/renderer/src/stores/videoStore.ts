@@ -1,41 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { MessageRole, FileType } from '@shared/types'
+import type { Message, Attachment, Thread } from '@shared/types'
 
-export interface Attachment {
-	url: string
-	type: 'preview' | 'actual' | 'original'
-}
-
-export interface Message {
-	id: string
-	role: 'user' | 'ai'
-	content: string
-	isPending: boolean
-	files?: Attachment[]
-	timeline?: any
-	createdAt: number
-}
-
-export interface Thread {
-	id: string
-	title: string
-	videoPath: string
-	preprocessing: {
-		audioPath?: string
-		lowResVideoPath?: string;
-		transcript?: any;
-	}
-	messages: Message[]
-	createdAt: number
-	updatedAt: number
-}
 
 export const useVideoStore = defineStore('video', () => {
 	const threads = ref<Thread[]>([])
 	const currentThreadId = ref<string | null>(null)
 
 	const currentThread = computed(() =>
-		threads.value.find(t => t.id === currentThreadId.value) || null
+		threads.value.find((t: Thread) => t.id === currentThreadId.value) || null
 	)
 
 	const messages = computed(() => {
@@ -43,13 +17,13 @@ export const useVideoStore = defineStore('video', () => {
 		const msgs = [...currentThread.value.messages]
 
 		// Inject the original video into the first message if it's a user message and has no files
-		if (msgs.length > 0 && msgs[0].role === 'user' && (!msgs[0].files || msgs[0].files.length === 0) && currentThread.value.videoPath) {
+		if (msgs.length > 0 && msgs[0].role === MessageRole.User && (!msgs[0].files || msgs[0].files.length === 0) && currentThread.value.videoPath) {
 			// Create a shallow copy of the first message to avoid mutating the source of truth directly (though safe here as we cloned array)
 			// But we need to be careful not to mutate the object ref if it confuses Vue, ensuring reactivity.
 			// Actually best to return a new object for the modified message.
 			msgs[0] = {
 				...msgs[0],
-				files: [{ url: 'file://' + currentThread.value.videoPath, type: 'original' }]
+				files: [{ url: 'file://' + currentThread.value.videoPath, type: FileType.Original }]
 			}
 		}
 
@@ -73,7 +47,7 @@ export const useVideoStore = defineStore('video', () => {
 	const selectThread = async (id: string) => {
 		const thread = await (window as any).api.getThread(id)
 		if (thread) {
-			const index = threads.value.findIndex(t => t.id === id)
+			const index = threads.value.findIndex((t: Thread) => t.id === id)
 			if (index !== -1) {
 				threads.value[index] = thread
 			} else {
@@ -83,7 +57,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const addMessage = async (content: string, role: 'user' | 'ai') => {
+	const addMessage = async (content: string, role: MessageRole) => {
 		if (!currentThreadId.value) return
 
 		const message = {
@@ -128,7 +102,7 @@ export const useVideoStore = defineStore('video', () => {
 		if (!currentThread.value) return
 
 		// Add initial AI status message
-		const id = await addMessage('Initializing pipeline...', 'ai')
+		const id = await addMessage('Initializing pipeline...', MessageRole.AI)
 
 		if ((window as any).api) {
 			// Setup listener
@@ -150,8 +124,7 @@ export const useVideoStore = defineStore('video', () => {
 
 			await (window as any).api.startPipeline({
 				threadId,
-				messageId: id,
-				videoPath: currentThread.value.videoPath
+				messageId: id
 			})
 		}
 	}
@@ -159,7 +132,7 @@ export const useVideoStore = defineStore('video', () => {
 	const deleteThread = async (id: string) => {
 		const success = await (window as any).api.deleteThread(id)
 		if (success) {
-			threads.value = threads.value.filter(t => t.id !== id)
+			threads.value = threads.value.filter((t: Thread) => t.id !== id)
 			if (currentThreadId.value === id) {
 				currentThreadId.value = null
 			}

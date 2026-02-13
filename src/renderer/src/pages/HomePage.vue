@@ -60,7 +60,7 @@
 						class="group cursor-pointer hover:-translate-y-1 transition-all duration-300"
 						@click="openThread(thread.id)">
 						<Card
-							class="h-full border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow">
+							class="h-full border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
 							<div class="p-5 flex flex-col h-full">
 								<div class="flex items-start justify-between mb-4">
 									<div
@@ -72,8 +72,21 @@
 											<rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
 										</svg>
 									</div>
-									<div class="text-xs font-bold uppercase tracking-wider text-zinc-400">
-										{{ formatDate(thread.updatedAt) }}
+									<div class="flex items-center space-x-2">
+										<button @click.stop="handleDeleteThread(thread.id)"
+											class="p-2 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all opacity-0 group-hover:opacity-100"
+											title="Delete Thread">
+											<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24"
+												fill="none" stroke="currentColor" stroke-width="2"
+												stroke-linecap="round" stroke-linejoin="round">
+												<path d="M3 6h18" />
+												<path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+												<path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+											</svg>
+										</button>
+										<div class="text-xs font-bold uppercase tracking-wider text-zinc-400">
+											{{ formatDate(thread.updatedAt) }}
+										</div>
 									</div>
 								</div>
 
@@ -118,7 +131,9 @@ const loading = ref(true)
 const formatDate = (timestamp: number) => {
 	return new Date(timestamp).toLocaleDateString(undefined, {
 		month: 'short',
-		day: 'numeric'
+		day: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit'
 	})
 }
 
@@ -130,6 +145,12 @@ const getLastMessage = (thread: any) => {
 
 const openThread = (id: string) => {
 	router.push(`/chat/${id}`)
+}
+
+const handleDeleteThread = async (id: string) => {
+	if (confirm('Are you sure you want to delete this video summary and all its messages?')) {
+		await videoStore.deleteThread(id)
+	}
 }
 
 onMounted(async () => {
