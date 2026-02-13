@@ -2,6 +2,7 @@ import { PipelineFunction } from '../index'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
+import { extractTranscriptStructured, generateSRT } from '../../gemini/utils'
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -26,7 +27,7 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 }
 
 export const convertToAudio: PipelineFunction = async (data, context) => {
-	const videoPath = data.videoPath || context.videoPath
+	const videoPath = context.preprocessing.lowResVideoPath! || context.videoPath;
 	context.updateStatus('Phase 1: Converting video to audio...')
 
 	const tempDir = context.tempDir
@@ -39,7 +40,6 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	context.next({ ...data, audioPath })
 }
 
-import { extractTranscriptStructured, generateSRT } from '../../gemini/utils'
 
 export const extractTranscript: PipelineFunction = async (data, context) => {
 	const audioPath = data.audioPath || context.preprocessing.audioPath

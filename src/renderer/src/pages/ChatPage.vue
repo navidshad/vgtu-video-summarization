@@ -32,141 +32,178 @@
           class="flex flex-col animate-in slide-in-from-bottom-4 duration-500"
           :class="msg.role === MessageRole.User ? 'items-end' : 'items-start'">
 
-          <!-- Message Bubble -->
-          <Card :class="[
-            '!rounded-2xl !p-6 shadow-sm dark:shadow-xl max-w-[80%] transition-colors',
-            msg.role === MessageRole.User
-              ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
-              : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
-            msg.isPending ? 'opacity-80' : ''
-          ]">
-            <div class="flex items-start space-x-3">
-              <div v-if="msg.isPending" class="mt-1">
-                <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
-                  viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                  </path>
-                </svg>
-              </div>
-              <div class="space-y-4 w-full">
-                <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+          <!-- Message Content Wrapper (Text + Attachments) -->
+          <div class="relative group flex flex-col gap-3"
+            :class="msg.role === MessageRole.User ? 'items-end' : 'items-start'">
 
-                <!-- Timeline Display -->
-                <div v-if="msg.timeline" class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                  <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Video Timeline</h4>
-                  <div class="space-y-2">
-                    <div v-for="(item, idx) in msg.timeline" :key="idx"
-                      class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
-                      <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time || item.timestamp
-                        }}</span>
-                      <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
+            <!-- Edit Button for AI Messages -->
+            <button v-if="msg.role === MessageRole.AI && !msg.isPending" @click="startEditing(msg.id)"
+              class="absolute left-full top-0 ml-4 flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm rounded-xl px-3 py-2 text-xs font-medium text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-10"
+              title="Branch from this result">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.2 6 3 11l-.9-2.4c-.5-1.1.2-2.4 1.3-2.9l13.2-4.8c1.1-.5 2.4.2 2.9 1.3l.7 1.8z" />
+                <path d="m6.2 5.3 3.1 3.9" />
+                <path d="m12.4 3.4 3.1 4" />
+                <path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+              </svg>
+              <span>Edit this version</span>
+            </button>
+
+            <!-- Text Message Bubble -->
+            <Card :class="[
+              '!rounded-2xl !p-6 shadow-sm dark:shadow-xl transition-colors',
+              msg.role === MessageRole.User
+                ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
+                : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
+              msg.isPending ? 'opacity-80' : ''
+            ]">
+              <div class="flex items-start space-x-3">
+                <div v-if="msg.isPending" class="mt-1">
+                  <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+                    viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                    </path>
+                  </svg>
+                </div>
+                <div class="space-y-4 w-full">
+                  <div class="flex flex-col gap-1">
+                    <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+                    <div v-if="msg.role === MessageRole.AI && !msg.isPending" class="flex justify-end">
+                      <span
+                        class="text-[10px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">v.{{
+                          msg.id.slice(0, 4) }}</span>
                     </div>
                   </div>
+
+                  <!-- Timeline Display -->
+                  <div v-if="msg.timeline" class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Video Timeline</h4>
+                    <div class="space-y-2">
+                      <div v-for="(item, idx) in msg.timeline" :key="idx"
+                        class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
+                        <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time ||
+                          item.timestamp
+                          }}</span>
+                        <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Attachments (Videos) -->
+                  <div v-if="msg.files && msg.files.length > 0" class="mt-4 space-y-3">
+                    <template v-for="file in msg.files" :key="file.url">
+                      <div
+                        class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
+                        <!-- Video Preview -->
+                        <div
+                          class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video cursor-pointer">
+                          <div
+                            class="absolute inset-0 bg-blue-500/0 group-hover/video:bg-blue-500/10 transition-colors">
+                          </div>
+
+                          <!-- Play/Preview Icon -->
+                          <div
+                            class="rounded-full flex items-center justify-center group-hover/video:scale-110 transition-transform duration-500 shadow-sm"
+                            :class="msg.role === MessageRole.User ? 'w-10 h-10 bg-white dark:bg-zinc-800 text-zinc-500' : 'w-14 h-14 bg-white/90 dark:bg-white/10 backdrop-blur-md text-zinc-800 dark:text-white'">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current"
+                              :class="msg.role === MessageRole.User ? 'w-4 h-4' : 'w-6 h-6'" viewBox="0 0 24 24"
+                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                              stroke-linejoin="round">
+                              <template v-if="msg.role === MessageRole.User">
+                                <path
+                                  d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </template>
+                              <template v-else>
+                                <path d="m7 4 12 8-12 8V4z" />
+                              </template>
+                            </svg>
+                          </div>
+                        </div>
+
+                        <!-- Footer info for AI files -->
+                        <div v-if="msg.role === MessageRole.AI"
+                          class="p-4 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
+                          <div>
+                            <h3 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">{{
+                              file.type ===
+                                FileType.Preview ? 'Preview Summary' : 'Final Summary' }}</h3>
+                            <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === FileType.Preview ?
+                              'Generating...' : 'Ready for review' }}</p>
+                          </div>
+                          <div class="flex items-center space-x-2">
+                            <Button variant="ghost"
+                              class="!px-3 !py-1.5 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
+                            <Button variant="primary"
+                              class="!px-4 !py-1.5 !h-auto text-[10px] font-bold uppercase tracking-widest">Open</Button>
+                          </div>
+                        </div>
+
+                        <!-- Simple label for User files -->
+                        <div v-else class="px-3 py-2 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
+                          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Original
+                            Video</span>
+                          <span class="text-[10px] font-bold text-blue-500 uppercase">{{ file.type }}</span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          <!-- Attachments (Videos) -->
-          <div v-if="msg.files && msg.files.length > 0" class="mt-4 flex flex-col space-y-3"
-            :class="msg.role === MessageRole.User ? 'items-end' : 'items-start'">
-            <template v-for="file in msg.files" :key="file.url">
-              <Card
-                class="!bg-white dark:!bg-zinc-900/50 border !border-zinc-200 dark:!border-zinc-800 !p-1.5 shadow-md dark:shadow-2xl backdrop-blur-sm group cursor-pointer hover:!border-blue-500/30 transition-all overflow-hidden"
-                :class="msg.role === MessageRole.User ? 'w-80 !rounded-2xl' : 'w-[420px] !rounded-3xl !p-2'">
 
-                <div
-                  class="aspect-video bg-zinc-100 dark:bg-zinc-950 flex items-center justify-center relative overflow-hidden"
-                  :class="msg.role === MessageRole.User ? 'rounded-xl' : 'rounded-2xl'">
-                  <div class="absolute inset-0 bg-blue-500/5 group-hover:bg-blue-500/10 transition-colors"></div>
-
-                  <!-- Play/Preview Icon -->
-                  <div
-                    class="rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-500"
-                    :class="msg.role === MessageRole.User ? 'w-10 h-10 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800' : 'w-16 h-16 bg-white/80 dark:bg-white/10 backdrop-blur-md border border-white/20'">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="text-zinc-500 dark:text-zinc-300"
-                      :class="msg.role === MessageRole.User ? 'w-5 h-5' : 'w-8 h-8 text-zinc-900 dark:text-white fill-current'"
-                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                      stroke-linejoin="round">
-                      <template v-if="msg.role === MessageRole.User">
-                        <path
-                          d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </template>
-                      <template v-else>
-                        <path d="m7 4 12 8-12 8V4z" />
-                      </template>
-                    </svg>
-                  </div>
-                </div>
-
-                <!-- Footer info for AI files -->
-                <div v-if="msg.role === MessageRole.AI" class="p-4 flex items-center justify-between">
-                  <div>
-                    <h3 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">{{ file.type
-                      ===
-                      FileType.Preview ?
-                      'Preview Summary' :
-                      'Final Summary' }}</h3>
-                    <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === FileType.Preview ? 'Generating...'
-                      :
-                      'Ready for review'
-                      }}</p>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <Button variant="ghost"
-                      class="!px-3 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
-                    <Button variant="primary"
-                      class="!px-4 !py-2 !h-auto text-[10px] font-bold uppercase tracking-widest">Open</Button>
-                  </div>
-                </div>
-
-                <!-- Simple label for User files -->
-                <div v-else class="px-2 py-2 flex justify-between items-center">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Original Video</span>
-                  <span class="text-[10px] font-bold text-blue-500/70 capitalize">{{ file.type }}</span>
-                </div>
-              </Card>
-            </template>
           </div>
         </div>
       </div>
     </main>
 
     <!-- Chat Input: Central Bottom -->
+    <!-- Chat Input: Central Bottom -->
     <footer
       class="p-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
-      <div class="max-w-4xl mx-auto flex items-end space-x-4">
-        <!-- Attachment Button -->
-        <button
-          class="w-14 h-14 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-all shadow-md dark:shadow-xl group">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 group-hover:rotate-12 transition-transform"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round">
-            <path
-              d="M21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.51a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
+      <div class="max-w-4xl mx-auto flex flex-col space-y-2">
+        <!-- Replying To Indicator -->
+        <div v-if="editingMessageId"
+          class="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-800 text-sm">
+          <div class="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            <span class="font-medium">Branching from previous result</span>
+          </div>
+          <button @click="cancelEdit" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
 
-        <!-- Main Input area using Textarea -->
-        <div class="flex-1 relative group">
-          <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="3"
-            class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100" />
+        <div class="flex items-end space-x-4">
+          <!-- Main Input area using Textarea -->
+          <div class="flex-1 relative group">
+            <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="3"
+              class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
 
-          <!-- Send Button (Circular) -->
-          <div class="absolute right-4 bottom-4">
-            <Button variant="primary" @click="sendMessage"
-              class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
-              <svg xmlns="http://www.w3.org/2000/svg"
-                class="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round">
-                <path d="m5 12 7-7 7 7" />
-                <path d="M12 19V5" />
-              </svg>
-            </Button>
+            <!-- Send Button (Circular) -->
+            <div class="absolute right-4 bottom-4">
+              <Button variant="primary" @click="sendMessage"
+                class="!rounded-full w-12 h-12 !p-0 flex items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-700 dark:hover:bg-zinc-200 active:scale-95 transition-all shadow-xl">
+                <svg xmlns="http://www.w3.org/2000/svg"
+                  class="w-5 h-5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <path d="m5 12 7-7 7 7" />
+                  <path d="M12 19V5" />
+                </svg>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -187,6 +224,7 @@ const router = useRouter()
 const videoStore = useVideoStore()
 const userPrompt = ref('')
 const scrollContainer = ref<HTMLElement | null>(null)
+const editingMessageId = ref<string | null>(null)
 
 const handleBack = () => {
   router.push('/home')
@@ -202,16 +240,38 @@ const scrollToBottom = async () => {
   }
 }
 
+const startEditing = (messageId: string) => {
+  editingMessageId.value = messageId
+  // Optionally maintain the user prompt or clear it? 
+  // User wants to "provide new prompt".
+  // Let's focus the textarea
+  const textarea = document.querySelector('textarea')
+  textarea?.focus()
+}
+
+const cancelEdit = () => {
+  editingMessageId.value = null
+}
+
 // Auto-scroll when new messages arrive
 watch(() => videoStore.messages.length, scrollToBottom)
 
 const sendMessage = async () => {
   if (!userPrompt.value.trim()) return
+
   // The store action handles adding to current thread
   await videoStore.addMessage(userPrompt.value, MessageRole.User)
+
+  // Capture the context ID *before* clearing it
+  const contextId = editingMessageId.value
+
+  // Reset UI state
   userPrompt.value = ''
+  editingMessageId.value = null
+
   if (videoStore.currentThreadId) {
-    await videoStore.startProcessing(videoStore.currentThreadId)
+    // Pass the captured context ID (if any) to startProcessing
+    await videoStore.startProcessing(videoStore.currentThreadId, contextId || undefined)
   }
 }
 
