@@ -33,9 +33,31 @@
             msg.role === 'user'
               ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
               : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
-            msg.isPending ? 'opacity-50 animate-pulse' : ''
+            msg.isPending ? 'opacity-80' : ''
           ]">
-            <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+            <div class="flex items-start space-x-3">
+              <div v-if="msg.isPending" class="mt-1">
+                <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <div class="space-y-4 w-full">
+                <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+
+                <!-- Timeline Display -->
+                <div v-if="msg.timeline" class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                  <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Video Timeline</h4>
+                  <div class="space-y-2">
+                    <div v-for="(item, idx) in msg.timeline" :key="idx" 
+                         class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
+                      <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time || item.timestamp }}</span>
+                      <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </Card>
 
           <!-- Attachments (Videos) -->

@@ -5,7 +5,7 @@ export type PipelineFunction = (data: any, context: PipelineContext) => Promise<
 export interface PipelineContext {
 	updateStatus: (status: string) => void;
 	next: (data: any) => void;
-	finish: (message: string, videoFile?: string) => void;
+	finish: (message: string, video?: { path: string; type: 'preview' | 'actual' }, timeline?: any) => void;
 }
 
 import { threadManager } from '../threads'
@@ -62,24 +62,26 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: (message: string, videoFile?: string) => {
+			finish: (message: string, video?: { path: string; type: 'preview' | 'actual' }, timeline?: any) => {
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
 					type: 'finish',
 					content: message,
-					videoFile
+					video,
+					timeline
 				})
 
 				// Persist to Thread
 				if (this.threadId) {
 					const updates: any = {
 						content: message,
-						isPending: false
+						isPending: false,
+						timeline
 					}
 
-					if (videoFile) {
-						updates.files = [{ url: videoFile, type: 'actual' }]
+					if (video) {
+						updates.files = [{ url: video.path, type: video.type }]
 					}
 
 					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)

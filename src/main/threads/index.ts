@@ -9,7 +9,8 @@ export interface Message {
 	role: 'user' | 'ai'
 	content: string
 	isPending: boolean
-	files?: { url: string; type: 'preview' | 'actual' }[]
+	files?: { url: string; type: 'preview' | 'actual' | 'original' }[]
+	timeline?: any
 	createdAt: number
 }
 
@@ -132,7 +133,7 @@ class ThreadManager {
 			for (const file of files) {
 				fs.unlinkSync(path.join(this.threadsDir, file))
 			}
-            // Also clean up temp directory if needed, but for now just threads
+			// Also clean up temp directory if needed, but for now just threads
 			return true
 		} catch (error) {
 			console.error('Failed to delete all threads:', error)
@@ -140,38 +141,38 @@ class ThreadManager {
 		}
 	}
 
-    // Helper to add a message to a thread
-    addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Message | null {
-        const thread = this.getThread(threadId)
-        if (!thread) return null
+	// Helper to add a message to a thread
+	addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Message | null {
+		const thread = this.getThread(threadId)
+		if (!thread) return null
 
-        const fullMessage: Message = {
-            id: uuidv4(),
-            createdAt: Date.now(),
-            ...message
-        }
+		const fullMessage: Message = {
+			id: uuidv4(),
+			createdAt: Date.now(),
+			...message
+		}
 
-        thread.messages.push(fullMessage)
-        thread.updatedAt = Date.now()
-        
-        fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
-        return fullMessage
-    }
+		thread.messages.push(fullMessage)
+		thread.updatedAt = Date.now()
 
-    // Update specific message in a thread
-    updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): boolean {
-        const thread = this.getThread(threadId)
-        if (!thread) return false
+		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		return fullMessage
+	}
 
-        const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-        if (msgIndex === -1) return false
+	// Update specific message in a thread
+	updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): boolean {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
 
-        thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
-        thread.updatedAt = Date.now()
+		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
+		if (msgIndex === -1) return false
 
-        fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
-        return true
-    }
+		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
+		thread.updatedAt = Date.now()
+
+		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		return true
+	}
 }
 
 export const threadManager = new ThreadManager()

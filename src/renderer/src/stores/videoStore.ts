@@ -12,6 +12,7 @@ export interface Message {
 	content: string
 	isPending: boolean
 	files?: Attachment[]
+	timeline?: any
 	createdAt: number
 }
 
@@ -139,7 +140,8 @@ export const useVideoStore = defineStore('video', () => {
 						updateMessage(id, {
 							content: data.content,
 							isPending: false,
-							files: data.videoFile ? [{ url: data.videoFile, type: 'actual' } as Attachment] : []
+							files: data.video ? [{ url: data.video.path, type: data.video.type } as Attachment] : [],
+							timeline: data.timeline
 						})
 						cleanup() // Remove listener when done
 					}
