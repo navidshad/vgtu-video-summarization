@@ -206,6 +206,25 @@ class ThreadManager {
 		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
 		return true
 	}
+	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
+	resetPendingMessages(): void {
+		const threads = this.getAllThreads()
+		for (const thread of threads) {
+			let hasChanges = false
+			for (const msg of thread.messages) {
+				if (msg.isPending) {
+					msg.isPending = false
+					msg.content += ' (Interrupted)'
+					hasChanges = true
+				}
+			}
+
+			if (hasChanges) {
+				thread.updatedAt = Date.now()
+				fs.writeFileSync(this.getThreadPath(thread.id), JSON.stringify(thread, null, 2))
+			}
+		}
+	}
 }
 
 export const threadManager = new ThreadManager()

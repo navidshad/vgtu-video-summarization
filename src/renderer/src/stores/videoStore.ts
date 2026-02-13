@@ -93,13 +93,19 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const startProcessing = async (threadId: string) => {
+	const startProcessing = async (threadId: string, contextMessageId?: string) => {
 		if (!threadId) return
 
 		// Ensure we are working with fresh data
 		await selectThread(threadId)
 
 		if (!currentThread.value) return
+
+		// Identify the user message that triggered this processing (usually the last one before we add the AI placeholder)
+		// If contextMessageId is NOT provided, we default to using the latest user message as the context point.
+		// The backend can then walk back from there to find the relevant timeline.
+		const defaultContextId = currentThread.value.messages[currentThread.value.messages.length - 1]?.id
+		const finalContextId = contextMessageId || defaultContextId
 
 		// Add initial AI status message
 		const id = await addMessage('Initializing pipeline...', MessageRole.AI)
@@ -124,7 +130,8 @@ export const useVideoStore = defineStore('video', () => {
 
 			await (window as any).api.startPipeline({
 				threadId,
-				messageId: id
+				messageId: id,
+				contextMessageId: finalContextId
 			})
 		}
 	}
