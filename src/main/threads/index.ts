@@ -3,25 +3,13 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message } from '@shared/types'
+import type { Message, Thread } from '@shared/types'
+import { settingsManager } from '../settings'
 
 // Re-export needed types for consumers (if any, though shared is better)
 export { MessageRole, FileType }
 export type { Message }
 
-export interface Thread {
-	id: string
-	title: string
-	videoPath: string
-	preprocessing: {
-		audioPath?: string
-		lowResVideoPath?: string;
-		transcript?: any; // Structured transcript
-	}
-	messages: Message[]
-	createdAt: number
-	updatedAt: number
-}
 
 class ThreadManager {
 	private threadsDir: string
@@ -49,6 +37,7 @@ class ThreadManager {
 			title: videoName,
 			videoPath,
 			preprocessing: {},
+			tempDir: settingsManager.getThreadTempDir(id),
 			messages: [],
 			createdAt: Date.now(),
 			updatedAt: Date.now()
@@ -126,6 +115,16 @@ class ThreadManager {
 		if (thread.preprocessing) {
 			this.deleteFile(thread.preprocessing.audioPath || '')
 			this.deleteFile(thread.preprocessing.lowResVideoPath || '')
+			this.deleteFile(thread.preprocessing.srtPath || '')
+		}
+
+		// Delete thread temp directory
+		if (thread.tempDir && fs.existsSync(thread.tempDir)) {
+			try {
+				fs.rmSync(thread.tempDir, { recursive: true, force: true })
+			} catch (error) {
+				console.error(`Failed to delete thread temp dir ${thread.tempDir}:`, error)
+			}
 		}
 
 		// Delete message files (excluding original)

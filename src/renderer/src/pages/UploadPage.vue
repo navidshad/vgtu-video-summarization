@@ -2,10 +2,12 @@
   <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8 relative">
     <!-- Back Button -->
     <div class="absolute top-0 left-0 p-6">
-      <button @click="router.back()" 
+      <button @click="router.back()"
         class="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 shadow-sm active:scale-95 group">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m15 18-6-6 6-6"/>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="m15 18-6-6 6-6" />
         </svg>
       </button>
     </div>
@@ -79,6 +81,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
+import { MessageRole } from '@shared/types'
 import { useVideoStore } from '../stores/videoStore'
 
 const router = useRouter()
@@ -107,10 +110,10 @@ const startCreation = async () => {
   if (fileSelected.value && prompt.value.trim()) {
     // 1. Create a new thread
     const threadId = await videoStore.createThread(filePath.value, fileName.value)
-    
+
     // 2. Add the user message
-    await videoStore.addMessage(prompt.value.trim(), 'user')
-    
+    await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
+
     // 3. Navigate to chat with thread ID
     router.push(`/chat/${threadId}`)
   }

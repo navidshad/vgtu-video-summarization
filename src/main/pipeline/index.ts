@@ -1,15 +1,20 @@
 import { BrowserWindow } from 'electron'
-import { FileType } from '../../shared/types'
+import { FileType, Thread } from '../../shared/types'
 
 export type PipelineFunction = (data: any, context: PipelineContext) => Promise<void> | void;
+
+import { threadManager } from '../threads'
 
 export interface PipelineContext {
 	updateStatus: (status: string) => void;
 	next: (data: any) => void;
 	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => void;
+	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
+	threadId: string;
+	videoPath: string;
+	tempDir: string;
+	preprocessing: Thread['preprocessing'];
 }
-
-import { threadManager } from '../threads'
 
 export class Pipeline {
 	private steps: PipelineFunction[] = []
@@ -41,8 +46,18 @@ export class Pipeline {
 			return;
 		}
 
+		const thread = threadManager.getThread(this.threadId)
+		if (!thread) {
+			console.error(`Thread ${this.threadId} not found during pipeline execution`)
+			return
+		}
+
 		const fn = this.steps[this.currentStepIndex];
 		const context: PipelineContext = {
+			threadId: this.threadId,
+			videoPath: thread.videoPath,
+			tempDir: thread.tempDir,
+			preprocessing: thread.preprocessing,
 			updateStatus: (status: string) => {
 				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {
@@ -57,6 +72,19 @@ export class Pipeline {
 						content: status,
 						isPending: true
 					})
+				}
+			},
+			savePreprocessing: (updates: Partial<Thread['preprocessing']>) => {
+				if (this.threadId) {
+					const currentThread = threadManager.getThread(this.threadId)
+					if (currentThread) {
+						threadManager.updateThread(this.threadId, {
+							preprocessing: {
+								...(currentThread.preprocessing || {}),
+								...updates
+							}
+						})
+					}
 				}
 			},
 			next: (nextData: any) => {

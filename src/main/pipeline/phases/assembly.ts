@@ -1,3 +1,4 @@
+import { FileType } from '../../../shared/types'
 import { PipelineFunction } from '../index'
 
 export const splitVideoParts: PipelineFunction = async (data, context) => {
@@ -11,6 +12,6 @@ export const joinVideoParts: PipelineFunction = async (data, context) => {
 	await new Promise(resolve => setTimeout(resolve, 2000))
 	context.finish('Processing complete. Your video summary is ready.', {
 		path: 'final_summary.mp4',
-		type: 'actual'
+		type: FileType.Actual
 	})
 }
