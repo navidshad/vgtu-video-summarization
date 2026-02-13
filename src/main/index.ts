@@ -102,6 +102,14 @@ app.whenReady().then(() => {
 		await shell.openPath(dir)
 	})
 
+	ipcMain.handle('get-gemini-api-key', () => {
+		return settingsManager.getGeminiApiKey()
+	})
+
+	ipcMain.handle('set-gemini-api-key', (_event, key: string) => {
+		settingsManager.setGeminiApiKey(key)
+	})
+
 	app.on('activate', function () {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow()
 	})

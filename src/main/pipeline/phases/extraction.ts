@@ -36,10 +36,19 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	context.next({ ...data, audioPath })
 }
 
+import { extractTranscriptStructured } from '../../gemini/utils'
+
 export const extractTranscript: PipelineFunction = async (data, context) => {
+	const { audioPath } = data
+
 	context.updateStatus('Phase 1: Extracting transcript and time data...')
-	await new Promise((resolve) => setTimeout(resolve, 2000))
-	context.next(data)
+
+	const transcript = await extractTranscriptStructured(audioPath)
+
+	console.log('Transcript extracted:', transcript)
+
+	context.updateStatus('Phase 1: Transcript extracted successfully.')
+	context.next({ ...data, transcript })
 }
 
 export const extractSceneTiming: PipelineFunction = async (data, context) => {

@@ -11,7 +11,9 @@ const api = {
 	},
 	getTempDir: () => ipcRenderer.invoke('get-temp-dir'),
 	setTempDir: () => ipcRenderer.invoke('set-temp-dir'),
-	openTempDir: () => ipcRenderer.invoke('open-temp-dir')
+	openTempDir: () => ipcRenderer.invoke('open-temp-dir'),
+	getGeminiApiKey: () => ipcRenderer.invoke('get-gemini-api-key'),
+	setGeminiApiKey: (key: string) => ipcRenderer.invoke('set-gemini-api-key', key)
 }
 
 if (process.contextIsolated) {
