@@ -2,10 +2,12 @@ import { app, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
-import { Message, MessageRole, FileType } from '../../shared/types'
+import { MessageRole, FileType } from '@shared/types'
+import type { Message } from '@shared/types'
 
 // Re-export needed types for consumers (if any, though shared is better)
-export { Message, MessageRole, FileType }
+export { MessageRole, FileType }
+export type { Message }
 
 export interface Thread {
 	id: string
