@@ -2,17 +2,10 @@ import { app, shell } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { Message, MessageRole, FileType } from '../../shared/types'
 
-// Define the Thread interface (matching what will be used in frontend)
-export interface Message {
-	id: string
-	role: 'user' | 'ai'
-	content: string
-	isPending: boolean
-	files?: { url: string; type: 'preview' | 'actual' | 'original' }[]
-	timeline?: any
-	createdAt: number
-}
+// Re-export needed types for consumers (if any, though shared is better)
+export { Message, MessageRole, FileType }
 
 export interface Thread {
 	id: string
@@ -114,12 +107,47 @@ class ThreadManager {
 		return updatedThread
 	}
 
+	private deleteFile(filePath: string) {
+		if (!filePath) return
+		const cleanPath = filePath.replace('file://', '')
+		if (fs.existsSync(cleanPath)) {
+			try {
+				fs.unlinkSync(cleanPath)
+			} catch (error) {
+				console.error(`Failed to delete file ${cleanPath}:`, error)
+			}
+		}
+	}
+
+	private deleteThreadArtifacts(thread: Thread) {
+		// Delete preprocessing files
+		if (thread.preprocessing) {
+			this.deleteFile(thread.preprocessing.audioPath || '')
+			this.deleteFile(thread.preprocessing.lowResVideoPath || '')
+		}
+
+		// Delete message files (excluding original)
+		for (const msg of thread.messages) {
+			if (msg.files) {
+				for (const file of msg.files) {
+					if (file.type !== FileType.Original) {
+						this.deleteFile(file.url)
+					}
+				}
+			}
+		}
+	}
+
 	// Delete a thread and its file
 	deleteThread(id: string): boolean {
+		const thread = this.getThread(id)
+		if (thread) {
+			this.deleteThreadArtifacts(thread)
+		}
+
 		const filePath = this.getThreadPath(id)
 		if (fs.existsSync(filePath)) {
 			fs.unlinkSync(filePath)
-			// TODO: Optionally delete associated artifacts if they are stored in a thread-specific folder
 			return true
 		}
 		return false
@@ -128,12 +156,16 @@ class ThreadManager {
 	// NEW: Delete all threads
 	deleteAllThreads(): boolean {
 		try {
+			const threads = this.getAllThreads()
+			for (const thread of threads) {
+				this.deleteThreadArtifacts(thread)
+			}
+
 			this.ensureThreadsDir()
 			const files = fs.readdirSync(this.threadsDir)
 			for (const file of files) {
 				fs.unlinkSync(path.join(this.threadsDir, file))
 			}
-			// Also clean up temp directory if needed, but for now just threads
 			return true
 		} catch (error) {
 			console.error('Failed to delete all threads:', error)

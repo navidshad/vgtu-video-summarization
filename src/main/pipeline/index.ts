@@ -1,11 +1,12 @@
 import { BrowserWindow } from 'electron'
+import { FileType } from '../../shared/types'
 
 export type PipelineFunction = (data: any, context: PipelineContext) => Promise<void> | void;
 
 export interface PipelineContext {
 	updateStatus: (status: string) => void;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: 'preview' | 'actual' }, timeline?: any) => void;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => void;
 }
 
 import { threadManager } from '../threads'
@@ -62,7 +63,7 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: (message: string, video?: { path: string; type: 'preview' | 'actual' }, timeline?: any) => {
+			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => {
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
