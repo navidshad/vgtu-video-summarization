@@ -22,6 +22,29 @@ Rules:
 - Respond ONLY with the SRT content. 
 - Do not include any preamble, conversational text, or markdown code blocks.`
 
+const TRANSCRIPT_CORRECTION_PROMPT = `You are an expert transcriber. I am providing you with an audio file and an initial transcript (in SRT format) that was generated for it. 
+Your task is to review the transcript against the audio and correct any errors (mishearings, missing words, incorrect timestamps).
+
+If the initial transcript is already 100% accurate, set "isCorrect" to true.
+If there are errors, set "isCorrect" to false and provide the FULL corrected transcript in SRT format in the "correctedTranscript" field.
+
+Initial Transcript:
+{{transcript}}`
+
+interface CorrectionResponse {
+	isCorrect: boolean
+	correctedTranscript?: string
+}
+
+const CORRECTION_SCHEMA = {
+	type: 'object',
+	properties: {
+		isCorrect: { type: 'boolean', description: 'True if the initial transcript is perfectly accurate, false otherwise.' },
+		correctedTranscript: { type: 'string', description: 'The full corrected transcript in SRT format. Leave empty if isCorrect is true.' }
+	},
+	required: ['isCorrect']
+}
+
 /**
  * Parses SRT text into TranscriptItem array.
  */
@@ -118,21 +141,35 @@ export async function extractTranscriptStructured(
 	console.log('Uploading audio to Gemini:', audioPath)
 	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 
-	console.log('Generating transcript from audio (SRT format)...')
-	const srtText = await adapter.generateTextFromFiles(
+	console.log('Generating initial transcript from audio (SRT format)...')
+	const initialSrtText = await adapter.generateTextFromFiles(
 		TRANSCRIPT_PROMPT,
 		[fileUri]
 	)
 
-	// console.log('Gemini SRT response:', srtText)
-	const transcript = parseSRT(srtText)
+	console.log('Verifying and correcting transcript...')
+	const correctionResult = await adapter.generateStructuredFromFiles<CorrectionResponse>(
+		TRANSCRIPT_CORRECTION_PROMPT.replace('{{transcript}}', initialSrtText),
+		[fileUri],
+		CORRECTION_SCHEMA
+	)
 
-	if (transcript.length === 0 && srtText.trim() !== '') {
+	let finalSrtText = initialSrtText
+	if (!correctionResult.isCorrect && correctionResult.correctedTranscript) {
+		console.log('Corrected transcript received.')
+		finalSrtText = correctionResult.correctedTranscript
+	} else {
+		console.log('Transcript verified as accurate.')
+	}
+
+	const transcript = parseSRT(finalSrtText)
+
+	if (transcript.length === 0 && finalSrtText.trim() !== '') {
 		console.warn('Failed to parse any segments from SRT response. Returning raw text as single segment.')
 		return [{
 			start: '00:00',
 			end: '00:00',
-			text: srtText
+			text: finalSrtText
 		}]
 	}
 

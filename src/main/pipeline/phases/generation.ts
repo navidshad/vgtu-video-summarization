@@ -33,6 +33,11 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       baseTimeline
     )
 
+    if (shorterTimeline.length === 0) {
+      context.finish('Failed to generate timeline.', undefined, [])
+      return;
+    }
+
     // Finish Pipeline with the generated timeline
     context.updateStatus('Processing complete. Short timeline generated.')
 
