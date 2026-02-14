@@ -154,8 +154,9 @@ export async function extractRawTranscript(
 
 	console.log('Generating raw transcript from audio (SRT format)...')
 	const rawSrtText = await adapter.generateTextFromFiles(
-		TRANSCRIPT_PROMPT,
+		'Generate the SRT for this audio.',
 		[fileUri],
+		TRANSCRIPT_PROMPT,
 		GEMINI_MODEL
 	)
 
@@ -174,10 +175,15 @@ export async function correctTranscript(
 	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 
 	console.log('Verifying and correcting transcript...')
+
+	// Remove the transcript placeholder part from system instruction
+	const systemInstruction = TRANSCRIPT_CORRECTION_PROMPT.split('Initial Transcript:')[0].trim();
+
 	const correctionResult = await adapter.generateStructuredFromFiles<CorrectionResponse>(
-		TRANSCRIPT_CORRECTION_PROMPT.replace('{{transcript}}', rawSrt),
+		`Initial Transcript:\n${rawSrt}`,
 		[fileUri],
 		CORRECTION_SCHEMA,
+		systemInstruction,
 		GEMINI_MODEL
 	)
 

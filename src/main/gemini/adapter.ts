@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
 import { GEMINI_MODEL } from '../constants/gemini';
 import { settingsManager } from '../settings';
 
@@ -26,11 +26,23 @@ export class GeminiAdapter {
 	/**
 	 * Generates a non-structured result from Gemini.
 	 */
-	async generateText(prompt: string, modelName: string = GEMINI_MODEL): Promise<string> {
-		const response = await this.client.models.generateContent({
+	async generateText(
+		userPrompt: string,
+		systemInstruction?: string,
+		modelName: string = GEMINI_MODEL
+	): Promise<string> {
+		const request: GenerateContentParameters = {
 			model: modelName,
-			contents: [{ role: 'user', parts: [{ text: prompt }] }]
-		});
+			contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
+		};
+
+		if (systemInstruction) {
+			request.config = {
+				systemInstruction: systemInstruction
+			};
+		}
+
+		const response = await this.client.models.generateContent(request);
 
 		return response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 	}
@@ -39,18 +51,25 @@ export class GeminiAdapter {
 	 * Generates a structured result (JSON) from Gemini based on a schema.
 	 */
 	async generateStructuredText<T>(
-		prompt: string,
+		userPrompt: string,
 		schema: any,
+		systemInstruction?: string,
 		modelName: string = GEMINI_MODEL
 	): Promise<T> {
-		const response = await this.client.models.generateContent({
+		const request: GenerateContentParameters = {
 			model: modelName,
-			contents: [{ role: 'system', parts: [{ text: prompt }] }],
+			contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
 			config: {
 				responseMimeType: 'application/json',
 				responseSchema: schema
 			}
-		});
+		};
+
+		if (systemInstruction) {
+			request.config!.systemInstruction = systemInstruction;
+		}
+
+		const response = await this.client.models.generateContent(request);
 
 		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
@@ -81,8 +100,9 @@ export class GeminiAdapter {
 	 * Generates a text result from Gemini using files.
 	 */
 	async generateTextFromFiles(
-		prompt: string,
+		userPrompt: string,
 		fileUris: string[],
+		systemInstruction?: string,
 		modelName: string = GEMINI_MODEL
 	): Promise<string> {
 		const contents = [
@@ -90,15 +110,23 @@ export class GeminiAdapter {
 				role: 'user',
 				parts: [
 					...fileUris.map((uri) => ({ fileData: { fileUri: uri, mimeType: 'audio/mpeg' } })),
-					{ text: prompt }
+					{ text: userPrompt }
 				]
 			}
 		];
 
-		const response = await this.client.models.generateContent({
+		const request: GenerateContentParameters = {
 			model: modelName,
 			contents
-		});
+		};
+
+		if (systemInstruction) {
+			request.config = {
+				systemInstruction: systemInstruction
+			};
+		}
+
+		const response = await this.client.models.generateContent(request);
 
 		return response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 	}
@@ -107,9 +135,10 @@ export class GeminiAdapter {
 	 * Generates a structured result (JSON) from Gemini based on files and a prompt.
 	 */
 	async generateStructuredFromFiles<T>(
-		prompt: string,
+		userPrompt: string,
 		fileUris: string[],
 		schema: any,
+		systemInstruction?: string,
 		modelName: string = GEMINI_MODEL
 	): Promise<T> {
 		const contents = [
@@ -117,19 +146,25 @@ export class GeminiAdapter {
 				role: 'user',
 				parts: [
 					...fileUris.map(uri => ({ fileData: { fileUri: uri, mimeType: 'audio/mpeg' } })), // Defaulting to audio/mpeg as per task
-					{ text: prompt }
+					{ text: userPrompt }
 				]
 			}
 		];
 
-		const response = await this.client.models.generateContent({
+		const request: GenerateContentParameters = {
 			model: modelName,
 			contents,
 			config: {
 				responseMimeType: 'application/json',
 				responseSchema: schema
 			}
-		});
+		};
+
+		if (systemInstruction) {
+			request.config!.systemInstruction = systemInstruction;
+		}
+
+		const response = await this.client.models.generateContent(request);
 
 		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 

@@ -6,17 +6,9 @@ import { TranscriptItem, parseSRT, generateSRT } from '../../gemini/utils'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 
-const INTENT_PROMPT = `
-START OF TRANSCRIPT (keep in mind as reference):
-{{transcript}}
-END OF TRANSCRIPT
-
+const INTENT_SYSTEM_INSTRUCTION = `
 Model Role:
 You are an AI assistant for a video summarization tool. Your goal is to understand the user's intent based on their latest message, the conversation history, and the video transcript.
-
-Conversation History:
-{{context}}
-END OF CONVERSATION HISTORY
 
 Task:
 You must decide between two types of actions:
@@ -26,10 +18,6 @@ You must decide between two types of actions:
 If the user wants a summary ("generate-timeline"), you must also determine the desired duration in seconds.
 - If the user specifies a duration (e.g., "10 seconds"), use that.
 - If the user does NOT specify a duration, decide on a reasonable duration based on the video length and complexity (default to 30-60s for medium videos, or up to 5 minutes for very long ones).
-
-
-The original video is approximately {{videoDuration}} seconds long.
-
 
 Respond ONLY with a JSON object following this schema:
 {
@@ -65,16 +53,24 @@ export const determineIntent: PipelineFunction = async (data, context) => {
 	// Get video duration from ffmpeg (source of truth)
 	const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
 
-	const prompt = INTENT_PROMPT
-		.replace('{{videoDuration}}', videoDuration.toString())
-		.replace('{{context}}', context.context)
-		.replace('{{transcript}}', rawSrt)
+	const userPrompt = `
+The original video is approximately ${videoDuration} seconds long.
+
+START OF TRANSCRIPT (keep in mind as reference):
+${rawSrt}
+END OF TRANSCRIPT
+
+Conversation History:
+${context.context}
+END OF CONVERSATION HISTORY
+`
 
 	try {
 		const adapter = GeminiAdapter.create()
 		const result = await adapter.generateStructuredText<IntentResult>(
-			prompt,
+			userPrompt,
 			INTENT_SCHEMA,
+			INTENT_SYSTEM_INSTRUCTION,
 			GEMINI_MODEL
 		)
 
