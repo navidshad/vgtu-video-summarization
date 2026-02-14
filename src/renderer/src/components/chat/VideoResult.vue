@@ -1,0 +1,52 @@
+<template>
+	<div class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
+		<!-- Video Preview -->
+		<div
+			class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
+			<video :src="getMediaUrl(file.url)" controls class="w-full h-full object-contain"
+				preload="metadata"></video>
+		</div>
+
+		<!-- Footer info for AI files -->
+		<div v-if="role === MessageRole.AI"
+			class="p-3 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
+			<div>
+				<h3 class="text-[10px] font-bold text-zinc-900 dark:text-white uppercase tracking-widest leading-none">
+					{{ file.type === FileType.Preview ? 'Preview Summary' : 'Final Summary' }}
+				</h3>
+				<p class="text-[9px] text-zinc-500 font-medium mt-1 leading-none">
+					{{ file.type === FileType.Preview ? 'Generating...' : 'Ready' }}
+				</p>
+			</div>
+			<div class="flex gap-2">
+				<Button variant="primary" @click="$emit('save', file.url)"
+					class="!px-3 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest">
+					Save
+				</Button>
+			</div>
+		</div>
+
+		<!-- Simple label for User files -->
+		<div v-else class="px-2 py-1.5 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
+			<span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Original Video</span>
+			<span class="text-[9px] font-bold text-blue-500 uppercase">{{ file.type }}</span>
+		</div>
+	</div>
+</template>
+
+<script setup lang="ts">
+import { Button } from '@codebridger/lib-vue-components/elements'
+import { MessageRole, FileType, Attachment } from '@shared/types'
+
+defineProps<{
+	file: Attachment
+	role: MessageRole
+}>()
+
+defineEmits(['save'])
+
+const getMediaUrl = (path: string) => {
+	if (!path) return ''
+	return `media://${path}`
+}
+</script>
