@@ -21,7 +21,7 @@ export interface Message {
 	content: string;
 	isPending: boolean;
 	files?: Attachment[];
-	timeline?: any;
+	timeline?: TimelineSegment[];
 	createdAt: number;
 }
 
@@ -41,9 +41,9 @@ export interface Thread {
 }
 
 export interface TimelineSegment {
-  index: number
-  start: string
-  end: string
-  text: string
-  duration: number
+	index: number
+	start: string
+	end: string
+	text: string
+	duration: number
 }

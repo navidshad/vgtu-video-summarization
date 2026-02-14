@@ -1,4 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { net } from 'electron'
+import { pathToFileURL } from 'url'
 import { Pipeline } from './pipeline'
 import { settingsManager } from './settings'
 import { threadManager } from './threads'
@@ -43,6 +45,14 @@ app.whenReady().then(() => {
 		optimizer.watchWindowShortcuts(window)
 	})
 
+	// Register custom protocol for local media
+	protocol.handle('media', (request) => {
+		const url = request.url.replace('media://', '')
+		// Decoded path might be needed if there are spaces or special characters
+		const decodedPath = decodeURIComponent(url)
+		return net.fetch(pathToFileURL(decodedPath).toString())
+	})
+
 	createWindow()
 
 	ipcMain.handle('select-video', async () => {
@@ -84,8 +94,7 @@ app.whenReady().then(() => {
 			.register(extraction.extractSceneTiming)
 			.register(extraction.generateSceneDescription)
 			.register(generation.buildShorterTimeline)
-			.register(assembly.splitVideoParts)
-			.register(assembly.joinVideoParts)
+			.register(assembly.assembleSummary)
 
 		await pipeline.start({})
 	})

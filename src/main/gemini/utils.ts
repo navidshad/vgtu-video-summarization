@@ -37,12 +37,13 @@ export function parseSRT(srt: string): TranscriptItem[] {
 	const timestampRegex = /((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[.,]\d{1,3})?)\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[.,]\d{1,3})?)/
 
 	const simplifyTime = (t: string) => {
-		const timeOnly = t.split(/[.,]/)[0]
+		const [timeOnly, milli] = t.split(/[.,]/)
 		const parts = timeOnly.split(':')
+		let res = timeOnly
 		if (parts.length === 3 && (parts[0] === '00' || parts[0] === '0')) {
-			return `${parts[1]}:${parts[2]}`
+			res = `${parts[1]}:${parts[2]}`
 		}
-		return timeOnly
+		return milli ? `${res}.${milli}` : res
 	}
 
 	for (let i = 0; i < allLines.length; i++) {

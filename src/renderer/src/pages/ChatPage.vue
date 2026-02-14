@@ -84,10 +84,9 @@
                     <div class="space-y-2">
                       <div v-for="(item, idx) in msg.timeline" :key="idx"
                         class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
-                        <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time ||
-                          item.timestamp
-                        }}</span>
-                        <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
+                        <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.start }} - {{
+                          item.end }}</span>
+                        <span class="text-zinc-700 dark:text-zinc-300">{{ item.text }}</span>
                       </div>
                     </div>
                   </div>
@@ -99,29 +98,9 @@
                         class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
                         <!-- Video Preview -->
                         <div
-                          class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video cursor-pointer">
-                          <div
-                            class="absolute inset-0 bg-blue-500/0 group-hover/video:bg-blue-500/10 transition-colors">
-                          </div>
-
-                          <!-- Play/Preview Icon -->
-                          <div
-                            class="rounded-full flex items-center justify-center group-hover/video:scale-110 transition-transform duration-500 shadow-sm"
-                            :class="msg.role === MessageRole.User ? 'w-10 h-10 bg-white dark:bg-zinc-800 text-zinc-500' : 'w-14 h-14 bg-white/90 dark:bg-white/10 backdrop-blur-md text-zinc-800 dark:text-white'">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="fill-current"
-                              :class="msg.role === MessageRole.User ? 'w-4 h-4' : 'w-6 h-6'" viewBox="0 0 24 24"
-                              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                              stroke-linejoin="round">
-                              <template v-if="msg.role === MessageRole.User">
-                                <path
-                                  d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </template>
-                              <template v-else>
-                                <path d="m7 4 12 8-12 8V4z" />
-                              </template>
-                            </svg>
-                          </div>
+                          class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
+                          <video :src="getMediaUrl(file.url)" controls class="w-full h-full object-contain"
+                            preload="metadata"></video>
                         </div>
 
                         <!-- Footer info for AI files -->
@@ -272,6 +251,12 @@ const sendMessage = async () => {
     // Pass the captured context ID (if any) to startProcessing
     await videoStore.startProcessing(videoStore.currentThreadId, contextId || undefined)
   }
+}
+
+const getMediaUrl = (path: string) => {
+  if (!path) return ''
+  // Use the custom media:// protocol
+  return `media://${encodeURIComponent(path)}`
 }
 
 onMounted(async () => {
