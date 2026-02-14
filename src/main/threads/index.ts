@@ -115,7 +115,7 @@ class ThreadManager {
 		if (thread.preprocessing) {
 			this.deleteFile(thread.preprocessing.audioPath || '')
 			this.deleteFile(thread.preprocessing.lowResVideoPath || '')
-			this.deleteFile(thread.preprocessing.srtPath || '')
+			this.deleteFile(thread.preprocessing.transcriptPath || '')
 		}
 
 		// Delete thread temp directory

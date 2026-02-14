@@ -10,13 +10,15 @@ export interface TranscriptItem {
 const TRANSCRIPT_PROMPT = `Extract a detailed transcript from the provided audio in SRT (Subtitle) format.
 
 Each entry must strictly follow this format:
+"""str
 1
 00:00:01,000 --> 00:00:05,000
 Text content here.
-
+<empty line>
 2
 00:00:05,000 --> 00:00:10,000
 Next segment text.
+"""
 
 Rules:
 - Use HH:MM:SS,mmm format for timestamps.
@@ -154,7 +156,7 @@ export async function extractRawTranscript(
 	const rawSrtText = await adapter.generateTextFromFiles(
 		TRANSCRIPT_PROMPT,
 		[fileUri],
-		GEMINI_MODEL_FLASH_THINKING
+		GEMINI_MODEL
 	)
 
 	return parseSRT(rawSrtText)

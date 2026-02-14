@@ -118,10 +118,10 @@ app.whenReady().then(() => {
 
 		pipeline
 			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawSrtPath })
+			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.correctedSrtPath })
+			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.correctedTranscriptPath })
 			// .register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
 			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })

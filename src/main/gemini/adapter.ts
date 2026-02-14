@@ -45,7 +45,7 @@ export class GeminiAdapter {
 	): Promise<T> {
 		const response = await this.client.models.generateContent({
 			model: modelName,
-			contents: [{ role: 'user', parts: [{ text: prompt }] }],
+			contents: [{ role: 'system', parts: [{ text: prompt }] }],
 			config: {
 				responseMimeType: 'application/json',
 				responseSchema: schema

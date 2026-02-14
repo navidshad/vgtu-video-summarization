@@ -32,9 +32,9 @@ export interface Thread {
 	preprocessing: {
 		audioPath?: string
 		lowResVideoPath?: string;
-		srtPath?: string; // Legacy/Current combined
-		rawSrtPath?: string;
-		correctedSrtPath?: string;
+		transcriptPath?: string;
+		rawTranscriptPath?: string;
+		correctedTranscriptPath?: string;
 	}
 	tempDir: string
 	messages: Message[]

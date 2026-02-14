@@ -50,37 +50,38 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	context.updateStatus('Phase 1: Extracting raw transcript...')
 
 	const transcript = await extractRawFromGemini(audioPath)
-	const srtContent = generateSRT(transcript)
 
 	const tempDir = context.tempDir
-	const rawSrtPath = path.join(tempDir, `raw_transcript.srt`)
-	fs.writeFileSync(rawSrtPath, srtContent)
+	const rawTranscriptPath = path.join(tempDir, `raw_transcript.json`)
+	fs.writeFileSync(rawTranscriptPath, JSON.stringify(transcript, null, 2))
 
-	context.savePreprocessing({ rawSrtPath, srtPath: rawSrtPath }) // Backward compatibility
+	context.savePreprocessing({ rawTranscriptPath, transcriptPath: rawTranscriptPath })
 	context.updateStatus('Phase 1: Raw transcript extracted.')
 	context.next({ ...data, transcript })
 }
 
 export const extractCorrectedTranscript: PipelineFunction = async (data, context) => {
 	const audioPath = context.preprocessing.audioPath
-	const rawSrtPath = context.preprocessing.rawSrtPath
+	const rawTranscriptPath = context.preprocessing.rawTranscriptPath
 
-	if (!audioPath || !rawSrtPath) {
+	if (!audioPath || !rawTranscriptPath) {
 		context.next(data)
 		return
 	}
 
 	context.updateStatus('Phase 1: Correcting transcript for better accuracy...')
 
-	const rawSrt = fs.readFileSync(rawSrtPath, 'utf-8')
+	const transcriptJson = fs.readFileSync(rawTranscriptPath, 'utf-8')
+	const rawTranscript = JSON.parse(transcriptJson)
+	const rawSrt = generateSRT(rawTranscript)
+
 	const transcript = await correctFromGemini(audioPath, rawSrt)
-	const srtContent = generateSRT(transcript)
 
 	const tempDir = context.tempDir
-	const correctedSrtPath = path.join(tempDir, `corrected_transcript.srt`)
-	fs.writeFileSync(correctedSrtPath, srtContent)
+	const correctedTranscriptPath = path.join(tempDir, `corrected_transcript.json`)
+	fs.writeFileSync(correctedTranscriptPath, JSON.stringify(transcript, null, 2))
 
-	context.savePreprocessing({ correctedSrtPath, srtPath: correctedSrtPath })
+	context.savePreprocessing({ correctedTranscriptPath, transcriptPath: correctedTranscriptPath })
 	context.updateStatus('Phase 1: Transcript refined.')
 	context.next({ ...data, transcript })
 }

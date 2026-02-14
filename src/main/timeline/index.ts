@@ -1,5 +1,5 @@
 import { TimelineSegment } from '../../shared/types'
-import { parseSRT } from '../gemini/utils'
+import { TranscriptItem, generateSRT } from '../gemini/utils'
 
 export interface TimelineGenerationAdapter {
     generateText(prompt: string): Promise<string>;
@@ -7,15 +7,14 @@ export interface TimelineGenerationAdapter {
 
 export async function generateTimeline(
     userExpectation: string,
-    fullTimelineSRT: string,
+    allSegments: TranscriptItem[],
     targetDuration: number,
     geminiAdapter: TimelineGenerationAdapter,
     updateStatus: (status: string) => void,
     baseTimeline: TimelineSegment[] = []
 ): Promise<TimelineSegment[]> {
 
-    // Parse the full SRT into usable segments
-    const allSegments = parseSRT(fullTimelineSRT);
+    const fullTimelineSRT = generateSRT(allSegments);
 
     const currentShorterTimeline: TimelineSegment[] = [...baseTimeline];
     let currentDuration = calculateTotalDuration(currentShorterTimeline);

@@ -2,13 +2,23 @@ import { PipelineFunction } from '../index'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { GEMINI_MODEL } from '../../constants/gemini'
 import { IntentResult } from '../../../shared/types'
-import { TranscriptItem, parseSRT } from '../../gemini/utils'
+import { TranscriptItem, parseSRT, generateSRT } from '../../gemini/utils'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 
-const INTENT_PROMPT = `You are an AI assistant for a video summarization tool. 
-Your goal is to understand the user's intent based on their latest message, the conversation history, and the video transcript.
+const INTENT_PROMPT = `
+START OF TRANSCRIPT (keep in mind as reference):
+{{transcript}}
+END OF TRANSCRIPT
 
+Model Role:
+You are an AI assistant for a video summarization tool. Your goal is to understand the user's intent based on their latest message, the conversation history, and the video transcript.
+
+Conversation History:
+{{context}}
+END OF CONVERSATION HISTORY
+
+Task:
 You must decide between two types of actions:
 1. "text": Answer the user's question directly with text (e.g., "What is the main topic?", "Who is speaking?").
 2. "generate-timeline": signal to other part of the app to generate video.
@@ -17,13 +27,9 @@ If the user wants a summary ("generate-timeline"), you must also determine the d
 - If the user specifies a duration (e.g., "10 seconds"), use that.
 - If the user does NOT specify a duration, decide on a reasonable duration based on the video length and complexity (default to 30-60s for medium videos, or up to 5 minutes for very long ones).
 
-Video Transcript (Time-coded):
-{{transcript}}
 
 The original video is approximately {{videoDuration}} seconds long.
 
-Memory (Conversation History):
-{{context}}
 
 Respond ONLY with a JSON object following this schema:
 {
@@ -45,16 +51,16 @@ const INTENT_SCHEMA = {
 export const determineIntent: PipelineFunction = async (data, context) => {
 	context.updateStatus('Phase 2: Analyzing your request...')
 
-	const srtPath = context.preprocessing.rawSrtPath
+	const transcriptPath = context.preprocessing.rawTranscriptPath
 	let transcript: TranscriptItem[] = []
 
-	if (srtPath && fs.existsSync(srtPath)) {
-		const content = fs.readFileSync(srtPath, 'utf-8')
-		transcript = parseSRT(content)
+	if (transcriptPath && fs.existsSync(transcriptPath)) {
+		const content = fs.readFileSync(transcriptPath, 'utf-8')
+		transcript = JSON.parse(content)
 	}
 
 	// Include timestamps for better context in intent analysis
-	const rawSrt = transcript.map((t: TranscriptItem) => `[${t.start}] ${t.text}`).join('\n').substring(0, 15000);
+	const rawSrt = generateSRT(transcript);
 
 	// Get video duration from ffmpeg (source of truth)
 	const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
