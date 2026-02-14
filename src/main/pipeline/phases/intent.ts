@@ -2,7 +2,7 @@ import { PipelineFunction } from '../index'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { GEMINI_MODEL } from '../../constants/gemini'
 import { IntentResult } from '../../../shared/types'
-import { TranscriptItem, parseSRT, generateSRT } from '../../gemini/utils'
+import { TranscriptItem, generateSRT } from '../../gemini/utils'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 
@@ -12,12 +12,21 @@ You are an AI assistant for a video summarization tool. Your goal is to understa
 
 Task:
 You must decide between two types of actions:
-1. "text": Answer the user's question directly with text (e.g., "What is the main topic?", "Who is speaking?").
-2. "generate-timeline": signal to other part of the app to generate video.
+1. "text": Conversational response. Use this for general questions, proposing a summary plan, or asking for final confirmation. This is the DEFAULT and preferred action.
+2. "generate-timeline": Signal to actually build the video.
 
-If the user wants a summary ("generate-timeline"), you must also determine the desired duration in seconds.
-- If the user specifies a duration (e.g., "10 seconds"), use that.
-- If the user does NOT specify a duration, decide on a reasonable duration based on the video length and complexity (default to 30-60s for medium videos, or up to 5 minutes for very long ones).
+Confirmation Rules (STRICT ENFORCEMENT):
+- NEVER trigger "generate-timeline" for suggestive or planning phrases like "let's make a summary", "can you create a highlights clip", "how about a summary", or "I want to see the key moments", etc.
+- For any of the above, use "text" to describe what you will include in the summary (e.g. "I will create a 30s summary focusing on [X].") and ask: "Shall I proceed with generating this video?".
+- ONLY trigger "generate-timeline" if:
+    a) The user gives a direct, unambiguous COMMAND including a duration (e.g., "Generate/Create a 30s video now").
+    b) The user explicitly confirms a proposal you just made (e.g., "Yes", "Go ahead", "Do it", "Proceed").
+- If the user asks "Tell me about the video", provide a detailed text description in the chat and do NOT trigger generation.
+
+Behavioral Guidelines:
+- If "generate-timeline" is triggered, you must determine the desired duration in seconds.
+  - If specified, use that.
+  - If NOT specified, use a reasonable duration based on video length (default 30-60s).
 
 Respond ONLY with a JSON object following this schema:
 {
