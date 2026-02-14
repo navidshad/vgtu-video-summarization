@@ -62,15 +62,21 @@ app.whenReady().then(() => {
 	// Register custom protocol for local media
 	protocol.registerFileProtocol('media', (request, callback) => {
 		try {
-			// Extract the file path from the media:// URL
 			const url = new URL(request.url)
-			const filePath = decodeURIComponent(url.pathname)
+			// Consolidate hostname and pathname (handles both media://var/... and media:///var/...)
+			let rawPath = decodeURIComponent(url.hostname + url.pathname)
 
-			// Resolve to absolute path - registerFileProtocol handles range requests automatically
+			// If path already contained file:// prefix, clean it up
+			let filePath = rawPath.replace(/^file:\/+/i, '/')
+
+			if (process.platform !== 'win32' && !filePath.startsWith('/')) {
+				filePath = '/' + filePath
+			}
+
 			callback({ path: filePath })
 		} catch (error) {
 			console.error('Media protocol error:', error)
-			callback({ error: -6 }) // net::ERR_FILE_NOT_FOUND
+			callback({ error: -6 })
 		}
 	})
 
