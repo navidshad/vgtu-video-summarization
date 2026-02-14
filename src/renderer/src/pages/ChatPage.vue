@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col bg-transparent overflow-hidden text-zinc-900 dark:text-zinc-200 transition-colors">
     <!-- Header: Simple -->
     <header
-      class="p-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
+      class="py-4 px-6 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800/50 backdrop-blur-md z-10">
       <div class="flex items-center space-x-4">
         <button @click="handleBack"
           class="p-2 -ml-2 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
@@ -12,28 +12,45 @@
           </svg>
         </button>
         <div
-          class="w-10 h-10 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-zinc-500 dark:text-zinc-400" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          class="w-9 h-9 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center shadow-sm dark:shadow-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 text-zinc-500 dark:text-zinc-400"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
         </div>
         <div>
-          <h2 class="text-sm font-bold tracking-tight text-zinc-900 dark:text-white">{{ videoStore.currentVideoName ||
+          <h2 class="text-xs font-bold tracking-tight text-zinc-900 dark:text-white uppercase tracking-widest">{{
+            videoStore.currentVideoName ||
             'AI Video Assistant' }}</h2>
         </div>
       </div>
     </header>
 
     <!-- Chat Messages Stack -->
-    <main ref="scrollContainer" class="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar">
-      <div class="max-w-4xl mx-auto space-y-10">
+    <main ref="scrollContainer" class="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
+      <div class="max-w-4xl mx-auto space-y-8">
         <div v-for="(msg, i) in videoStore.messages" :key="i"
           class="flex flex-col animate-in slide-in-from-bottom-4 duration-500"
           :class="msg.role === MessageRole.User ? 'items-end' : 'items-start'">
 
+          <!-- Role Indicator -->
+          <div class="flex items-center space-x-2 mb-2 px-1"
+            :class="msg.role === MessageRole.User ? 'flex-row-reverse space-x-reverse' : 'flex-row'">
+            <div
+              class="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase tracking-wider shadow-sm"
+              :class="msg.role === MessageRole.User
+                ? 'bg-blue-500 text-white'
+                : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'">
+              {{ msg.role === MessageRole.User ? 'U' : 'AI' }}
+            </div>
+            <span class="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+              {{ msg.role === MessageRole.User ? 'You' : 'AI Assistant' }}
+            </span>
+          </div>
+
           <!-- Message Content Wrapper (Text + Attachments) -->
-          <div class="relative group flex flex-col gap-3"
+          <div class="relative group flex flex-col gap-2 w-full"
             :class="msg.role === MessageRole.User ? 'items-end' : 'items-start'">
 
             <!-- Edit Button for AI Messages -->
@@ -52,7 +69,7 @@
 
             <!-- Text Message Bubble -->
             <Card :class="[
-              '!rounded-2xl !p-6 shadow-sm dark:shadow-xl transition-colors',
+              '!rounded-2xl !p-4 shadow-sm dark:shadow-xl transition-colors w-fit max-w-[85%]',
               msg.role === MessageRole.User
                 ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
                 : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
@@ -70,65 +87,76 @@
                 </div>
                 <div class="space-y-4 w-full">
                   <div class="flex flex-col gap-1">
-                    <p class="text-[15px] leading-relaxed">{{ msg.content }}</p>
+                    <p class="text-[14px] leading-relaxed">{{ msg.content }}</p>
                     <div v-if="msg.role === MessageRole.AI && !msg.isPending" class="flex justify-end">
                       <span
-                        class="text-[10px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">v.{{
+                        class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">v.{{
                           msg.id.slice(0, 4) }}</span>
                     </div>
                   </div>
 
-                  <!-- Timeline Display -->
-                  <div v-if="msg.timeline" class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <h4 class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-3">Video Timeline</h4>
-                    <div class="space-y-2">
-                      <div v-for="(item, idx) in msg.timeline" :key="idx"
-                        class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
-                        <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.start }} - {{
-                          item.end }}</span>
-                        <span class="text-zinc-700 dark:text-zinc-300">{{ item.text }}</span>
+                  <!-- Results Section: Timeline + Video Layout -->
+                  <div v-if="(msg.timeline && msg.timeline.length > 0) || (msg.files && msg.files.length > 0)"
+                    class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col lg:flex-row gap-6">
+
+                    <!-- Video Section (Left Column on Large Screens) -->
+                    <div v-if="msg.files && msg.files.length > 0" class="flex-1 space-y-3 min-w-0">
+                      <template v-for="file in msg.files" :key="file.url">
+                        <div
+                          class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 max-w-[350px]">
+                          <!-- Video Preview -->
+                          <div
+                            class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
+                            <video :src="getMediaUrl(file.url)" controls class="w-full h-full object-contain"
+                              preload="metadata"></video>
+                          </div>
+
+                          <!-- Footer info for AI files -->
+                          <div v-if="msg.role === MessageRole.AI"
+                            class="p-3 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
+                            <div>
+                              <h3
+                                class="text-[10px] font-bold text-zinc-900 dark:text-white uppercase tracking-widest leading-none">
+                                {{
+                                  file.type ===
+                                    FileType.Preview ? 'Preview Summary' : 'Final Summary' }}</h3>
+                              <p class="text-[9px] text-zinc-500 font-medium mt-1 leading-none">{{ file.type ===
+                                FileType.Preview ?
+                                'Generating...' : 'Ready' }}</p>
+                            </div>
+                            <div class="flex gap-2">
+                              <Button variant="ghost"
+                                class="!px-2 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
+                              <Button variant="primary"
+                                class="!px-3 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest">Open</Button>
+                            </div>
+                          </div>
+
+                          <!-- Simple label for User files -->
+                          <div v-else
+                            class="px-2 py-1.5 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
+                            <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Original
+                              Video</span>
+                            <span class="text-[9px] font-bold text-blue-500 uppercase">{{ file.type }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+
+                    <!-- Timeline Section (Right Column on Large Screens) -->
+                    <div v-if="msg.timeline && msg.timeline.length > 0" class="flex-1 min-w-0 lg:max-w-[40%]">
+                      <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Video Timeline</h4>
+                      <div class="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                        <div v-for="(item, idx) in msg.timeline" :key="idx"
+                          class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
+                          <span class="font-mono text-blue-500 font-medium whitespace-nowrap">
+                            {{ item.start }} <br> {{ item.end }}
+                          </span>
+                          <span class="text-zinc-700 dark:text-zinc-300">{{ item.text }}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <!-- Attachments (Videos) -->
-                  <div v-if="msg.files && msg.files.length > 0" class="mt-4 space-y-3">
-                    <template v-for="file in msg.files" :key="file.url">
-                      <div
-                        class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
-                        <!-- Video Preview -->
-                        <div
-                          class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
-                          <video :src="getMediaUrl(file.url)" controls class="w-full h-full object-contain"
-                            preload="metadata"></video>
-                        </div>
-
-                        <!-- Footer info for AI files -->
-                        <div v-if="msg.role === MessageRole.AI"
-                          class="p-4 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
-                          <div>
-                            <h3 class="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-widest">{{
-                              file.type ===
-                                FileType.Preview ? 'Preview Summary' : 'Final Summary' }}</h3>
-                            <p class="text-[10px] text-zinc-500 font-medium">{{ file.type === FileType.Preview ?
-                              'Generating...' : 'Ready for review' }}</p>
-                          </div>
-                          <div class="flex items-center space-x-2">
-                            <Button variant="ghost"
-                              class="!px-3 !py-1.5 !h-auto text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
-                            <Button variant="primary"
-                              class="!px-4 !py-1.5 !h-auto text-[10px] font-bold uppercase tracking-widest">Open</Button>
-                          </div>
-                        </div>
-
-                        <!-- Simple label for User files -->
-                        <div v-else class="px-3 py-2 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
-                          <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Original
-                            Video</span>
-                          <span class="text-[10px] font-bold text-blue-500 uppercase">{{ file.type }}</span>
-                        </div>
-                      </div>
-                    </template>
                   </div>
                 </div>
               </div>
@@ -142,7 +170,7 @@
 
     <!-- Chat Input: Central Bottom -->
     <footer
-      class="p-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
+      class="py-6 px-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
       <div class="max-w-4xl mx-auto flex flex-col space-y-2">
         <!-- Replying To Indicator -->
         <div v-if="editingMessageId"
@@ -166,8 +194,8 @@
         <div class="flex items-end space-x-4">
           <!-- Main Input area using Textarea -->
           <div class="flex-1 relative group">
-            <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="3"
-              class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-6 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
+            <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="2"
+              class="!bg-white dark:!bg-zinc-900 border !border-zinc-200 dark:!border-zinc-800 !rounded-3xl shadow-lg dark:shadow-2xl !p-4 focus-within:!border-blue-500/50 transition-all text-sm resize-none pr-16 custom-scrollbar !text-zinc-900 dark:!text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-600" />
 
             <!-- Send Button (Circular) -->
             <div class="absolute right-4 bottom-4">
