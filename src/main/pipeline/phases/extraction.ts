@@ -2,7 +2,7 @@ import { PipelineFunction } from '../index'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
-import { extractTranscriptStructured, generateSRT } from '../../gemini/utils'
+import { extractRawTranscript as extractRawFromGemini, correctTranscript as correctFromGemini, generateSRT } from '../../gemini/utils'
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -41,23 +41,47 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 }
 
 
-export const extractTranscript: PipelineFunction = async (data, context) => {
+export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	const audioPath = data.audioPath || context.preprocessing.audioPath
 	if (!audioPath) {
 		throw new Error('Audio path not found for transcript extraction')
 	}
 
-	context.updateStatus('Phase 1: Extracting transcript and time data...')
+	context.updateStatus('Phase 1: Extracting raw transcript...')
 
-	const transcript = await extractTranscriptStructured(audioPath)
+	const transcript = await extractRawFromGemini(audioPath)
 	const srtContent = generateSRT(transcript)
 
 	const tempDir = context.tempDir
-	const srtPath = path.join(tempDir, `transcript.srt`)
-	fs.writeFileSync(srtPath, srtContent)
+	const rawSrtPath = path.join(tempDir, `raw_transcript.srt`)
+	fs.writeFileSync(rawSrtPath, srtContent)
 
-	context.savePreprocessing({ srtPath })
-	context.updateStatus('Phase 1: Transcript extracted successfully.')
+	context.savePreprocessing({ rawSrtPath, srtPath: rawSrtPath }) // Backward compatibility
+	context.updateStatus('Phase 1: Raw transcript extracted.')
+	context.next({ ...data, transcript })
+}
+
+export const extractCorrectedTranscript: PipelineFunction = async (data, context) => {
+	const audioPath = context.preprocessing.audioPath
+	const rawSrtPath = context.preprocessing.rawSrtPath
+
+	if (!audioPath || !rawSrtPath) {
+		context.next(data)
+		return
+	}
+
+	context.updateStatus('Phase 1: Correcting transcript for better accuracy...')
+
+	const rawSrt = fs.readFileSync(rawSrtPath, 'utf-8')
+	const transcript = await correctFromGemini(audioPath, rawSrt)
+	const srtContent = generateSRT(transcript)
+
+	const tempDir = context.tempDir
+	const correctedSrtPath = path.join(tempDir, `corrected_transcript.srt`)
+	fs.writeFileSync(correctedSrtPath, srtContent)
+
+	context.savePreprocessing({ correctedSrtPath, srtPath: correctedSrtPath })
+	context.updateStatus('Phase 1: Transcript refined.')
 	context.next({ ...data, transcript })
 }
 

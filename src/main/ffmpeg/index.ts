@@ -39,6 +39,22 @@ export async function getVideoResolution(filePath: string): Promise<VideoInfo> {
 }
 
 /**
+ * Gets the duration of a video file in seconds.
+ */
+export async function getVideoDuration(filePath: string): Promise<number> {
+	return new Promise((resolve, reject) => {
+		ffmpeg.ffprobe(filePath, (err, metadata) => {
+			if (err) return reject(err)
+			const duration = metadata.format.duration
+			if (duration === undefined) {
+				return reject(new Error('Duration missing from metadata'))
+			}
+			resolve(duration)
+		})
+	})
+}
+
+/**
  * Returns true if the video resolution is 480p or lower.
  */
 export async function isVideoLowResolution(filePath: string): Promise<boolean> {

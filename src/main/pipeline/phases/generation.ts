@@ -6,14 +6,14 @@ import fs from 'fs'
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Phase 2: Preparing for timeline generation...')
 
-  const srtPath = context.preprocessing?.srtPath
+  const srtPath = context.preprocessing?.correctedSrtPath || context.preprocessing?.srtPath || context.preprocessing?.rawSrtPath
   if (!srtPath || !fs.existsSync(srtPath)) {
     throw new Error('SRT file not found. Cannot generate timeline.')
   }
 
   const fullTimelineSRT = fs.readFileSync(srtPath, 'utf-8')
-  const userExpectation = context.context || "Create a highlight reel."
-  const targetDuration = 30 // Default 30 seconds as per requirements
+  const userExpectation = context.intentResult?.content || context.context || "Create a highlight reel."
+  const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
   const baseTimeline = context.baseTimeline || []
 
   try {

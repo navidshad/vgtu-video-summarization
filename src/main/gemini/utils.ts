@@ -1,4 +1,5 @@
 import { GeminiAdapter } from './adapter'
+import { GEMINI_MODEL, GEMINI_MODEL_FLASH_THINKING } from '../constants/gemini'
 
 export interface TranscriptItem {
 	start: string
@@ -140,29 +141,45 @@ export function generateSRT(items: TranscriptItem[]): string {
 }
 
 /**
- * Extracts a transcript from an audio file using Gemini.
+ * Extracts a raw transcript from an audio file using Gemini Flash.
  */
-export async function extractTranscriptStructured(
+export async function extractRawTranscript(
 	audioPath: string
 ): Promise<TranscriptItem[]> {
 	const adapter = GeminiAdapter.create()
-	console.log('Uploading audio to Gemini:', audioPath)
+	console.log('Uploading audio to Gemini for raw transcript:', audioPath)
 	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 
-	console.log('Generating initial transcript from audio (SRT format)...')
-	const initialSrtText = await adapter.generateTextFromFiles(
+	console.log('Generating raw transcript from audio (SRT format)...')
+	const rawSrtText = await adapter.generateTextFromFiles(
 		TRANSCRIPT_PROMPT,
-		[fileUri]
+		[fileUri],
+		GEMINI_MODEL_FLASH_THINKING
 	)
+
+	return parseSRT(rawSrtText)
+}
+
+/**
+ * Corrects an existing transcript using Gemini Pro.
+ */
+export async function correctTranscript(
+	audioPath: string,
+	rawSrt: string
+): Promise<TranscriptItem[]> {
+	const adapter = GeminiAdapter.create()
+	console.log('Uploading audio to Gemini for transcript correction:', audioPath)
+	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 
 	console.log('Verifying and correcting transcript...')
 	const correctionResult = await adapter.generateStructuredFromFiles<CorrectionResponse>(
-		TRANSCRIPT_CORRECTION_PROMPT.replace('{{transcript}}', initialSrtText),
+		TRANSCRIPT_CORRECTION_PROMPT.replace('{{transcript}}', rawSrt),
 		[fileUri],
-		CORRECTION_SCHEMA
+		CORRECTION_SCHEMA,
+		GEMINI_MODEL
 	)
 
-	let finalSrtText = initialSrtText
+	let finalSrtText = rawSrt
 	if (!correctionResult.isCorrect && correctionResult.correctedTranscript) {
 		console.log('Corrected transcript received.')
 		finalSrtText = correctionResult.correctedTranscript
@@ -170,16 +187,17 @@ export async function extractTranscriptStructured(
 		console.log('Transcript verified as accurate.')
 	}
 
-	const transcript = parseSRT(finalSrtText)
+	return parseSRT(finalSrtText)
+}
 
-	if (transcript.length === 0 && finalSrtText.trim() !== '') {
-		console.warn('Failed to parse any segments from SRT response. Returning raw text as single segment.')
-		return [{
-			start: '00:00',
-			end: '00:00',
-			text: finalSrtText
-		}]
-	}
-
-	return transcript
+/**
+ * Extracts a transcript from an audio file using Gemini.
+ * @deprecated Use extractRawTranscript and correctTranscript separately for better control.
+ */
+export async function extractTranscriptStructured(
+	audioPath: string
+): Promise<TranscriptItem[]> {
+	const raw = await extractRawTranscript(audioPath)
+	const rawSrt = generateSRT(raw)
+	return correctTranscript(audioPath, rawSrt)
 }

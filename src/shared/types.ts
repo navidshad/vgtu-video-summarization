@@ -32,7 +32,9 @@ export interface Thread {
 	preprocessing: {
 		audioPath?: string
 		lowResVideoPath?: string;
-		srtPath?: string;
+		srtPath?: string; // Legacy/Current combined
+		rawSrtPath?: string;
+		correctedSrtPath?: string;
 	}
 	tempDir: string
 	messages: Message[]
@@ -46,4 +48,10 @@ export interface TimelineSegment {
 	end: string
 	text: string
 	duration: number
+}
+
+export interface IntentResult {
+	type: 'text' | 'generate-timeline';
+	content: string; // Brief description or the text answer
+	duration?: number; // Duration in seconds
 }

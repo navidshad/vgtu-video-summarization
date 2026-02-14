@@ -225,6 +225,20 @@ class ThreadManager {
 			}
 		}
 	}
+	// Get formatted context for AI (messages + timelines)
+	getThreadContext(threadId: string): string {
+		const thread = this.getThread(threadId)
+		if (!thread) return ''
+
+		return thread.messages.map(m => {
+			let content = `${m.role.toUpperCase()}: ${m.content}`
+			if (m.timeline && m.timeline.length > 0) {
+				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
+				content += `\n(AI Generated Timeline):\n${timelineText}`
+			}
+			return content
+		}).join('\n\n')
+	}
 }
 
 export const threadManager = new ThreadManager()

@@ -8,6 +8,7 @@ import { settingsManager } from './settings'
 import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
+import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
@@ -107,8 +108,8 @@ app.whenReady().then(() => {
 		if (!thread) return
 
 		// Prepare the context
-		// User message is the context for the pipeline
-		const context = thread.messages.find(m => m.id === userPromptMessageId)?.content || ''
+		// Full thread history is the context for the pipeline
+		const context = threadManager.getThreadContext(threadId)
 
 		// Prepare the base timeline
 		const baseTimeline = editReferenceMessageId ? thread.messages.find(m => m.id === editReferenceMessageId)?.timeline : undefined;
@@ -116,13 +117,16 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline)
 
 		pipeline
-			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
 			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.extractTranscript, { skipIf: ctx => !!ctx.preprocessing.srtPath })
-			.register(extraction.extractSceneTiming)
-			.register(extraction.generateSceneDescription)
-			.register(generation.buildShorterTimeline)
-			.register(assembly.assembleSummary)
+			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawSrtPath })
+			.register(intent.determineIntent)
+			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
+			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.correctedSrtPath })
+			// .register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
+			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(assembly.assembleSummary, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
 		await pipeline.start({})
 	})
