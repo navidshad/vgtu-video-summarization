@@ -87,7 +87,7 @@
 
 						<Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey"
 							variant="primary" size="sm"
-							class="w-full font-semibold shadow-lg active:scale-[0.98] transition-all">
+							class="w-full font-semibold shadow-lg active:scale-[0.98] transition-all !bg-zinc-900 dark:!bg-zinc-50 !text-white dark:!text-zinc-900 hover:!bg-zinc-800 dark:hover:!bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed">
 							Save API Key
 						</Button>
 					</div>
