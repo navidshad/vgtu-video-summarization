@@ -127,10 +127,11 @@ export async function assembleVideo(
 	videoPath: string,
 	segments: TimelineSegment[],
 	outputDir: string,
+	messageId: string,
 	onProgress?: (percent: number) => void
 ): Promise<string> {
 	const filename = basename(videoPath, extname(videoPath))
-	const outputPath = join(outputDir, `${filename}_result.mp4`)
+	const outputPath = join(outputDir, `${filename}_${messageId}_result.mp4`)
 
 	if (segments.length === 0) {
 		throw new Error('No segments provided for assembly')

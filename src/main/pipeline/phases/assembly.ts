@@ -24,6 +24,7 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 			videoPath,
 			timeline,
 			context.tempDir,
+			context.messageId,
 			(percent) => {
 				context.updateStatus(`Phase 3: Assembling video (${percent}%)...`)
 			}
