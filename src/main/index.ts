@@ -10,6 +10,20 @@ import * as assembly from './pipeline/phases/assembly'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
+protocol.registerSchemesAsPrivileged([
+	{
+		scheme: 'media',
+		privileges: {
+			secure: true,
+			supportFetchAPI: true,
+			bypassCSP: true,
+			stream: true,
+			standard: true,
+			corsEnabled: true
+		}
+	}
+])
+
 function createWindow(): void {
 	const mainWindow = new BrowserWindow({
 		width: 1200,
@@ -46,11 +60,18 @@ app.whenReady().then(() => {
 	})
 
 	// Register custom protocol for local media
-	protocol.handle('media', (request) => {
-		const url = request.url.replace('media://', '')
-		// Decoded path might be needed if there are spaces or special characters
-		const decodedPath = decodeURIComponent(url)
-		return net.fetch(pathToFileURL(decodedPath).toString())
+	protocol.registerFileProtocol('media', (request, callback) => {
+		try {
+			// Extract the file path from the media:// URL
+			const url = new URL(request.url)
+			const filePath = decodeURIComponent(url.pathname)
+
+			// Resolve to absolute path - registerFileProtocol handles range requests automatically
+			callback({ path: filePath })
+		} catch (error) {
+			console.error('Media protocol error:', error)
+			callback({ error: -6 }) // net::ERR_FILE_NOT_FOUND
+		}
 	})
 
 	createWindow()

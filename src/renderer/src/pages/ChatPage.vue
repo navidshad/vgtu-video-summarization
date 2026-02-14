@@ -255,8 +255,9 @@ const sendMessage = async () => {
 
 const getMediaUrl = (path: string) => {
   if (!path) return ''
-  // Use the custom media:// protocol
-  return `media://${encodeURIComponent(path)}`
+  // Use the custom media:// protocol. With standard: true, it expects media://path
+  // If path is absolute /Users/..., it becomes media:///Users/...
+  return `media://${path}`
 }
 
 onMounted(async () => {
