@@ -86,7 +86,7 @@
                         class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
                         <span class="font-mono text-blue-500 font-medium whitespace-nowrap">{{ item.time ||
                           item.timestamp
-                          }}</span>
+                        }}</span>
                         <span class="text-zinc-700 dark:text-zinc-300">{{ item.description || item.text }}</span>
                       </div>
                     </div>
@@ -161,7 +161,6 @@
       </div>
     </main>
 
-    <!-- Chat Input: Central Bottom -->
     <!-- Chat Input: Central Bottom -->
     <footer
       class="p-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
