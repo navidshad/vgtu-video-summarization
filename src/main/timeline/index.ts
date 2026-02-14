@@ -1,27 +1,33 @@
 import { TimelineSegment } from '../../shared/types'
-import { parseSRT } from '../gemini/utils'
+import { TranscriptItem, generateSRT } from '../gemini/utils'
 
 export interface TimelineGenerationAdapter {
-    generateText(prompt: string): Promise<string>;
+    generateText(prompt: string, systemInstruction?: string): Promise<string>;
 }
 
 export async function generateTimeline(
     userExpectation: string,
-    fullTimelineSRT: string,
+    allSegments: TranscriptItem[],
     targetDuration: number,
     geminiAdapter: TimelineGenerationAdapter,
     updateStatus: (status: string) => void,
     baseTimeline: TimelineSegment[] = []
 ): Promise<TimelineSegment[]> {
 
-    // Parse the full SRT into usable segments
-    const allSegments = parseSRT(fullTimelineSRT);
+    const fullTimelineSRT = generateSRT(allSegments);
 
     const currentShorterTimeline: TimelineSegment[] = [...baseTimeline];
     let currentDuration = calculateTotalDuration(currentShorterTimeline);
 
     let iterationCount = 0;
     const MAX_ITERATIONS = 20; // Safety break
+
+    const systemInstruction = `
+You are a video editor assistant.
+Your task is to select the next best segments from the full transcript to build a shorter video timeline based on the user's request.
+Return ONLY a JSON array of indices (integers) of the selected segments, e.g. [1, 5, 8].
+Do not include any other text.
+`;
 
     while (currentDuration < targetDuration && iterationCount < MAX_ITERATIONS) {
         iterationCount++;
@@ -35,25 +41,26 @@ export async function generateTimeline(
             : '• empty';
 
         // Construct prompt
-        // We ask for indices.
         const prompt = `
-Take the transcript and user request, ${userExpectation}:
+User Request: ${userExpectation}
+Target Duration: ${targetDuration} seconds
+
 -----------------
-Full timeline:
+Full timeline (SRT):
 ${fullTimelineSRT}
 -----------------
-make a ${targetDuration} seconds timeline
------------------
-Short time line (${currentDuration.toFixed(1)}s):
+
+Current built timeline (${currentDuration.toFixed(1)}s):
 ${formattedCurrentTimeline}
+
 -----------------
-pick the next 3 part. Return ONLY a JSON array of indices (integers), e.g. [1, 5, 8].
+Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
             // Using generateText because generateStructuredText might be overkill or strict schema might be annoying if Gemini adds text.
             // But let's try to parse a simple JSON array from text.
-            const responseText = await geminiAdapter.generateText(prompt);
+            const responseText = await geminiAdapter.generateText(prompt, systemInstruction);
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             const indices = parseIndicesFromResponse(responseText);

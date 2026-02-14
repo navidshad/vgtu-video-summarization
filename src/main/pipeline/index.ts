@@ -16,6 +16,7 @@ export interface PipelineContext {
 	preprocessing: Thread['preprocessing'];
 	baseTimeline?: any; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
+	intentResult?: import('../../shared/types').IntentResult;
 }
 
 export class Pipeline {
@@ -26,6 +27,7 @@ export class Pipeline {
 	private threadId: string
 	private context: string
 	private baseTimeline?: any
+	private intentResult?: import('../../shared/types').IntentResult
 
 	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any) {
 		this.browserWindow = browserWindow
@@ -83,6 +85,7 @@ export class Pipeline {
 			// But creating the full context object (with callbacks) before checking skip might be needed.
 		}
 
+		const self = this
 		const context: PipelineContext = {
 			threadId: this.threadId,
 			videoPath: thread.videoPath,
@@ -90,6 +93,8 @@ export class Pipeline {
 			preprocessing: thread.preprocessing,
 			context: this.context,
 			baseTimeline: this.baseTimeline,
+			get intentResult() { return self.intentResult },
+			set intentResult(val) { self.intentResult = val },
 			updateStatus: (status: string) => {
 				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {

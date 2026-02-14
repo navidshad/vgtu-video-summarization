@@ -3,12 +3,12 @@ import { PipelineFunction } from '../index'
 import { TimelineSegment } from '../../../shared/types'
 import { assembleVideo } from '../../ffmpeg'
 
-export const assembleSummary: PipelineFunction = async (data, context) => {
+export const assembleVideoFromTimeline: PipelineFunction = async (data, context) => {
 	const timeline = data.timeline as TimelineSegment[]
 	const videoPath = context.preprocessing.lowResVideoPath || context.videoPath // Use original high-res video for assembly
 
 	if (!videoPath) {
-		context.finish('Video path not found. Cannot assemble summary.')
+		context.finish('Video path not found. Cannot assemble video.')
 		return
 	}
 
@@ -17,7 +17,7 @@ export const assembleSummary: PipelineFunction = async (data, context) => {
 		return
 	}
 
-	context.updateStatus('Phase 3: Assembling video summary...')
+	context.updateStatus('Phase 3: Assembling video from timeline...')
 
 	try {
 		const outputPath = await assembleVideo(
@@ -25,11 +25,11 @@ export const assembleSummary: PipelineFunction = async (data, context) => {
 			timeline,
 			context.tempDir,
 			(percent) => {
-				context.updateStatus(`Phase 3: Assembling video summary (${percent}%)...`)
+				context.updateStatus(`Phase 3: Assembling video (${percent}%)...`)
 			}
 		)
 
-		context.finish('Processing complete. Your video summary is ready.', {
+		context.finish('Processing complete. Your video is ready.', {
 			path: outputPath,
 			type: FileType.Actual
 		}, timeline)
