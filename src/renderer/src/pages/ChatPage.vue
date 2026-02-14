@@ -37,13 +37,6 @@
           <!-- Role Indicator -->
           <div class="flex items-center space-x-2 mb-2 px-1"
             :class="msg.role === MessageRole.User ? 'flex-row-reverse space-x-reverse' : 'flex-row'">
-            <div
-              class="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold uppercase tracking-wider shadow-sm"
-              :class="msg.role === MessageRole.User
-                ? 'bg-blue-500 text-white'
-                : 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900'">
-              {{ msg.role === MessageRole.User ? 'U' : 'AI' }}
-            </div>
             <span class="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
               {{ msg.role === MessageRole.User ? 'You' : 'AI Assistant' }}
             </span>
