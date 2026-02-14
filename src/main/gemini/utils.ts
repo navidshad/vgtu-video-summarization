@@ -46,6 +46,31 @@ const CORRECTION_SCHEMA = {
 }
 
 /**
+ * Normalizes a timestamp string to HH:MM:SS,mmm format.
+ * Handles various inputs: MM:SS, HH:MM:SS, MM:SS.mmm, MM:SS,mmm, etc.
+ */
+function normalizeTimestamp(t: string): string {
+	const clean = t.trim().replace('.', ',')
+	const [timePart, milliPart = '000'] = clean.split(',')
+
+	const parts = timePart.split(':').map(Number)
+	let hh = 0, mm = 0, ss = 0
+
+	if (parts.length === 3) {
+		[hh, mm, ss] = parts
+	} else if (parts.length === 2) {
+		[mm, ss] = parts
+	} else if (parts.length === 1) {
+		ss = parts[0]
+	}
+
+	const pad = (n: number, z = 2) => n.toString().padStart(z, '0')
+	const ms = milliPart.padEnd(3, '0').substring(0, 3)
+
+	return `${pad(hh)}:${pad(mm)}:${pad(ss)},${ms}`
+}
+
+/**
  * Parses SRT text into TranscriptItem array.
  */
 export function parseSRT(srt: string): TranscriptItem[] {
@@ -59,16 +84,6 @@ export function parseSRT(srt: string): TranscriptItem[] {
 
 	const timestampRegex = /((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[.,]\d{1,3})?)\s*-->\s*((?:\d{1,2}:)?\d{1,2}:\d{2}(?:[.,]\d{1,3})?)/
 
-	const simplifyTime = (t: string) => {
-		const [timeOnly, milli] = t.split(/[.,]/)
-		const parts = timeOnly.split(':')
-		let res = timeOnly
-		if (parts.length === 3 && (parts[0] === '00' || parts[0] === '0')) {
-			res = `${parts[1]}:${parts[2]}`
-		}
-		return milli ? `${res}.${milli}` : res
-	}
-
 	for (let i = 0; i < allLines.length; i++) {
 		const line = allLines[i]
 
@@ -78,8 +93,8 @@ export function parseSRT(srt: string): TranscriptItem[] {
 			const nextLine = allLines[i + 1]
 			if (nextLine && timestampRegex.test(nextLine)) {
 				const timeMatch = nextLine.match(timestampRegex)!
-				const start = simplifyTime(timeMatch[1])
-				const end = simplifyTime(timeMatch[2])
+				const start = normalizeTimestamp(timeMatch[1])
+				const end = normalizeTimestamp(timeMatch[2])
 
 				let textLines: string[] = []
 				let j = i + 2
@@ -117,17 +132,10 @@ export function parseSRT(srt: string): TranscriptItem[] {
  */
 export function generateSRT(items: TranscriptItem[]): string {
 	return items.map((item, index) => {
-		const start = item.start.includes(':') ? item.start : `00:${item.start}`
-		const end = item.end.includes(':') ? item.end : `00:${item.end}`
+		const start = normalizeTimestamp(item.start)
+		const end = normalizeTimestamp(item.end)
 
-		// Ensure HH:MM:SS,mmm format if possible, but keep it simple if it was already simplified
-		const formatTime = (t: string) => {
-			const parts = t.split(':')
-			if (parts.length === 2) return `00:${parts[0]}:${parts[1]},000`
-			return t.includes(',') ? t : `${t},000`
-		}
-
-		return `${index + 1}\n${formatTime(start)} --> ${formatTime(end)}\n${item.text}\n`
+		return `${index + 1}\n${start} --> ${end}\n${item.text}\n`
 	}).join('\n')
 }
 
