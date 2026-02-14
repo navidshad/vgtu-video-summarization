@@ -69,7 +69,7 @@
 
             <!-- Text Message Bubble -->
             <Card :class="[
-              '!rounded-2xl !p-4 shadow-sm dark:shadow-xl transition-colors w-fit max-w-[85%]',
+              '!rounded-2xl !p-4 shadow-sm dark:shadow-xl transition-colors w-fit max-w-[450px]',
               msg.role === MessageRole.User
                 ? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
                 : '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
@@ -97,13 +97,13 @@
 
                   <!-- Results Section: Timeline + Video Layout -->
                   <div v-if="(msg.timeline && msg.timeline.length > 0) || (msg.files && msg.files.length > 0)"
-                    class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col lg:flex-row gap-6">
+                    class="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-6">
 
                     <!-- Video Section (Left Column on Large Screens) -->
                     <div v-if="msg.files && msg.files.length > 0" class="flex-1 space-y-3 min-w-0">
                       <template v-for="file in msg.files" :key="file.url">
                         <div
-                          class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 max-w-[350px]">
+                          class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
                           <!-- Video Preview -->
                           <div
                             class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
@@ -143,16 +143,28 @@
                       </template>
                     </div>
 
-                    <!-- Timeline Section (Right Column on Large Screens) -->
-                    <div v-if="msg.timeline && msg.timeline.length > 0" class="flex-1 min-w-0 lg:max-w-[40%]">
-                      <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Video Timeline</h4>
-                      <div class="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
+                    <!-- Timeline Section (Stacked below Video) -->
+                    <div v-if="msg.timeline && msg.timeline.length > 0" class="flex-1 min-w-0">
+                      <button @click="toggleTimeline(msg.id)"
+                        class="flex items-center justify-between w-full text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors group/toggle">
+                        <span>Video Timeline</span>
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                          class="w-3.5 h-3.5 transition-transform duration-300 transform"
+                          :class="expandedTimelines.has(msg.id) ? 'rotate-180' : ''" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </button>
+
+                      <div v-if="expandedTimelines.has(msg.id)"
+                        class="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-1 animate-in fade-in slide-in-from-top-2 duration-300">
                         <div v-for="(item, idx) in msg.timeline" :key="idx"
                           class="flex items-start space-x-3 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 text-sm">
-                          <span class="font-mono text-blue-500 font-medium whitespace-nowrap">
+                          <span
+                            class="font-mono text-blue-500 font-medium whitespace-nowrap text-[11px] leading-tight shrink-0">
                             {{ item.start }} <br> {{ item.end }}
                           </span>
-                          <span class="text-zinc-700 dark:text-zinc-300">{{ item.text }}</span>
+                          <span class="text-zinc-700 dark:text-zinc-300 leading-snug">{{ item.text }}</span>
                         </div>
                       </div>
                     </div>
@@ -231,6 +243,15 @@ const videoStore = useVideoStore()
 const userPrompt = ref('')
 const scrollContainer = ref<HTMLElement | null>(null)
 const editingMessageId = ref<string | null>(null)
+const expandedTimelines = ref<Set<string>>(new Set())
+
+const toggleTimeline = (messageId: string) => {
+  if (expandedTimelines.value.has(messageId)) {
+    expandedTimelines.value.delete(messageId)
+  } else {
+    expandedTimelines.value.add(messageId)
+  }
+}
 
 const handleBack = () => {
   router.push('/home')
