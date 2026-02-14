@@ -1,12 +1,29 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { net } from 'electron'
+import * as fs from 'fs'
+import { basename, extname, join } from 'path'
+import { pathToFileURL } from 'url'
 import { Pipeline } from './pipeline'
 import { settingsManager } from './settings'
 import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as assembly from './pipeline/phases/assembly'
-import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+
+protocol.registerSchemesAsPrivileged([
+	{
+		scheme: 'media',
+		privileges: {
+			secure: true,
+			supportFetchAPI: true,
+			bypassCSP: true,
+			stream: true,
+			standard: true,
+			corsEnabled: true
+		}
+	}
+])
 
 function createWindow(): void {
 	const mainWindow = new BrowserWindow({
@@ -41,6 +58,27 @@ app.whenReady().then(() => {
 
 	app.on('browser-window-created', (_, window) => {
 		optimizer.watchWindowShortcuts(window)
+	})
+
+	// Register custom protocol for local media
+	protocol.registerFileProtocol('media', (request, callback) => {
+		try {
+			const url = new URL(request.url)
+			// Consolidate hostname and pathname (handles both media://var/... and media:///var/...)
+			let rawPath = decodeURIComponent(url.hostname + url.pathname)
+
+			// If path already contained file:// prefix, clean it up
+			let filePath = rawPath.replace(/^file:\/+/i, '/')
+
+			if (process.platform !== 'win32' && !filePath.startsWith('/')) {
+				filePath = '/' + filePath
+			}
+
+			callback({ path: filePath })
+		} catch (error) {
+			console.error('Media protocol error:', error)
+			callback({ error: -6 })
+		}
 	})
 
 	createWindow()
@@ -84,8 +122,7 @@ app.whenReady().then(() => {
 			.register(extraction.extractSceneTiming)
 			.register(extraction.generateSceneDescription)
 			.register(generation.buildShorterTimeline)
-			.register(assembly.splitVideoParts)
-			.register(assembly.joinVideoParts)
+			.register(assembly.assembleSummary)
 
 		await pipeline.start({})
 	})
@@ -148,6 +185,28 @@ app.whenReady().then(() => {
 
 	ipcMain.handle('add-message', (_event, { threadId, message }) => {
 		return threadManager.addMessageToThread(threadId, message)
+	})
+
+	ipcMain.handle('save-video', async (_event, sourcePath: string) => {
+		const extension = extname(sourcePath)
+		const fileName = basename(sourcePath)
+
+		const result = await dialog.showSaveDialog({
+			defaultPath: fileName,
+			filters: [{ name: 'Videos', extensions: [extension.replace('.', '')] }]
+		})
+
+		if (result.canceled || !result.filePath) {
+			return null
+		}
+
+		try {
+			fs.copyFileSync(sourcePath, result.filePath)
+			return result.filePath
+		} catch (error) {
+			console.error('Failed to save video:', error)
+			throw error
+		}
 	})
 
 	app.on('activate', function () {

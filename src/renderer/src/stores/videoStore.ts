@@ -23,7 +23,7 @@ export const useVideoStore = defineStore('video', () => {
 			// Actually best to return a new object for the modified message.
 			msgs[0] = {
 				...msgs[0],
-				files: [{ url: 'file://' + currentThread.value.videoPath, type: FileType.Original }]
+				files: [{ url: currentThread.value.videoPath, type: FileType.Original }]
 			}
 		}
 

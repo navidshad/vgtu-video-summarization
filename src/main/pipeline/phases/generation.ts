@@ -18,7 +18,7 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
 
   try {
     const geminiAdapter = GeminiAdapter.create()
-    
+
     // Wrapper for status updates
     const updateStatus = (status: string) => {
       context.updateStatus(status)
@@ -33,11 +33,16 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       baseTimeline
     )
 
+    if (shorterTimeline.length === 0) {
+      context.finish('Failed to generate timeline.', undefined, [])
+      return;
+    }
+
     // Finish Pipeline with the generated timeline
-    context.finish('Processing complete. Short timeline generated.', undefined, shorterTimeline)
+    context.updateStatus('Processing complete. Short timeline generated.')
 
     // Ready for the assembly phase (pass timeline in data)
-    // context.next({ ...data, timeline: shorterTimeline })
+    context.next({ ...data, timeline: shorterTimeline })
 
   } catch (error) {
     console.error('Error in buildShorterTimeline:', error)
