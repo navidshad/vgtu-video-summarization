@@ -115,7 +115,7 @@ class ThreadManager {
 		if (thread.preprocessing) {
 			this.deleteFile(thread.preprocessing.audioPath || '')
 			this.deleteFile(thread.preprocessing.lowResVideoPath || '')
-			this.deleteFile(thread.preprocessing.srtPath || '')
+			this.deleteFile(thread.preprocessing.transcriptPath || '')
 		}
 
 		// Delete thread temp directory
@@ -224,6 +224,20 @@ class ThreadManager {
 				fs.writeFileSync(this.getThreadPath(thread.id), JSON.stringify(thread, null, 2))
 			}
 		}
+	}
+	// Get formatted context for AI (messages + timelines)
+	getThreadContext(threadId: string): string {
+		const thread = this.getThread(threadId)
+		if (!thread) return ''
+
+		return thread.messages.map(m => {
+			let content = `${m.role.toUpperCase()}: ${m.content}`
+			if (m.timeline && m.timeline.length > 0) {
+				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
+				content += `\n(AI Generated Timeline):\n${timelineText}`
+			}
+			return content
+		}).join('\n\n')
 	}
 }
 
