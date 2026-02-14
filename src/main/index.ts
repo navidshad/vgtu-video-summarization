@@ -1,5 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
 import { net } from 'electron'
+import * as fs from 'fs'
+import { basename, extname, join } from 'path'
 import { pathToFileURL } from 'url'
 import { Pipeline } from './pipeline'
 import { settingsManager } from './settings'
@@ -7,7 +9,6 @@ import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as assembly from './pipeline/phases/assembly'
-import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 protocol.registerSchemesAsPrivileged([
@@ -184,6 +185,28 @@ app.whenReady().then(() => {
 
 	ipcMain.handle('add-message', (_event, { threadId, message }) => {
 		return threadManager.addMessageToThread(threadId, message)
+	})
+
+	ipcMain.handle('save-video', async (_event, sourcePath: string) => {
+		const extension = extname(sourcePath)
+		const fileName = basename(sourcePath)
+
+		const result = await dialog.showSaveDialog({
+			defaultPath: fileName,
+			filters: [{ name: 'Videos', extensions: [extension.replace('.', '')] }]
+		})
+
+		if (result.canceled || !result.filePath) {
+			return null
+		}
+
+		try {
+			fs.copyFileSync(sourcePath, result.filePath)
+			return result.filePath
+		} catch (error) {
+			console.error('Failed to save video:', error)
+			throw error
+		}
 	})
 
 	app.on('activate', function () {

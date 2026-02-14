@@ -118,10 +118,8 @@
                                 'Generating...' : 'Ready' }}</p>
                             </div>
                             <div class="flex gap-2">
-                              <Button variant="ghost"
-                                class="!px-2 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white">Download</Button>
-                              <Button variant="primary"
-                                class="!px-3 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest">Open</Button>
+                              <Button variant="primary" @click="handleSave(file.url)"
+                                class="!px-3 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest">Save</Button>
                             </div>
                           </div>
 
@@ -292,6 +290,15 @@ const sendMessage = async () => {
   if (videoStore.currentThreadId) {
     // Pass the captured context ID (if any) to startProcessing
     await videoStore.startProcessing(videoStore.currentThreadId, contextId || undefined)
+  }
+}
+
+const handleSave = async (filePath: string) => {
+  try {
+    // @ts-ignore - api is exposed via preload
+    await window.api.saveVideo(filePath)
+  } catch (error) {
+    console.error('Failed to save video:', error)
   }
 }
 
