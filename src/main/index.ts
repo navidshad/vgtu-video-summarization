@@ -126,7 +126,7 @@ app.whenReady().then(() => {
 			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(assembly.assembleSummary, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
 		await pipeline.start({})
 	})

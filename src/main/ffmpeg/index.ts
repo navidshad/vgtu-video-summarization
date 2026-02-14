@@ -120,7 +120,7 @@ export async function toAudio(
 }
 
 /**
- * Assembles a summary video from segments identified in the timeline.
+ * Assembles a video from segments identified in the timeline.
  * Uses a complex filter to avoid temporary files and ensure efficiency.
  */
 export async function assembleVideo(
@@ -130,7 +130,7 @@ export async function assembleVideo(
 	onProgress?: (percent: number) => void
 ): Promise<string> {
 	const filename = basename(videoPath, extname(videoPath))
-	const outputPath = join(outputDir, `${filename}_summary.mp4`)
+	const outputPath = join(outputDir, `${filename}_result.mp4`)
 
 	if (segments.length === 0) {
 		throw new Error('No segments provided for assembly')
