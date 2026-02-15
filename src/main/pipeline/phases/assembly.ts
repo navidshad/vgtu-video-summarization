@@ -17,7 +17,7 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 		return
 	}
 
-	context.updateStatus('Phase 3: Assembling video from timeline...')
+	context.updateStatus('Assembling video from timeline...')
 
 	try {
 		const outputPath = await assembleVideo(
@@ -26,7 +26,7 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 			context.tempDir,
 			context.messageId,
 			(percent) => {
-				context.updateStatus(`Phase 3: Assembling video (${percent}%)...`)
+				context.updateStatus(`Assembling video (${percent}%)...`)
 			}
 		)
 

@@ -3,7 +3,7 @@ import { generateTimeline } from '../../timeline'
 import fs from 'fs'
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
-  context.updateStatus('Phase 2: Preparing for timeline generation...')
+  context.updateStatus('Preparing for timeline generation...')
 
   const transcriptPath = context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {

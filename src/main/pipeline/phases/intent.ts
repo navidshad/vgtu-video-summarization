@@ -57,7 +57,7 @@ const INTENT_SCHEMA = {
 }
 
 export const determineIntent: PipelineFunction = async (data, context) => {
-	context.updateStatus('Phase 2: Analyzing your request...')
+	context.updateStatus('Analyzing your request...')
 
 	const transcriptPath = context.preprocessing.rawTranscriptPath
 	let transcript: TranscriptItem[] = []
