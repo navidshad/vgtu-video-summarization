@@ -75,7 +75,7 @@ async function editTimeline(options: {
         onRecordUsage
     } = options;
 
-    onUpdateStatus?.(`Phase 2: Editing timeline in one-shot...`);
+    onUpdateStatus?.(`Editing timeline in one-shot...`);
 
     const formattedCurrentTimeline = baseTimeline.length > 0
         ? baseTimeline.map(s => `• Index ${s.index}: ${s.duration.toFixed(1)}s duration, ${s.text}`).join('\n')
@@ -182,7 +182,7 @@ Do not include any other text.
 
     while (currentDuration < targetDuration && iterationCount < MAX_ITERATIONS) {
         iterationCount++;
-        onUpdateStatus?.(`Phase 2: Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
+        onUpdateStatus?.(`Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
 
         const formattedCurrentTimeline = currentShorterTimeline.length > 0
             ? currentShorterTimeline.map(s => `• ${s.duration.toFixed(1)}s duration, ${s.text}`).join('\n')

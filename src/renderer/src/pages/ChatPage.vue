@@ -58,15 +58,22 @@ const cancelEdit = () => {
 // Auto-scroll when new messages arrive
 watch(() => videoStore.messages.length, scrollToBottom)
 
+// Clear edit mode if a new AI message comes with a video file
+watch(() => videoStore.messages, (newMessages) => {
+  if (editingMessageId.value && newMessages.length > 0) {
+    const lastMessage = newMessages[newMessages.length - 1]
+    if (lastMessage.role === MessageRole.AI && !lastMessage.isPending && lastMessage.files && lastMessage.files.length > 0) {
+      editingMessageId.value = null
+    }
+  }
+}, { deep: true })
+
 const handleSendMessage = async (userPrompt: string) => {
   // The store action handles adding to current thread
   await videoStore.addMessage(userPrompt, MessageRole.User)
 
-  // Capture the context ID *before* clearing it
+  // Capture the context ID (which we now persist)
   const contextId = editingMessageId.value
-
-  // Reset UI state
-  editingMessageId.value = null
 
   if (videoStore.currentThreadId) {
     // Pass the captured context ID (if any) to startProcessing
