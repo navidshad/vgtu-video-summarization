@@ -6,13 +6,14 @@
     <!-- Chat Messages Stack -->
     <main ref="scrollContainer" class="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
       <div class="max-w-4xl mx-auto space-y-8">
-        <ChatMessage v-for="(msg, i) in videoStore.messages" :key="i" :message="msg" @edit="startEditing"
-          @save-video="handleSave" />
+        <ChatMessage v-for="(msg, i) in videoStore.messages" :key="i" :id="'message-' + msg.id" :message="msg"
+          @edit="startEditing" @save-video="handleSave" />
       </div>
     </main>
 
     <!-- Chat Input -->
-    <ChatInput :editing-message-id="editingMessageId" @send="handleSendMessage" @cancel-edit="cancelEdit" />
+    <ChatInput :editing-message-id="editingMessageId" @send="handleSendMessage" @cancel-edit="cancelEdit"
+      @scroll-to-reference="scrollToMessage" />
   </div>
 </template>
 
@@ -53,6 +54,13 @@ const startEditing = (messageId: string) => {
 
 const cancelEdit = () => {
   editingMessageId.value = null
+}
+
+const scrollToMessage = (messageId: string) => {
+  const element = document.getElementById('message-' + messageId)
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 }
 
 // Auto-scroll when new messages arrive

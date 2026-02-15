@@ -1,65 +1,66 @@
 <template>
   <footer
-    class="py-6 px-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20"
-  >
+    class="py-6 px-8 border-t border-zinc-200 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/20 backdrop-blur-xl z-20">
     <div class="max-w-4xl mx-auto flex flex-col space-y-2">
-      <!-- Replying To Indicator -->
-      <div
-        v-if="editingMessageId"
-        class="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-xl border border-blue-100 dark:border-blue-800 text-sm"
-      >
-        <div class="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-          </svg>
-          <span class="font-medium">Branching from previous result</span>
-        </div>
-        <IconButton
-          icon="IconX"
-          color="primary"
-          size="xs"
-          @click="$emit('cancel-edit')"
-        />
-      </div>
-
       <div class="flex items-end space-x-4">
-        <!-- Main Input area using Textarea -->
-        <div class="flex-1 relative group">
-          <TextArea
-            v-model="userPrompt"
-            iconName="IconArrowUp"
-            iconOppositePosition
-            placeholder="Ask a follow-up question..."
-            :rows="2"
-            @icon-click="handleSend"
-          />
-        </div>
+        <!-- Main Input area -->
+        <InputGroup
+          class="!rounded-2xl overflow-hidden flex-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm focus-within:border-blue-500/50 transition-colors">
+          <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="2"
+            class="flex-1 !border-0 focus:!ring-0 bg-transparent" @enter="handleSend" />
+
+          <div class="flex items-center p-2 space-x-2 bg-transparent">
+            <!-- Compact Branching Indicator -->
+            <div v-if="editingMessageId"
+              class="flex items-center space-x-1.5 bg-blue-50/80 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100/50 dark:border-blue-800/30 text-[11px] text-blue-600 dark:text-blue-400 mb-0.5 animate-in fade-in slide-in-from-right-2 duration-300">
+              <span class="font-bold font-mono cursor-pointer hover:underline"
+                @click="$emit('scroll-to-reference', editingMessageId)">{{ branchedVersion }}</span>
+              <button class="hover:bg-blue-100 dark:hover:bg-blue-800/50 p-0.5 rounded-md transition-colors"
+                @click="$emit('cancel-edit')">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <IconButton icon="IconSend" color="primary" size="sm" rounded="lg" :disabled="!userPrompt.trim()"
+              @click="handleSend" />
+          </div>
+        </InputGroup>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { TextArea } from '@codebridger/lib-vue-components/form'
+import { ref, computed } from 'vue'
+import { TextArea, InputGroup } from '@codebridger/lib-vue-components/form'
 import { IconButton } from '@codebridger/lib-vue-components/elements'
+import { FileType } from '@shared/types'
+import { useVideoStore } from '../../stores/videoStore'
 
-defineProps<{
+const props = defineProps<{
   editingMessageId: string | null
 }>()
 
-const emit = defineEmits(['send', 'cancel-edit'])
+const emit = defineEmits(['send', 'cancel-edit', 'scroll-to-reference'])
 
+const videoStore = useVideoStore()
 const userPrompt = ref('')
+
+const branchedVersion = computed(() => {
+  if (!props.editingMessageId) return ''
+  const msg = videoStore.messages.find((m) => m.id === props.editingMessageId)
+  if (!msg) return '...'
+
+  const version = msg.version || msg.id.slice(0, 4)
+  const videoFile = msg.files?.find((f) => f.type === FileType.Preview || f.type === FileType.Actual)
+  const type = videoFile ? ` ${videoFile.type.toUpperCase()}` : ''
+
+  return `v.${version}${type}`
+})
 
 const handleSend = () => {
   if (!userPrompt.value.trim()) return
@@ -87,17 +88,8 @@ const handleSend = () => {
   background: #52525b;
 }
 
-/* Textarea Overrides */
 :deep(.form-textarea) {
-  border-radius: 1.5rem !important;
-  border-color: #e4e4e7 !important;
-}
-
-:global(.dark) :deep(.form-textarea) {
-  border-color: #27272a !important;
-}
-
-:deep(.form-textarea:focus) {
-  border-color: rgba(59, 130, 246, 0.5) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 </style>
