@@ -2,10 +2,13 @@ import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import os from 'os'
+import { ModelSettings } from '../shared/types'
+import { DEFAULT_MODEL_SETTINGS } from './constants/gemini'
 
 interface Settings {
 	tempDir: string
 	geminiApiKey?: string
+	modelSettings?: ModelSettings
 }
 
 class SettingsManager {
@@ -21,21 +24,24 @@ class SettingsManager {
 	}
 
 	private loadSettings(): Settings {
-
 		try {
 			if (existsSync(this.settingsPath)) {
 				const data = readFileSync(this.settingsPath, 'utf-8')
 				const parsed = JSON.parse(data)
 				return {
 					tempDir: parsed.tempDir || this.defaultTempDir,
-					geminiApiKey: parsed.geminiApiKey
+					geminiApiKey: parsed.geminiApiKey,
+					modelSettings: parsed.modelSettings || DEFAULT_MODEL_SETTINGS
 				}
 			}
 		} catch (error) {
 			console.error('Failed to load settings:', error)
 		}
 
-		return { tempDir: this.defaultTempDir }
+		return {
+			tempDir: this.defaultTempDir,
+			modelSettings: DEFAULT_MODEL_SETTINGS
+		}
 	}
 
 	private saveSettings(): void {
@@ -90,6 +96,21 @@ class SettingsManager {
 	setGeminiApiKey(key: string): void {
 		this.settings.geminiApiKey = key
 		this.saveSettings()
+	}
+
+	getModelSettings(): ModelSettings {
+		return this.settings.modelSettings || DEFAULT_MODEL_SETTINGS
+	}
+
+	setModelSettings(settings: ModelSettings): void {
+		this.settings.modelSettings = settings
+		this.saveSettings()
+	}
+
+	resetModelSettings(): ModelSettings {
+		this.settings.modelSettings = DEFAULT_MODEL_SETTINGS
+		this.saveSettings()
+		return DEFAULT_MODEL_SETTINGS
 	}
 }
 

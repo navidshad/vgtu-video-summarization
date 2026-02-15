@@ -1,6 +1,5 @@
 import { PipelineFunction } from '../index'
 import { GeminiAdapter } from '../../gemini/adapter'
-import { GEMINI_MODEL } from '../../constants/gemini'
 import { IntentResult } from '../../../shared/types'
 import { TranscriptItem, generateSRT } from '../../gemini/utils'
 import * as ffmpegAdapter from '../../ffmpeg'
@@ -97,11 +96,13 @@ END OF CONVERSATION HISTORY
 
 	try {
 		const adapter = GeminiAdapter.create()
+		const modelSettings = (await import('../../settings')).settingsManager.getModelSettings()
+		const modelName = modelSettings.selection['intent']
 		const { data: result, record } = await adapter.generateStructuredText<IntentResult>(
+			modelName,
 			userPrompt,
 			INTENT_SCHEMA,
-			INTENT_SYSTEM_INSTRUCTION,
-			GEMINI_MODEL
+			INTENT_SYSTEM_INSTRUCTION
 		)
 
 		context.recordUsage(record)

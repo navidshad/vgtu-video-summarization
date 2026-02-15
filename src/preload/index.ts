@@ -15,6 +15,9 @@ const api = {
 	openTempDir: () => ipcRenderer.invoke('open-temp-dir'),
 	getGeminiApiKey: () => ipcRenderer.invoke('get-gemini-api-key'),
 	setGeminiApiKey: (key: string) => ipcRenderer.invoke('set-gemini-api-key', key),
+	getModelSettings: () => ipcRenderer.invoke('get-model-settings'),
+	setModelSettings: (settings: any) => ipcRenderer.invoke('set-model-settings', settings),
+	resetModelSettings: () => ipcRenderer.invoke('reset-model-settings'),
 	// Thread Management
 	createThread: (videoPath: string, videoName: string) =>
 		ipcRenderer.invoke('create-thread', { videoPath, videoName }),

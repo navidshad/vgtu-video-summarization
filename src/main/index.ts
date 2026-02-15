@@ -166,6 +166,18 @@ app.whenReady().then(() => {
 		settingsManager.setGeminiApiKey(key)
 	})
 
+	ipcMain.handle('get-model-settings', () => {
+		return settingsManager.getModelSettings()
+	})
+
+	ipcMain.handle('set-model-settings', (_event, settings: any) => {
+		settingsManager.setModelSettings(settings)
+	})
+
+	ipcMain.handle('reset-model-settings', () => {
+		return settingsManager.resetModelSettings()
+	})
+
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
 		return threadManager.createThread(videoPath, videoName)
