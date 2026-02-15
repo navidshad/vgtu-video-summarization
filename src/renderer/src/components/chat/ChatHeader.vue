@@ -21,15 +21,27 @@
 				<h2 class="text-xs font-bold tracking-tight text-zinc-900 dark:text-white uppercase tracking-widest">
 					{{ title || 'AI Video Assistant' }}
 				</h2>
+				<p v-if="totalCost > 0" class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">
+					Total Cost: ${{ totalCost.toFixed(4) }}
+				</p>
 			</div>
 		</div>
 	</header>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useVideoStore } from '../../stores/videoStore'
+
+const videoStore = useVideoStore()
+
 defineProps<{
 	title?: string
 }>()
+
+const totalCost = computed(() => {
+	return videoStore.messages.reduce((acc, msg) => acc + (msg.cost || 0), 0)
+})
 
 defineEmits(['back'])
 </script>

@@ -1,10 +1,9 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
-import { GeminiAdapter } from '../../gemini/adapter'
 import fs from 'fs'
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
-  context.updateStatus('Phase 2: Preparing for timeline generation...')
+  context.updateStatus('Preparing for timeline generation...')
 
   const transcriptPath = context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
@@ -17,22 +16,22 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
   const baseTimeline = context.baseTimeline || []
 
+  // Decide mode and model
+  const mode = baseTimeline.length > 0 ? 'edit' : 'new'
+  const { GEMINI_MODEL, GEMINI_MODEL_FLASH_THINKING } = await import('../../constants/gemini')
+  const modelName = mode === 'edit' ? GEMINI_MODEL : GEMINI_MODEL_FLASH_THINKING
+
   try {
-    const geminiAdapter = GeminiAdapter.create()
-
-    // Wrapper for status updates
-    const updateStatus = (status: string) => {
-      context.updateStatus(status)
-    }
-
-    const shorterTimeline = await generateTimeline(
+    const shorterTimeline = await generateTimeline({
       userExpectation,
-      transcript,
+      allSegments: transcript,
       targetDuration,
-      geminiAdapter,
-      updateStatus,
-      baseTimeline
-    )
+      baseTimeline,
+      modelName,
+      mode,
+      onUpdateStatus: (status) => context.updateStatus(status),
+      onRecordUsage: (record) => context.recordUsage(record)
+    })
 
     if (shorterTimeline.length === 0) {
       context.finish('Failed to generate timeline.', undefined, [])
