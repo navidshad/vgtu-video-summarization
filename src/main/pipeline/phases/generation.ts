@@ -31,6 +31,7 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       targetDuration,
       geminiAdapter,
       updateStatus,
+      context.recordUsage,
       baseTimeline
     )
 

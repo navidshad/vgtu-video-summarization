@@ -10,6 +10,7 @@ export interface PipelineContext {
 	next: (data: any) => void;
 	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => void;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
+	recordUsage: (record: import('../../shared/types').UsageRecord) => void;
 	threadId: string;
 	videoPath: string;
 	tempDir: string;
@@ -78,7 +79,8 @@ export class Pipeline {
 				updateStatus: () => { },
 				next: () => { },
 				finish: () => { },
-				savePreprocessing: () => { }
+				savePreprocessing: () => { },
+				recordUsage: () => { }
 			}
 
 			// We need the REAL context to check conditions properly (especially `preprocessing` which is there)
@@ -109,6 +111,24 @@ export class Pipeline {
 						content: status,
 						isPending: true
 					})
+				}
+			},
+			recordUsage: (record: import('../../shared/types').UsageRecord) => {
+				if (this.threadId) {
+					threadManager.updateMessageUsage(this.threadId, this.messageId, record)
+
+					// Send update to UI for real-time cost display
+					const updatedThread = threadManager.getThread(this.threadId)
+					const updatedMessage = updatedThread?.messages.find(m => m.id === this.messageId)
+
+					if (updatedMessage) {
+						this.browserWindow.webContents.send('pipeline-update', {
+							id: this.messageId,
+							type: 'usage',
+							usage: updatedMessage.usage,
+							cost: updatedMessage.cost
+						})
+					}
 				}
 			},
 			savePreprocessing: (updates: Partial<Thread['preprocessing']>) => {

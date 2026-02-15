@@ -2,7 +2,7 @@ import { TimelineSegment } from '../../shared/types'
 import { TranscriptItem, generateSRT } from '../gemini/utils'
 
 export interface TimelineGenerationAdapter {
-    generateText(prompt: string, systemInstruction?: string): Promise<string>;
+    generateText(prompt: string, systemInstruction?: string): Promise<{ text: string; record: import('../../shared/types').UsageRecord }>;
 }
 
 export async function generateTimeline(
@@ -11,6 +11,7 @@ export async function generateTimeline(
     targetDuration: number,
     geminiAdapter: TimelineGenerationAdapter,
     updateStatus: (status: string) => void,
+    recordUsage: (record: import('../../shared/types').UsageRecord) => void,
     baseTimeline: TimelineSegment[] = []
 ): Promise<TimelineSegment[]> {
 
@@ -60,8 +61,11 @@ Task: Pick the next 3 segments to add to the timeline.
         try {
             // Using generateText because generateStructuredText might be overkill or strict schema might be annoying if Gemini adds text.
             // But let's try to parse a simple JSON array from text.
-            const responseText = await geminiAdapter.generateText(prompt, systemInstruction);
+            const { text: responseText, record } = await geminiAdapter.generateText(prompt, systemInstruction);
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
+
+            // Record usage for each iteration
+            recordUsage(record);
 
             const indices = parseIndicesFromResponse(responseText);
 

@@ -96,12 +96,14 @@ END OF CONVERSATION HISTORY
 
 	try {
 		const adapter = GeminiAdapter.create()
-		const result = await adapter.generateStructuredText<IntentResult>(
+		const { data: result, record } = await adapter.generateStructuredText<IntentResult>(
 			userPrompt,
 			INTENT_SCHEMA,
 			INTENT_SYSTEM_INSTRUCTION,
 			GEMINI_MODEL
 		)
+
+		context.recordUsage(record)
 
 		context.intentResult = result
 

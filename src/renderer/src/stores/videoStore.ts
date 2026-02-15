@@ -122,6 +122,11 @@ export const useVideoStore = defineStore('video', () => {
 							timeline: data.timeline
 						})
 						cleanup() // Remove listener when done
+					} else if (data.type === 'usage') {
+						updateMessage(newAiMessageId, {
+							usage: data.usage,
+							cost: data.cost
+						})
 					}
 				}
 			})

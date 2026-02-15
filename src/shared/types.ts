@@ -15,6 +15,18 @@ export interface Attachment {
 	type: FileType;
 }
 
+export interface Usage {
+	promptTokens: number;
+	candidatesTokens: number;
+	thinkingTokens?: number;
+	totalTokens: number;
+}
+
+export interface UsageRecord {
+	usage: Usage;
+	cost: number;
+}
+
 export interface Message {
 	id: string;
 	role: MessageRole;
@@ -22,6 +34,8 @@ export interface Message {
 	isPending: boolean;
 	files?: Attachment[];
 	timeline?: TimelineSegment[];
+	usage?: Usage;
+	cost?: number;
 	createdAt: number;
 }
 

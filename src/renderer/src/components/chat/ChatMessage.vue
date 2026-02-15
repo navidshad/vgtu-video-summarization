@@ -48,7 +48,12 @@
 					<div class="space-y-4 w-full">
 						<div class="flex flex-col gap-1">
 							<p class="text-[14px] leading-relaxed">{{ message.content }}</p>
-							<div v-if="message.role === MessageRole.AI && !message.isPending" class="flex justify-end">
+							<div v-if="message.role === MessageRole.AI && !message.isPending"
+								class="flex items-center justify-end gap-2">
+								<span v-if="message.usage"
+									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+									{{ message.usage.totalTokens.toLocaleString() }} tokens
+								</span>
 								<span
 									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">v.{{
 										message.id.slice(0, 4) }}</span>

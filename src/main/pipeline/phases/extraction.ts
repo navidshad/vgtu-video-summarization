@@ -48,8 +48,10 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	}
 
 	context.updateStatus('Phase 1: Extracting raw transcript...')
+	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
-	const transcript = await extractRawFromGemini(audioPath)
+	const { items: transcript, record } = await extractRawFromGemini(audioPath, duration)
+	context.recordUsage(record)
 
 	const tempDir = context.tempDir
 	const rawTranscriptPath = path.join(tempDir, `raw_transcript.json`)
@@ -70,12 +72,14 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	}
 
 	context.updateStatus('Phase 1: Correcting transcript for better accuracy...')
+	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
 	const transcriptJson = fs.readFileSync(rawTranscriptPath, 'utf-8')
 	const rawTranscript = JSON.parse(transcriptJson)
 	const rawSrt = generateSRT(rawTranscript)
 
-	const transcript = await correctFromGemini(audioPath, rawSrt)
+	const { items: transcript, record } = await correctFromGemini(audioPath, rawSrt, duration)
+	context.recordUsage(record)
 
 	const tempDir = context.tempDir
 	const correctedTranscriptPath = path.join(tempDir, `corrected_transcript.json`)
