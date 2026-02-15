@@ -1,6 +1,5 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
-import { GeminiAdapter } from '../../gemini/adapter'
 import fs from 'fs'
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
@@ -17,9 +16,12 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
   const baseTimeline = context.baseTimeline || []
 
-  try {
-    const geminiAdapter = GeminiAdapter.create()
+  // Decide mode and model
+  const mode = baseTimeline.length > 0 ? 'edit' : 'new'
+  const { GEMINI_MODEL, GEMINI_MODEL_FLASH_THINKING } = await import('../../constants/gemini')
+  const modelName = mode === 'edit' ? GEMINI_MODEL : GEMINI_MODEL_FLASH_THINKING
 
+  try {
     // Wrapper for status updates
     const updateStatus = (status: string) => {
       context.updateStatus(status)
@@ -29,10 +31,11 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       userExpectation,
       transcript,
       targetDuration,
-      geminiAdapter,
       updateStatus,
       context.recordUsage,
-      baseTimeline
+      baseTimeline,
+      modelName,
+      mode
     )
 
     if (shorterTimeline.length === 0) {

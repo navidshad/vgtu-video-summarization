@@ -43,7 +43,8 @@ Respond ONLY with a JSON object following this schema:
 
 Specific rules for 'content' field:
 - If type is 'text': This is the message shown directly to the user.
-- If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent. It should include all user preferences, specific moments mentioned, style constraints, and context from previous iterations. It will NOT be shown to the user.`
+- If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent. It should include all user preferences, specific moments mentioned, style constraints, and context from previous iterations.
+- CRITICAL: When editing an existing timeline, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user.`
 
 const INTENT_SCHEMA = {
 	type: 'object',

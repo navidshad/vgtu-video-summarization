@@ -15,6 +15,7 @@ export interface PipelineContext {
 	videoPath: string;
 	tempDir: string;
 	preprocessing: Thread['preprocessing'];
+	messageId: string;
 	baseTimeline?: any; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
 	intentResult?: import('../../shared/types').IntentResult;
@@ -70,6 +71,7 @@ export class Pipeline {
 				videoPath: thread.videoPath,
 				tempDir: thread.tempDir,
 				preprocessing: thread.preprocessing,
+				messageId: this.messageId,
 				context: this.context,
 				baseTimeline: undefined, // baseTimeline is not ready/needed for this check usually, or we can resolve it if needed. 
 				// Minimally mocking the context for the check.
@@ -93,6 +95,7 @@ export class Pipeline {
 			videoPath: thread.videoPath,
 			tempDir: thread.tempDir,
 			preprocessing: thread.preprocessing,
+			messageId: this.messageId,
 			context: this.context,
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
