@@ -33,7 +33,7 @@
 					</div>
 					<div class="space-y-4 w-full">
 						<div class="flex flex-col gap-1">
-							<p class="text-[14px] leading-relaxed">{{ message.content }}</p>
+							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-800 prose-pre:text-zinc-100" v-html="renderedContent"></div>
 							<div v-if="!message.isPending && (message.role === MessageRole.AI || (message.role === MessageRole.User && hasOriginalVideo))"
 								class="flex items-center justify-end gap-2">
 								<template v-if="message.role === MessageRole.AI">
@@ -87,6 +87,7 @@ import { Card } from '@codebridger/lib-vue-components/elements'
 import { MessageRole, Message, FileType } from '@shared/types'
 import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'
+import MarkdownIt from 'markdown-it'
 
 const props = defineProps<{
 	message: Message
@@ -107,6 +108,16 @@ const videoType = computed(() => {
 
 const hasOriginalVideo = computed(() => {
 	return props.message.files?.some(f => f.type === FileType.Original)
+})
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  typographer: true
+})
+
+const renderedContent = computed(() => {
+  return md.render(props.message.content)
 })
 
 const toggleTimeline = () => {
