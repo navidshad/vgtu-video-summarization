@@ -54,6 +54,10 @@
 									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
 									{{ message.usage.totalTokens.toLocaleString() }} tokens
 								</span>
+								<span v-if="message.cost"
+									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+									${{ message.cost.toFixed(4) }}
+								</span>
 								<span
 									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">v.{{
 										message.id.slice(0, 4) }}</span>
