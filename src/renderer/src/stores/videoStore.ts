@@ -57,12 +57,13 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const addMessage = async (content: string, role: MessageRole) => {
+	const addMessage = async (content: string, role: MessageRole, editRefId?: string) => {
 		if (!currentThreadId.value) return
 
 		const message = {
 			role,
 			content,
+			editRefId,
 			isPending: role === 'ai'
 		}
 
@@ -101,12 +102,8 @@ export const useVideoStore = defineStore('video', () => {
 
 		if (!currentThread.value) return
 
-		// Identify the user message that triggered this processing (usually the last one before we add the AI placeholder)
-		// If editReferenceMessageId is provided, we still need the latest user prompt as the instructions.
-		const userPromptMessageId = currentThread.value.messages[currentThread.value.messages.length - 1]?.id
-
 		// Add initial AI status message
-		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI)
+		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId)
 
 		if ((window as any).api) {
 			// Setup listener
@@ -133,9 +130,7 @@ export const useVideoStore = defineStore('video', () => {
 
 			await (window as any).api.startPipeline({
 				threadId,
-				newAiMessageId,
-				userPromptMessageId,
-				editReferenceMessageId
+				newAiMessageId
 			})
 		}
 	}

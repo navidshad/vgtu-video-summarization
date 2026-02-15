@@ -100,21 +100,25 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, userPromptMessageId, editReferenceMessageId }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
 		const thread = threadManager.getThread(threadId)
 		if (!thread) return
 
+		// Derive edit reference from the last user message
+		const lastUserMsg = threadManager.getLatestUserMessage(threadId)
+		const editRefId = lastUserMsg?.editRefId
+
 		// Prepare the context
 		// Full thread history is the context for the pipeline
 		const context = threadManager.getThreadContext(threadId)
 
 		// Prepare the base timeline
-		const baseTimeline = editReferenceMessageId ? thread.messages.find(m => m.id === editReferenceMessageId)?.timeline : undefined;
+		const baseTimeline = editRefId ? thread.messages.find(m => m.id === editRefId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
 
 		pipeline
 			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })

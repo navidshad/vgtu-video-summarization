@@ -37,6 +37,7 @@ export interface Message {
 	usage?: Usage;
 	cost?: number;
 	version?: number;
+	editRefId?: string;
 	createdAt: number;
 }
 

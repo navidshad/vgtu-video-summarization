@@ -33,8 +33,9 @@
 					</div>
 					<div class="space-y-4 w-full">
 						<div class="flex flex-col gap-1">
-							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-800 prose-pre:text-zinc-100" v-html="renderedContent"></div>
-							<div v-if="!message.isPending && (message.role === MessageRole.AI || (message.role === MessageRole.User && hasOriginalVideo))"
+							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-800 prose-pre:text-zinc-100"
+								v-html="renderedContent"></div>
+							<div v-if="!message.isPending && (message.role === MessageRole.AI || (message.role === MessageRole.User && (hasOriginalVideo || referencedVersion)))"
 								class="flex items-center justify-end gap-2">
 								<template v-if="message.role === MessageRole.AI">
 									<span v-if="message.usage"
@@ -47,8 +48,15 @@
 									</span>
 								</template>
 
-								<span v-if="showVersionTag || (message.role === MessageRole.User && hasOriginalVideo)"
-									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1">
+								<span
+									v-if="referencedVersion || showVersionTag || (message.role === MessageRole.User && hasOriginalVideo)"
+									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-2">
+									<div v-if="referencedVersion"
+										class="flex items-center gap-1 dark:border-zinc-700 pr-2 cursor-pointer hover:underline"
+										@click="$emit('scroll-to-reference', message.editRefId)">
+										<span class="text-zinc-500 font-medium text-[8px]">EDITING</span>
+										<span class="text-blue-500 font-bold">v.{{ referencedVersion }}</span>
+									</div>
 									<span v-if="showVersionTag" class="opacity-70">v.{{ message.version ||
 										message.id.slice(0, 4) }}</span>
 									<span v-if="videoType || (message.role === MessageRole.User && hasOriginalVideo)"
@@ -65,7 +73,8 @@
 							<!-- Video Section -->
 							<div v-if="message.files && message.files.length > 0" class="flex-1 space-y-3 min-w-0">
 								<VideoResult v-for="file in message.files" :key="file.url" :file="file"
-									:role="message.role" :is-pending="message.isPending" @save="$emit('save-video', $event)" @edit="$emit('edit', message.id)" />
+									:role="message.role" :is-pending="message.isPending"
+									@save="$emit('save-video', $event)" @edit="$emit('edit', message.id)" />
 
 							</div>
 
@@ -87,15 +96,24 @@ import { Card } from '@codebridger/lib-vue-components/elements'
 import { MessageRole, Message, FileType } from '@shared/types'
 import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'
-import MarkdownIt from 'markdown-it'
+import { useVideoStore } from '../../stores/videoStore'
+import markdownit from 'markdown-it'
 
 const props = defineProps<{
 	message: Message
 }>()
 
-defineEmits(['edit', 'save-video'])
+defineEmits(['edit', 'save-video', 'scroll-to-reference'])
 
+const videoStore = useVideoStore()
 const isTimelineExpanded = ref(false)
+
+const referencedVersion = computed(() => {
+	if (!props.message.editRefId) return null
+	const refMsg = videoStore.messages.find(m => m.id === props.message.editRefId)
+	if (!refMsg) return null
+	return refMsg.version || refMsg.id.slice(0, 4)
+})
 
 const showVersionTag = computed(() => {
 	return props.message.role === MessageRole.AI && props.message.files && props.message.files.some(f => f.type === FileType.Preview || f.type === FileType.Actual)
@@ -110,14 +128,14 @@ const hasOriginalVideo = computed(() => {
 	return props.message.files?.some(f => f.type === FileType.Original)
 })
 
-const md = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true
+const md = new markdownit({
+	html: false,
+	linkify: true,
+	typographer: true
 })
 
 const renderedContent = computed(() => {
-  return md.render(props.message.content)
+	return md.render(props.message.content)
 })
 
 const toggleTimeline = () => {

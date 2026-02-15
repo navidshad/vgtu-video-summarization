@@ -18,6 +18,7 @@ export interface PipelineContext {
 	messageId: string;
 	baseTimeline?: any; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
+	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
 }
 
@@ -28,15 +29,17 @@ export class Pipeline {
 	private messageId: string
 	private threadId: string
 	private context: string
+	private editRefId?: string
 	private baseTimeline?: any
 	private intentResult?: import('../../shared/types').IntentResult
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any, editRefId?: string) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
 		this.context = context
 		this.baseTimeline = baseTimeline
+		this.editRefId = editRefId
 	}
 
 	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
@@ -97,6 +100,7 @@ export class Pipeline {
 			preprocessing: thread.preprocessing,
 			messageId: this.messageId,
 			context: this.context,
+			editRefId: this.editRefId,
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },

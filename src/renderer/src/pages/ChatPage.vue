@@ -7,7 +7,7 @@
     <main ref="scrollContainer" class="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
       <div class="max-w-4xl mx-auto space-y-8">
         <ChatMessage v-for="(msg, i) in videoStore.messages" :key="i" :id="'message-' + msg.id" :message="msg"
-          @edit="startEditing" @save-video="handleSave" />
+          @edit="startEditing" @save-video="handleSave" @scroll-to-reference="scrollToMessage" />
       </div>
     </main>
 
@@ -77,15 +77,15 @@ watch(() => videoStore.messages, (newMessages) => {
 }, { deep: true })
 
 const handleSendMessage = async (userPrompt: string) => {
-  // The store action handles adding to current thread
-  await videoStore.addMessage(userPrompt, MessageRole.User)
-
   // Capture the context ID (which we now persist)
-  const contextId = editingMessageId.value
+  const editRefId = editingMessageId.value
+
+  // The store action handles adding to current thread
+  await videoStore.addMessage(userPrompt, MessageRole.User, editRefId || undefined)
 
   if (videoStore.currentThreadId) {
     // Pass the captured context ID (if any) to startProcessing
-    await videoStore.startProcessing(videoStore.currentThreadId, contextId || undefined)
+    await videoStore.startProcessing(videoStore.currentThreadId, editRefId || undefined)
   }
 }
 

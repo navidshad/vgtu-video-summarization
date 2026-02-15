@@ -278,6 +278,13 @@ class ThreadManager {
 			return content
 		}).join('\n\n')
 	}
+
+	// Get the last user message in a thread
+	getLatestUserMessage(threadId: string): Message | null {
+		const thread = this.getThread(threadId)
+		if (!thread) return null
+		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
+	}
 }
 
 export const threadManager = new ThreadManager()
