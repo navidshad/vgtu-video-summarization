@@ -113,7 +113,7 @@ Task: Provide a list of indices representing the new timeline after applying the
 `;
 
     try {
-        const { text: responseText, record } = await geminiAdapter.generateText(prompt, systemInstruction, modelName);
+        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
         console.log(`Gemini response (Edit Mode):`, responseText);
 
         // Record usage for the edit call
@@ -205,7 +205,7 @@ Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
-            const { text: responseText, record } = await geminiAdapter.generateText(prompt, systemInstruction, modelName);
+            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             // Record usage for each iteration

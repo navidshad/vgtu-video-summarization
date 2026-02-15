@@ -18,8 +18,8 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
 
   // Decide mode and model
   const mode = baseTimeline.length > 0 ? 'edit' : 'new'
-  const { GEMINI_MODEL, GEMINI_MODEL_FLASH_THINKING } = await import('../../constants/gemini')
-  const modelName = mode === 'edit' ? GEMINI_MODEL : GEMINI_MODEL_FLASH_THINKING
+  const modelSettings = (await import('../../settings')).settingsManager.getModelSettings()
+  const modelName = mode === 'edit' ? modelSettings.selection['timeline-edit'] : modelSettings.selection['timeline-new']
 
   try {
     const shorterTimeline = await generateTimeline({

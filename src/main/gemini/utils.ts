@@ -1,5 +1,5 @@
 import { GeminiAdapter } from './adapter'
-import { GEMINI_MODEL } from '../constants/gemini'
+import { settingsManager } from '../settings'
 import { UsageRecord } from '../../shared/types'
 
 export interface TranscriptItem {
@@ -131,13 +131,15 @@ export async function extractRawTranscript(
 	audioDuration: number = 0
 ): Promise<{ items: TranscriptItem[], record: UsageRecord }> {
 	const adapter = GeminiAdapter.create()
+	const modelSettings = settingsManager.getModelSettings()
+	const modelName = modelSettings.selection['raw-transcript']
 	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 	const { text: rawSrtText, record } = await adapter.generateTextFromFiles(
+		modelName,
 		'Generate the SRT for this audio.',
 		[fileUri],
 		TRANSCRIPT_PROMPT,
-		audioDuration,
-		GEMINI_MODEL
+		audioDuration
 	)
 
 	return {
@@ -155,16 +157,18 @@ export async function correctTranscript(
 	audioDuration: number = 0
 ): Promise<{ items: TranscriptItem[], record: UsageRecord }> {
 	const adapter = GeminiAdapter.create()
+	const modelSettings = settingsManager.getModelSettings()
+	const modelName = modelSettings.selection['corrected-transcript']
 	const fileUri = await adapter.uploadFile(audioPath, 'audio/mpeg')
 	const systemInstruction = TRANSCRIPT_CORRECTION_PROMPT.split('Initial Transcript:')[0].trim();
 
 	const { data: correctionResult, record } = await adapter.generateStructuredFromFiles<CorrectionResponse>(
+		modelName,
 		`Initial Transcript:\n${rawSrt}`,
 		[fileUri],
 		CORRECTION_SCHEMA,
 		systemInstruction,
-		audioDuration,
-		GEMINI_MODEL
+		audioDuration
 	)
 
 	let finalSrtText = rawSrt

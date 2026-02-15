@@ -71,3 +71,29 @@ export interface IntentResult {
 	content: string; // Brief description or the text answer
 	duration?: number; // Duration in seconds
 }
+
+export interface ModelPricing {
+	input: {
+		standard: number
+		longContext?: number // Only for Pro
+		threshold?: number   // Only for Pro
+		text?: number        // Only for Flash
+		audio?: number       // Only for Flash
+	}
+	output: {
+		standard: number
+		longContext?: number // Only for Pro
+		threshold?: number   // Only for Pro
+	}
+}
+
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit'
+
+export interface ModelSelection {
+	[key: string]: string // operation -> model name
+}
+
+export interface ModelSettings {
+	pricing: Record<string, ModelPricing>
+	selection: ModelSelection
+}
