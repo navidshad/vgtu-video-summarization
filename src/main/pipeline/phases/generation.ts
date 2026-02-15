@@ -22,21 +22,16 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   const modelName = mode === 'edit' ? GEMINI_MODEL : GEMINI_MODEL_FLASH_THINKING
 
   try {
-    // Wrapper for status updates
-    const updateStatus = (status: string) => {
-      context.updateStatus(status)
-    }
-
-    const shorterTimeline = await generateTimeline(
+    const shorterTimeline = await generateTimeline({
       userExpectation,
-      transcript,
+      allSegments: transcript,
       targetDuration,
-      updateStatus,
-      context.recordUsage,
       baseTimeline,
       modelName,
-      mode
-    )
+      mode,
+      onUpdateStatus: (status) => context.updateStatus(status),
+      onRecordUsage: (record) => context.recordUsage(record)
+    })
 
     if (shorterTimeline.length === 0) {
       context.finish('Failed to generate timeline.', undefined, [])

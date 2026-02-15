@@ -2,56 +2,80 @@ import { TimelineSegment, UsageRecord } from '../../shared/types'
 import { TranscriptItem, generateSRT } from '../gemini/utils'
 import { GeminiAdapter } from '../gemini/adapter'
 
-export async function generateTimeline(
-    userExpectation: string,
-    allSegments: TranscriptItem[],
-    targetDuration: number,
-    updateStatus: (status: string) => void,
-    recordUsage: (record: UsageRecord) => void,
-    baseTimeline: TimelineSegment[] = [],
-    modelName: string,
-    mode: 'new' | 'edit'
-): Promise<TimelineSegment[]> {
+export interface GenerateTimelineOptions {
+    userExpectation: string;
+    allSegments: TranscriptItem[];
+    targetDuration: number;
+    baseTimeline?: TimelineSegment[];
+    modelName: string;
+    mode: 'new' | 'edit';
+    onUpdateStatus?: (status: string) => void;
+    onRecordUsage?: (record: UsageRecord) => void;
+}
+
+export async function generateTimeline(options: GenerateTimelineOptions): Promise<TimelineSegment[]> {
+    const {
+        userExpectation,
+        allSegments,
+        targetDuration,
+        onUpdateStatus,
+        onRecordUsage,
+        baseTimeline = [],
+        modelName,
+        mode
+    } = options;
+
     const fullTimelineSRT = generateSRT(allSegments);
     const geminiAdapter = GeminiAdapter.create();
 
     if (mode === 'edit') {
-        return editTimeline(
+        return editTimeline({
             userExpectation,
             allSegments,
             fullTimelineSRT,
             baseTimeline,
             geminiAdapter,
             modelName,
-            updateStatus,
-            recordUsage
-        );
+            onUpdateStatus,
+            onRecordUsage
+        });
     } else {
-        return generateNewTimeline(
+        return generateNewTimeline({
             userExpectation,
             allSegments,
             fullTimelineSRT,
             targetDuration,
             geminiAdapter,
             modelName,
-            updateStatus,
-            recordUsage,
+            onUpdateStatus,
+            onRecordUsage,
             baseTimeline
-        );
+        });
     }
 }
 
-async function editTimeline(
-    userExpectation: string,
-    allSegments: TranscriptItem[],
-    fullTimelineSRT: string,
-    baseTimeline: TimelineSegment[],
-    geminiAdapter: GeminiAdapter,
-    modelName: string,
-    updateStatus: (status: string) => void,
-    recordUsage: (record: UsageRecord) => void
-): Promise<TimelineSegment[]> {
-    updateStatus(`Phase 2: Editing timeline in one-shot...`);
+async function editTimeline(options: {
+    userExpectation: string;
+    allSegments: TranscriptItem[];
+    fullTimelineSRT: string;
+    baseTimeline: TimelineSegment[];
+    geminiAdapter: GeminiAdapter;
+    modelName: string;
+    onUpdateStatus?: (status: string) => void;
+    onRecordUsage?: (record: UsageRecord) => void;
+}): Promise<TimelineSegment[]> {
+    const {
+        userExpectation,
+        allSegments,
+        fullTimelineSRT,
+        baseTimeline,
+        geminiAdapter,
+        modelName,
+        onUpdateStatus,
+        onRecordUsage
+    } = options;
+
+    onUpdateStatus?.(`Phase 2: Editing timeline in one-shot...`);
 
     const formattedCurrentTimeline = baseTimeline.length > 0
         ? baseTimeline.map(s => `• Index ${s.index}: ${s.duration.toFixed(1)}s duration, ${s.text}`).join('\n')
@@ -93,7 +117,7 @@ Task: Provide a list of indices representing the new timeline after applying the
         console.log(`Gemini response (Edit Mode):`, responseText);
 
         // Record usage for the edit call
-        recordUsage(record);
+        onRecordUsage?.(record);
 
         const indices = parseIndicesFromResponse(responseText);
         const newTimeline: TimelineSegment[] = [];
@@ -115,22 +139,34 @@ Task: Provide a list of indices representing the new timeline after applying the
         return newTimeline;
     } catch (error) {
         console.error("Error in editTimeline:", error);
-        updateStatus(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
+        onUpdateStatus?.(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
         return baseTimeline;
     }
 }
 
-async function generateNewTimeline(
-    userExpectation: string,
-    allSegments: TranscriptItem[],
-    fullTimelineSRT: string,
-    targetDuration: number,
-    geminiAdapter: GeminiAdapter,
-    modelName: string,
-    updateStatus: (status: string) => void,
-    recordUsage: (record: UsageRecord) => void,
-    baseTimeline: TimelineSegment[] = []
-): Promise<TimelineSegment[]> {
+async function generateNewTimeline(options: {
+    userExpectation: string;
+    allSegments: TranscriptItem[];
+    fullTimelineSRT: string;
+    targetDuration: number;
+    geminiAdapter: GeminiAdapter;
+    modelName: string;
+    onUpdateStatus?: (status: string) => void;
+    onRecordUsage?: (record: UsageRecord) => void;
+    baseTimeline?: TimelineSegment[];
+}): Promise<TimelineSegment[]> {
+    const {
+        userExpectation,
+        allSegments,
+        fullTimelineSRT,
+        targetDuration,
+        geminiAdapter,
+        modelName,
+        onUpdateStatus,
+        onRecordUsage,
+        baseTimeline = []
+    } = options;
+
     const currentShorterTimeline: TimelineSegment[] = [...baseTimeline];
     let currentDuration = calculateTotalDuration(currentShorterTimeline);
 
@@ -146,7 +182,7 @@ Do not include any other text.
 
     while (currentDuration < targetDuration && iterationCount < MAX_ITERATIONS) {
         iterationCount++;
-        updateStatus(`Phase 2: Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
+        onUpdateStatus?.(`Phase 2: Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
 
         const formattedCurrentTimeline = currentShorterTimeline.length > 0
             ? currentShorterTimeline.map(s => `• ${s.duration.toFixed(1)}s duration, ${s.text}`).join('\n')
@@ -173,7 +209,7 @@ Task: Pick the next 3 segments to add to the timeline.
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             // Record usage for each iteration
-            recordUsage(record);
+            onRecordUsage?.(record);
 
             const indices = parseIndicesFromResponse(responseText);
 
@@ -212,7 +248,7 @@ Task: Pick the next 3 segments to add to the timeline.
 
         } catch (error) {
             console.error("Error in generateNewTimeline iteration:", error);
-            updateStatus(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
+            onUpdateStatus?.(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
             break;
         }
     }
