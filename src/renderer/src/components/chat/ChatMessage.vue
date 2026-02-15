@@ -48,15 +48,17 @@
 									</span>
 								</template>
 
-								<span
-									v-if="referencedVersion || showVersionTag || (message.role === MessageRole.User && hasOriginalVideo)"
-									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-2">
-									<div v-if="referencedVersion"
-										class="flex items-center gap-1 dark:border-zinc-700 pr-2 cursor-pointer hover:underline"
-										@click="$emit('scroll-to-reference', message.editRefId)">
-										<span class="text-zinc-500 font-medium text-[8px]">EDITING</span>
-										<span class="text-blue-500 font-bold">v.{{ referencedVersion }}</span>
-									</div>
+								<!-- Edit Reference Tag -->
+								<span v-if="referencedVersion"
+									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:underline"
+									@click="$emit('scroll-to-reference', message.editRefId)">
+									<span class="text-zinc-500 font-medium text-[8px]">{{ editLabel }}</span>
+									<span class="text-blue-500 font-bold">v.{{ referencedVersion }}</span>
+								</span>
+
+								<!-- Current Version/Type Tag -->
+								<span v-if="showVersionTag || (message.role === MessageRole.User && hasOriginalVideo)"
+									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1">
 									<span v-if="showVersionTag" class="opacity-70">v.{{ message.version ||
 										message.id.slice(0, 4) }}</span>
 									<span v-if="videoType || (message.role === MessageRole.User && hasOriginalVideo)"
@@ -117,6 +119,12 @@ const referencedVersion = computed(() => {
 
 const showVersionTag = computed(() => {
 	return props.message.role === MessageRole.AI && props.message.files && props.message.files.some(f => f.type === FileType.Preview || f.type === FileType.Actual)
+})
+
+const editLabel = computed(() => {
+	if (props.message.role === MessageRole.User) return 'EDITING'
+	if (showVersionTag.value) return 'EDITED'
+	return 'EDITING'
 })
 
 const videoType = computed(() => {

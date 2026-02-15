@@ -116,7 +116,8 @@ export const useVideoStore = defineStore('video', () => {
 							content: data.content,
 							isPending: false,
 							files: data.video ? [{ url: data.video.path, type: data.video.type } as Attachment] : [],
-							timeline: data.timeline
+							timeline: data.timeline,
+							version: data.version
 						})
 						cleanup() // Remove listener when done
 					} else if (data.type === 'usage') {

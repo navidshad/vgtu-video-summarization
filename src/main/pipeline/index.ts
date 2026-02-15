@@ -156,13 +156,22 @@ export class Pipeline {
 				this.runStep(nextData)
 			},
 			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
+				let finalVersion: number | undefined = undefined
+
+				if (options?.version) {
+					finalVersion = options.version
+				} else if (options?.shouldVersion && this.threadId) {
+					finalVersion = threadManager.getNextVersion(this.threadId)
+				}
+
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
 					type: 'finish',
 					content: message,
 					video,
-					timeline
+					timeline,
+					version: finalVersion
 				})
 
 				// Persist to Thread
@@ -170,17 +179,12 @@ export class Pipeline {
 					const updates: Partial<Message> = {
 						content: message,
 						isPending: false,
-						timeline
+						timeline,
+						version: finalVersion
 					}
 
 					if (video) {
 						updates.files = [{ url: video.path, type: video.type }]
-					}
-
-					if (options?.version) {
-						updates.version = options.version
-					} else if (options?.shouldVersion) {
-						updates.version = threadManager.getNextVersion(this.threadId)
 					}
 
 					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
