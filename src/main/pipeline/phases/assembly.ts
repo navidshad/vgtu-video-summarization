@@ -32,8 +32,8 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 
 		context.finish('Processing complete. Your video is ready.', {
 			path: outputPath,
-			type: FileType.Actual
-		}, timeline)
+			type: FileType.Preview
+		}, timeline, { shouldVersion: true })
 	} catch (error) {
 		console.error('Assembly failed:', error)
 		context.finish('Video assembly failed.')

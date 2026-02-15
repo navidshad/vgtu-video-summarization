@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { FileType, Thread } from '../../shared/types'
+import { FileType, Thread, Message } from '../../shared/types'
 
 export type PipelineFunction = (data: any, context: PipelineContext) => Promise<void> | void;
 
@@ -8,7 +8,7 @@ import { threadManager } from '../threads'
 export interface PipelineContext {
 	updateStatus: (status: string) => void;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => void;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => void;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => void;
 	threadId: string;
@@ -151,7 +151,7 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => {
+			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
@@ -163,7 +163,7 @@ export class Pipeline {
 
 				// Persist to Thread
 				if (this.threadId) {
-					const updates: any = {
+					const updates: Partial<Message> = {
 						content: message,
 						isPending: false,
 						timeline
@@ -171,6 +171,12 @@ export class Pipeline {
 
 					if (video) {
 						updates.files = [{ url: video.path, type: video.type }]
+					}
+
+					if (options?.version) {
+						updates.version = options.version
+					} else if (options?.shouldVersion) {
+						updates.version = threadManager.getNextVersion(this.threadId)
 					}
 
 					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)

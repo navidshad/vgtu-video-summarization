@@ -39,6 +39,7 @@ class ThreadManager {
 			preprocessing: {},
 			tempDir: settingsManager.getThreadTempDir(id),
 			messages: [],
+			versionCounter: 0,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
@@ -205,6 +206,15 @@ class ThreadManager {
 
 		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
 		return true
+	}
+
+	getNextVersion(threadId: string): number {
+		const thread = this.getThread(threadId)
+		if (!thread) return 0
+
+		const nextVersion = (thread.versionCounter || 0) + 1
+		this.updateThread(threadId, { versionCounter: nextVersion })
+		return nextVersion
 	}
 
 	// Update usage and cost for a message

@@ -26,11 +26,7 @@
 			</div>
 		</div>
 
-		<!-- Simple label for User files -->
-		<div v-else class="px-2 py-1.5 flex justify-between items-center bg-white/50 dark:bg-zinc-900/50">
-			<span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Original Video</span>
-			<span class="text-[9px] font-bold text-blue-500 uppercase">{{ file.type }}</span>
-		</div>
+		<!-- No footer for User files as it moved to ChatMessage metadata -->
 	</div>
 </template>
 

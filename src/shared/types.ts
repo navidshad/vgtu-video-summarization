@@ -36,6 +36,7 @@ export interface Message {
 	timeline?: TimelineSegment[];
 	usage?: Usage;
 	cost?: number;
+	version?: number;
 	createdAt: number;
 }
 
@@ -52,6 +53,7 @@ export interface Thread {
 	}
 	tempDir: string
 	messages: Message[]
+	versionCounter?: number
 	createdAt: number
 	updatedAt: number
 }
