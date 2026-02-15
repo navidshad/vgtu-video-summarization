@@ -17,10 +17,7 @@
           </p>
         </div>
 
-        <Button @click="saveKey" :disabled="!apiKey" variant="primary"
-          class="w-full font-semibold shadow-lg dark:shadow-blue-900/20 active:scale-[0.98] transition-all">
-          Continue
-        </Button>
+        <Button @click="saveKey" :disabled="!apiKey" color="primary" class="w-full" label="Continue" />
       </div>
     </div>
   </div>

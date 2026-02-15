@@ -3,13 +3,7 @@
 		class="h-full overflow-hidden flex flex-col p-8 space-y-8 bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300">
 		<!-- Header -->
 		<div class="flex items-center space-x-4">
-			<button @click="router.back()"
-				class="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all text-zinc-600 dark:text-zinc-400 active:scale-95 shadow-sm">
-				<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-					stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="m15 18-6-6 6-6" />
-				</svg>
-			</button>
+			<IconButton @click="router.back()" icon="IconArrowLeft" size="xs"/>
 			<div>
 				<h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Settings</h1>
 				<p class="text-sm text-zinc-500 dark:text-zinc-400">Configure application preferences</p>
@@ -44,18 +38,10 @@
 							{{ tempDir || 'Loading...' }}
 						</div>
 
-						<div class="flex space-x-3">
-							<Button @click="handleChange" variant="secondary" size="sm" class="flex-1">
-								Change Location
-							</Button>
-							<Button @click="handleOpen" variant="ghost" size="sm"
-								class="flex-1 border border-zinc-200 dark:border-zinc-800">
-								Open Folder
-							</Button>
-							<Button @click="handleReset" variant="ghost" size="sm"
-								class="flex-1 border border-zinc-200 dark:border-zinc-800 text-zinc-500">
-								Reset to Default
-							</Button>
+						<div class="flex gap-4 justify-between">
+							<Button @click="handleChange" outline color="secondary" size="sm" label="Change Location" class="w-full" />
+							<Button @click="handleOpen" size="sm" label="Open Folder" class="w-full" />
+							<Button @click="handleReset" size="sm" label="Reset to Default" class="w-full" />
 						</div>
 					</div>
 				</div>
@@ -85,11 +71,7 @@
 						<Input v-model="apiKey" type="password" placeholder="Enter API Key..."
 							class="font-mono text-sm !bg-zinc-50 dark:!bg-zinc-800/50 !border-zinc-200 dark:!border-zinc-700 !text-zinc-900 dark:!text-white placeholder:text-zinc-400 focus:!border-blue-500 transition-all" />
 
-						<Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey"
-							variant="primary" size="sm"
-							class="w-full font-semibold shadow-lg active:scale-[0.98] transition-all">
-							Save API Key
-						</Button>
+						<Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm" class="w-full" label="Save API Key" />
 					</div>
 				</div>
 				<!-- Danger Zone -->
@@ -116,10 +98,7 @@
 							Permanently delete all chats, video summaries, and cached files. This action cannot be
 							undone.
 						</p>
-						<Button @click="handleDeleteAll" variant="ghost"
-							class="w-full border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30">
-							Delete All Data
-						</Button>
+						<Button @click="handleDeleteAll" label="Delete All Data" outline color="danger" class="w-full" />
 					</div>
 				</div>
 			</div>
@@ -130,7 +109,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
 import { Input } from '@codebridger/lib-vue-components/form'
 import { useVideoStore } from '../stores/videoStore'
 

@@ -18,11 +18,16 @@
 					{{ file.type === FileType.Preview ? 'Generating...' : 'Ready' }}
 				</p>
 			</div>
-			<div class="flex gap-2">
-				<Button variant="primary" @click="$emit('save', file.url)"
-					class="!px-3 !py-1 !h-auto text-[9px] font-bold uppercase tracking-widest">
-					Save
-				</Button>
+			<div class="flex gap-2 items-center">
+				<Button 
+					label="Save"
+					@click="$emit('save', file.url)"
+				/>
+				<Button
+					label="Edit"
+					v-if="!isPending" 
+					@click="$emit('edit')"
+				/>
 			</div>
 		</div>
 
@@ -31,15 +36,16 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
 import { MessageRole, FileType, Attachment } from '@shared/types'
 
 defineProps<{
 	file: Attachment
 	role: MessageRole
+	isPending?: boolean
 }>()
 
-defineEmits(['save'])
+defineEmits(['save', 'edit'])
 
 const getMediaUrl = (path: string) => {
 	if (!path) return ''

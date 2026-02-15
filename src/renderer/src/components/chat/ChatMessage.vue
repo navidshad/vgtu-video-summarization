@@ -12,20 +12,6 @@
 		<!-- Message Content Wrapper (Text + Attachments) -->
 		<div class="relative group flex flex-col gap-2 w-full"
 			:class="message.role === MessageRole.User ? 'items-end' : 'items-start'">
-			<!-- Edit Button for AI Messages -->
-			<button v-if="message.role === MessageRole.AI && !message.isPending" @click="$emit('edit', message.id)"
-				class="absolute left-full top-0 ml-4 flex items-center gap-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm rounded-xl px-3 py-2 text-xs font-medium text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-200 dark:hover:border-blue-800 opacity-0 group-hover:opacity-100 transition-all whitespace-nowrap z-10"
-				title="Branch from this result">
-				<svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"
-					stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M20.2 6 3 11l-.9-2.4c-.5-1.1.2-2.4 1.3-2.9l13.2-4.8c1.1-.5 2.4.2 2.9 1.3l.7 1.8z" />
-					<path d="m6.2 5.3 3.1 3.9" />
-					<path d="m12.4 3.4 3.1 4" />
-					<path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
-				</svg>
-				<span>Edit this version</span>
-			</button>
-
 			<!-- Text Message Bubble -->
 			<Card :class="[
 				'!rounded-2xl !p-4 shadow-sm dark:shadow-xl transition-colors w-fit max-w-[450px]',
@@ -79,7 +65,8 @@
 							<!-- Video Section -->
 							<div v-if="message.files && message.files.length > 0" class="flex-1 space-y-3 min-w-0">
 								<VideoResult v-for="file in message.files" :key="file.url" :file="file"
-									:role="message.role" @save="$emit('save-video', $event)" />
+									:role="message.role" :is-pending="message.isPending" @save="$emit('save-video', $event)" @edit="$emit('edit', message.id)" />
+
 							</div>
 
 							<!-- Timeline Section -->
