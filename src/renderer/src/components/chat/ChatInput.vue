@@ -23,30 +23,12 @@
           </svg>
           <span class="font-medium">Branching from previous result</span>
         </div>
-        <button
+        <IconButton
+          icon="IconX"
+          color="primary"
+          size="xs"
           @click="$emit('cancel-edit')"
-          class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
-		<!-- <IconButton
-		icon="IconX"
-		color="primary"
-		size="xs"
-		@click="$emit('cancel-edit')"
-		/> -->
+        />
       </div>
 
       <div class="flex items-end space-x-4">
@@ -54,12 +36,9 @@
         <div class="flex-1 relative group">
           <TextArea
             v-model="userPrompt"
-            :disabled="false"
-            :error="false"
             iconName="IconArrowUp"
             iconOppositePosition
             placeholder="Ask a follow-up question..."
-            :required="false"
             :rows="2"
             @icon-click="handleSend"
           />
@@ -71,7 +50,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-
 import { TextArea } from '@codebridger/lib-vue-components/form'
 import { IconButton } from '@codebridger/lib-vue-components/elements'
 
@@ -80,6 +58,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits(['send', 'cancel-edit'])
+
 const userPrompt = ref('')
 
 const handleSend = () => {
@@ -90,6 +69,7 @@ const handleSend = () => {
 </script>
 
 <style scoped>
+/* Scrollbar Customization */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
 }
@@ -107,6 +87,7 @@ const handleSend = () => {
   background: #52525b;
 }
 
+/* Textarea Overrides */
 :deep(.form-textarea) {
   border-radius: 1.5rem !important;
   border-color: #e4e4e7 !important;

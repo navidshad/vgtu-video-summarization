@@ -2,14 +2,7 @@
   <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8 relative">
     <!-- Back Button -->
     <div class="absolute top-0 left-0 p-6">
-      <button @click="router.back()"
-        class="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-zinc-600 dark:text-zinc-400 shadow-sm active:scale-95 group">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 group-hover:-translate-x-0.5 transition-transform"
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="m15 18-6-6 6-6" />
-        </svg>
-      </button>
+      <IconButton @click="router.back()" icon="IconArrowLeft" size="xs"/>
     </div>
 
     <div class="text-center">
@@ -57,20 +50,14 @@
               <p class="text-xs text-zinc-500 dark:text-zinc-400">Ready to upload</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" @click="resetSelection"
-            class="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-white">
-            Change
-          </Button>
+          <Button size="sm" @click="resetSelection" label="Change" />
         </div>
 
         <TextArea v-model="prompt"
           placeholder="What would you like to focus on in this summary? (e.g. 'Summarize key takeaways')" :rows="4"
           class="!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-white !border-zinc-200 dark:!border-zinc-700 placeholder:text-zinc-400" />
 
-        <Button @click="startCreation" variant="primary" :disabled="!prompt.trim()"
-          class="w-full py-4 font-bold active:scale-[0.99] shadow-lg dark:shadow-blue-900/20">
-          Create Summary
-        </Button>
+        <Button @click="startCreation" color="primary" :disabled="!prompt.trim()" label="Create Summary" class="w-full"/>
       </div>
     </div>
   </div>
@@ -79,7 +66,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
 import { MessageRole } from '@shared/types'
 import { useVideoStore } from '../stores/videoStore'
