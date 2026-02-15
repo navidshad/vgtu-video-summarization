@@ -1,9 +1,9 @@
-import { app, shell } from 'electron'
+import { app } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message, Thread } from '@shared/types'
+import type { Message, Thread, Usage, UsageRecord } from '@shared/types'
 import { settingsManager } from '../settings'
 
 // Re-export needed types for consumers (if any, though shared is better)
@@ -39,6 +39,7 @@ class ThreadManager {
 			preprocessing: {},
 			tempDir: settingsManager.getThreadTempDir(id),
 			messages: [],
+			versionCounter: 0,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
@@ -203,6 +204,44 @@ class ThreadManager {
 		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
 		thread.updatedAt = Date.now()
 
+		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		return true
+	}
+
+	getNextVersion(threadId: string): number {
+		const thread = this.getThread(threadId)
+		if (!thread) return 0
+
+		const nextVersion = (thread.versionCounter || 0) + 1
+		this.updateThread(threadId, { versionCounter: nextVersion })
+		return nextVersion
+	}
+
+	// Update usage and cost for a message
+	updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): boolean {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
+		if (msgIndex === -1) return false
+
+		const currentMsg = thread.messages[msgIndex]
+		const newUsage: Usage = {
+			promptTokens: (currentMsg.usage?.promptTokens || 0) + record.usage.promptTokens,
+			candidatesTokens: (currentMsg.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
+			thinkingTokens: (currentMsg.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
+			totalTokens: (currentMsg.usage?.totalTokens || 0) + record.usage.totalTokens
+		}
+
+		const newCost = (currentMsg.cost || 0) + record.cost
+
+		thread.messages[msgIndex] = {
+			...currentMsg,
+			usage: newUsage,
+			cost: newCost
+		}
+
+		thread.updatedAt = Date.now()
 		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
 		return true
 	}

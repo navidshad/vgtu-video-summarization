@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { FileType, Thread } from '../../shared/types'
+import { FileType, Thread, Message } from '../../shared/types'
 
 export type PipelineFunction = (data: any, context: PipelineContext) => Promise<void> | void;
 
@@ -8,12 +8,14 @@ import { threadManager } from '../threads'
 export interface PipelineContext {
 	updateStatus: (status: string) => void;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => void;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => void;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
+	recordUsage: (record: import('../../shared/types').UsageRecord) => void;
 	threadId: string;
 	videoPath: string;
 	tempDir: string;
 	preprocessing: Thread['preprocessing'];
+	messageId: string;
 	baseTimeline?: any; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
 	intentResult?: import('../../shared/types').IntentResult;
@@ -69,6 +71,7 @@ export class Pipeline {
 				videoPath: thread.videoPath,
 				tempDir: thread.tempDir,
 				preprocessing: thread.preprocessing,
+				messageId: this.messageId,
 				context: this.context,
 				baseTimeline: undefined, // baseTimeline is not ready/needed for this check usually, or we can resolve it if needed. 
 				// Minimally mocking the context for the check.
@@ -78,7 +81,8 @@ export class Pipeline {
 				updateStatus: () => { },
 				next: () => { },
 				finish: () => { },
-				savePreprocessing: () => { }
+				savePreprocessing: () => { },
+				recordUsage: () => { }
 			}
 
 			// We need the REAL context to check conditions properly (especially `preprocessing` which is there)
@@ -91,6 +95,7 @@ export class Pipeline {
 			videoPath: thread.videoPath,
 			tempDir: thread.tempDir,
 			preprocessing: thread.preprocessing,
+			messageId: this.messageId,
 			context: this.context,
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
@@ -111,6 +116,24 @@ export class Pipeline {
 					})
 				}
 			},
+			recordUsage: (record: import('../../shared/types').UsageRecord) => {
+				if (this.threadId) {
+					threadManager.updateMessageUsage(this.threadId, this.messageId, record)
+
+					// Send update to UI for real-time cost display
+					const updatedThread = threadManager.getThread(this.threadId)
+					const updatedMessage = updatedThread?.messages.find(m => m.id === this.messageId)
+
+					if (updatedMessage) {
+						this.browserWindow.webContents.send('pipeline-update', {
+							id: this.messageId,
+							type: 'usage',
+							usage: updatedMessage.usage,
+							cost: updatedMessage.cost
+						})
+					}
+				}
+			},
 			savePreprocessing: (updates: Partial<Thread['preprocessing']>) => {
 				if (this.threadId) {
 					const currentThread = threadManager.getThread(this.threadId)
@@ -128,7 +151,7 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any) => {
+			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
@@ -140,7 +163,7 @@ export class Pipeline {
 
 				// Persist to Thread
 				if (this.threadId) {
-					const updates: any = {
+					const updates: Partial<Message> = {
 						content: message,
 						isPending: false,
 						timeline
@@ -148,6 +171,12 @@ export class Pipeline {
 
 					if (video) {
 						updates.files = [{ url: video.path, type: video.type }]
+					}
+
+					if (options?.version) {
+						updates.version = options.version
+					} else if (options?.shouldVersion) {
+						updates.version = threadManager.getNextVersion(this.threadId)
 					}
 
 					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)

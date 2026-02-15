@@ -17,22 +17,23 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 		return
 	}
 
-	context.updateStatus('Phase 3: Assembling video from timeline...')
+	context.updateStatus('Assembling video from timeline...')
 
 	try {
 		const outputPath = await assembleVideo(
 			videoPath,
 			timeline,
 			context.tempDir,
+			context.messageId,
 			(percent) => {
-				context.updateStatus(`Phase 3: Assembling video (${percent}%)...`)
+				context.updateStatus(`Assembling video (${percent}%)...`)
 			}
 		)
 
 		context.finish('Processing complete. Your video is ready.', {
 			path: outputPath,
-			type: FileType.Actual
-		}, timeline)
+			type: FileType.Preview
+		}, timeline, { shouldVersion: true })
 	} catch (error) {
 		console.error('Assembly failed:', error)
 		context.finish('Video assembly failed.')
