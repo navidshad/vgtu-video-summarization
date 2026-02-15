@@ -10,24 +10,10 @@
 		<!-- Footer info for AI files -->
 		<div v-if="role === MessageRole.AI"
 			class="p-3 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
-			<div>
-				<h3 class="text-[10px] font-bold text-zinc-900 dark:text-white uppercase tracking-widest leading-none">
-					{{ file.type === FileType.Preview ? 'Preview Summary' : 'Final Summary' }}
-				</h3>
-				<p class="text-[9px] text-zinc-500 font-medium mt-1 leading-none">
-					{{ file.type === FileType.Preview ? 'Generating...' : 'Ready' }}
-				</p>
-			</div>
+			<div></div>
 			<div class="flex gap-2 items-center">
-				<Button 
-					label="Save"
-					@click="$emit('save', file.url)"
-				/>
-				<Button
-					label="Edit"
-					v-if="!isPending" 
-					@click="$emit('edit')"
-				/>
+				<Button label="Save" size="sm" @click="$emit('save', file.url)" />
+				<Button label="Edit" size="sm" v-if="!isPending" @click="$emit('edit')" />
 			</div>
 		</div>
 
