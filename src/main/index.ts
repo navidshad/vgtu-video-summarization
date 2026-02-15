@@ -1,10 +1,30 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { net } from 'electron'
+import * as fs from 'fs'
+import { basename, extname, join } from 'path'
+import { pathToFileURL } from 'url'
 import { Pipeline } from './pipeline'
+import { settingsManager } from './settings'
+import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
+import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
-import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+
+protocol.registerSchemesAsPrivileged([
+	{
+		scheme: 'media',
+		privileges: {
+			secure: true,
+			supportFetchAPI: true,
+			bypassCSP: true,
+			stream: true,
+			standard: true,
+			corsEnabled: true
+		}
+	}
+])
 
 function createWindow(): void {
 	const mainWindow = new BrowserWindow({
@@ -41,12 +61,33 @@ app.whenReady().then(() => {
 		optimizer.watchWindowShortcuts(window)
 	})
 
+	// Register custom protocol for local media
+	protocol.registerFileProtocol('media', (request, callback) => {
+		try {
+			const url = new URL(request.url)
+			// Consolidate hostname and pathname (handles both media://var/... and media:///var/...)
+			let rawPath = decodeURIComponent(url.hostname + url.pathname)
+
+			// If path already contained file:// prefix, clean it up
+			let filePath = rawPath.replace(/^file:\/+/i, '/')
+
+			if (process.platform !== 'win32' && !filePath.startsWith('/')) {
+				filePath = '/' + filePath
+			}
+
+			callback({ path: filePath })
+		} catch (error) {
+			console.error('Media protocol error:', error)
+			callback({ error: -6 })
+		}
+	})
+
 	createWindow()
 
 	ipcMain.handle('select-video', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov'] }]
+			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }]
 		})
 
 		if (result.canceled || result.filePaths.length === 0) {
@@ -59,26 +100,125 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { messageId, videoPath }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, userPromptMessageId, editReferenceMessageId }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
-		const pipeline = new Pipeline(window, messageId)
+		const thread = threadManager.getThread(threadId)
+		if (!thread) return
+
+		// Prepare the context
+		// Full thread history is the context for the pipeline
+		const context = threadManager.getThreadContext(threadId)
+
+		// Prepare the base timeline
+		const baseTimeline = editReferenceMessageId ? thread.messages.find(m => m.id === editReferenceMessageId)?.timeline : undefined;
+
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline)
 
 		pipeline
-			.register(extraction.convertToAudio)
-			.register(extraction.extractTranscript)
-			.register(extraction.extractSceneTiming)
-			.register(extraction.generateSceneDescription)
-			.register(generation.buildShorterTimeline)
-			.register(assembly.splitVideoParts)
-			.register(assembly.joinVideoParts)
+			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
+			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
+			.register(intent.determineIntent)
+			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
+			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
+			// .register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
+			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
-		await pipeline.start({ videoPath })
+		await pipeline.start({})
+	})
+
+	ipcMain.handle('get-temp-dir', () => {
+		return settingsManager.getTempDir()
+	})
+
+	ipcMain.handle('set-temp-dir', async () => {
+		const result = await dialog.showOpenDialog({
+			properties: ['openDirectory', 'createDirectory']
+		})
+
+		if (result.canceled || result.filePaths.length === 0) {
+			return null
+		}
+
+		const newPath = result.filePaths[0]
+		settingsManager.setTempDir(newPath)
+		return newPath
+	})
+
+	ipcMain.handle('reset-temp-dir', () => {
+		return settingsManager.resetTempDir()
+	})
+
+	ipcMain.handle('open-temp-dir', async () => {
+		const dir = settingsManager.getTempDir()
+		await shell.openPath(dir)
+	})
+
+	ipcMain.handle('get-gemini-api-key', () => {
+		return settingsManager.getGeminiApiKey()
+	})
+
+	ipcMain.handle('set-gemini-api-key', (_event, key: string) => {
+		settingsManager.setGeminiApiKey(key)
+	})
+
+	// Thread Management
+	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
+		return threadManager.createThread(videoPath, videoName)
+	})
+
+	ipcMain.handle('get-all-threads', () => {
+		return threadManager.getAllThreads()
+	})
+
+	ipcMain.handle('get-thread', (_event, id) => {
+		return threadManager.getThread(id)
+	})
+
+	ipcMain.handle('delete-thread', (_event, id) => {
+		return threadManager.deleteThread(id)
+	})
+
+	ipcMain.handle('delete-all-threads', () => {
+		return threadManager.deleteAllThreads()
+	})
+
+	ipcMain.handle('add-message', (_event, { threadId, message }) => {
+		return threadManager.addMessageToThread(threadId, message)
+	})
+
+	ipcMain.handle('save-video', async (_event, sourcePath: string) => {
+		const extension = extname(sourcePath)
+		const fileName = basename(sourcePath)
+
+		const result = await dialog.showSaveDialog({
+			defaultPath: fileName,
+			filters: [{ name: 'Videos', extensions: [extension.replace('.', '')] }]
+		})
+
+		if (result.canceled || !result.filePath) {
+			return null
+		}
+
+		try {
+			fs.copyFileSync(sourcePath, result.filePath)
+			return result.filePath
+		} catch (error) {
+			console.error('Failed to save video:', error)
+			throw error
+		}
 	})
 
 	app.on('activate', function () {
 		if (BrowserWindow.getAllWindows().length === 0) createWindow()
+	})
+
+	app.on('before-quit', () => {
+		threadManager.resetPendingMessages()
 	})
 })
 
