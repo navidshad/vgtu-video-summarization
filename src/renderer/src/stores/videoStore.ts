@@ -18,9 +18,6 @@ export const useVideoStore = defineStore('video', () => {
 
 		// Inject the original video into the first message if it's a user message and has no files
 		if (msgs.length > 0 && msgs[0].role === MessageRole.User && (!msgs[0].files || msgs[0].files.length === 0) && currentThread.value.videoPath) {
-			// Create a shallow copy of the first message to avoid mutating the source of truth directly (though safe here as we cloned array)
-			// But we need to be careful not to mutate the object ref if it confuses Vue, ensuring reactivity.
-			// Actually best to return a new object for the modified message.
 			msgs[0] = {
 				...msgs[0],
 				files: [{ url: currentThread.value.videoPath, type: FileType.Original }]

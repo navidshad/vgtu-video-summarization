@@ -76,20 +76,13 @@ export class Pipeline {
 				preprocessing: thread.preprocessing,
 				messageId: this.messageId,
 				context: this.context,
-				baseTimeline: undefined, // baseTimeline is not ready/needed for this check usually, or we can resolve it if needed. 
-				// Minimally mocking the context for the check.
-				// However, if skipIf depends on baseTimeline, we need to resolve it early.
-				// Let's copy the full context resolution logic or move it up.
-				// Better to resolve context once.
+				baseTimeline: undefined, 
 				updateStatus: () => { },
 				next: () => { },
 				finish: () => { },
 				savePreprocessing: () => { },
 				recordUsage: () => { }
 			}
-
-			// We need the REAL context to check conditions properly (especially `preprocessing` which is there)
-			// But creating the full context object (with callbacks) before checking skip might be needed.
 		}
 
 		const self = this
