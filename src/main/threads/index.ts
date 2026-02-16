@@ -299,6 +299,33 @@ class ThreadManager {
 		if (!thread) return null
 		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
 	}
+
+	// Remove a message from a thread and delete its files
+	removeMessageFromThread(threadId: string, messageId: string): boolean {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
+		if (msgIndex === -1) return false
+
+		const msg = thread.messages[msgIndex]
+
+		// Delete associated files (except original)
+		if (msg.files) {
+			for (const file of msg.files) {
+				if (file.type !== FileType.Original) {
+					this.deleteFile(file.url)
+				}
+			}
+		}
+
+		// Remove from messages array
+		thread.messages.splice(msgIndex, 1)
+		thread.updatedAt = Date.now()
+
+		this.saveThread(thread)
+		return true
+	}
 }
 
 export const threadManager = new ThreadManager()

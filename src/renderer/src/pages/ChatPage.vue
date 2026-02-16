@@ -6,8 +6,11 @@
     <!-- Chat Messages Stack -->
     <main ref="scrollContainer" class="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
       <div class="max-w-4xl mx-auto space-y-8">
-        <ChatMessage v-for="(msg, i) in videoStore.messages" :key="i" :id="'message-' + msg.id" :message="msg"
-          @edit="startEditing" @save-video="handleSave" @scroll-to-reference="scrollToMessage" />
+        <ChatMessage v-for="(msg, i) in videoStore.messages" :key="msg.id" :id="'message-' + msg.id" :message="msg"
+          :is-first="i === 0"
+          :is-latest-user="videoStore.messages.findLastIndex(m => m.role === MessageRole.User) === i"
+          @edit="startEditing" @save-video="handleSave" @scroll-to-reference="scrollToMessage"
+          @remove="videoStore.removeMessage" @retry="videoStore.retryMessage" />
       </div>
     </main>
 
