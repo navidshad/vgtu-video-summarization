@@ -1,144 +1,85 @@
-# 🎬 VGTU Video Summarization (AI-Powered)
 
+# 🎬 VGTU Video Summarization
 ![Project Process](./docs/imgs/process.jpeg)
 
-## 🌟 Overview
-**VGTU Video Summarization** is an advanced AI-driven application designed to transform long-form video content into concise, meaningful summaries. By leveraging state-of-the-art Multimodal LLMs (Google Gemini), the system understands the nuances of video, audio, and transcripts to generate context-aware highlights through an interactive chat interface.
-
-This project was developed as part of the **Video Summarization** homework, focusing on reproducibility, AI integration, and a premium user experience.
 
 ---
 
-## 🧠 Logic & Technical Insights
-*This section provides a technical breakdown for repository reviewers and instructors.*
+A high-fidelity platform that transforms long-form video content into concise, meaningful highlights. By leveraging **Google Gemini's** multimodal intelligence and precise **FFmpeg** engineering, it provides a seamless chat-based refinement experience.
 
-The application follows a **multi-phase pipeline** to ensure high-quality results and interactive flexibility:
+**Key Use Cases:**
+- 🎓 **Academic Hub**: Condense 2-hour technical lectures into 5-minute study guides.
+- 📱 **Content Creation**: Generate social media teasers from raw footage with natural language.
+- 🔍 **Quick Review**: Rapidly navigate long meetings or webinars for specific insights.
 
-### 1. Pre-Processing Phase
-- **Scene Detection**: Utilizes **FFmpeg** and **PySceneDetect** to identify key visual transitions and shots.
-- **Multimodal Extraction**: Audio is extracted and processed to generate a raw transcript using Gemini's native multimodal capabilities (Gemini 1.5/2.0).
-- **Metadata Analysis**: Video resolution and duration are fetched to calibrate the summarization engine.
+---
+## 🧭 Quick Links & Navigation
 
-### 2. Intent Recognition (The "Brain")
-Before generating a video, the system uses a dedicated **Intent Node**. It analyzes:
-- The user's latest request.
-- The full conversation history (contextual memory).
-- The video transcript.
-- *If editing:* The previous version of the timeline.
+| Topic | Resource / Section | Description |
+| :--- | :--- | :--- |
+| 🏗 **Architecture** | [**Technical Deep-Dive**](./docs/architecture.md) | Pipeline logic, intent nodes, and iterative generation. |
+| 🎨 **UI & UX** | [**Design Overview**](./docs/ui_ux.md) | Frontend components, state, and user interaction flow. |
+| 🚀 **Setup** | [**Setup Guide**](./docs/setup.md) | Prerequisites and environment installation instructions. |
+| 📦 **Repository** | [**Deliverables**](#-deliverables) | Formal project components and file structure. |
+| 🧠 **AI Logic** | [**The Pipeline**](#-the-ai-pipeline-highlights) | Logic overview of the 4-phase summarization engine. |
+| 🛠 **Verifiability** | [**Reproducibility**](#-reproducibility) | Ensuring consistent results across environments. |
+| 📸 **Demo** | [**Final Screenshot**](#-final-snapshot) | Visual overview of the chat and video editor interface. |
 
-The AI decides whether to **Chat** (provide insights/planning) or **Generate** (trigger the timeline builder). This prevents unnecessary processing and allows for natural "human-in-the-loop" confirmation.
+---
 
-### 3. Timeline Generation (Zero-Shot & Iterative)
-The system generates a **JSON-based Timeline**. 
-- **New Summaries**: The AI selects the best moments based on the raw transcript and visual descriptions.
-- **Iterative Edits**: When a user asks to "make it shorter" or "focus on the speaker's face," the AI performs a "diff" operation on the `REFERENCE TIMELINE`, ensuring maximum consistency with the previous version while applying requested changes.
+## 📦 Deliverables
+This formal homework project delivers a complete production-grade ecosystem:
+*   **Production Code**: Electron desktop app written in Vue 3 & TypeScript.
+*   **AI Engine**: A 4-phase pipeline (Extraction, Intent, Generation, Assembly).
+*   **Reproduction Tools**: Download the [Sample Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) and use the app for a 4-phase trace.
+*   **Visual Documentation**: Fully documented [Architecture](./docs/architecture.md) and [UI/UX Flow](./docs/ui_ux.md).
 
-### 4. Video Assembly
-The final video is assembled using **FFmpeg** with hardware acceleration support (e.g., `h264_videotoolbox` on macOS). The engine handles:
-- Precise frame-accurate trimming.
-- Concatenation of selected clips.
-- Re-encoding for high-quality preview.
+---
+
+## 🧠 The AI Pipeline (Highlights)
+
+Our unique **4-Phase Engine** ensures that every summary is contextually accurate:
+*   **Intent Recognition**: Uses a "Brain" node to distinguish between chat and generation, preventing token waste.
+*   **Iterative Refinement**: Supports an **Edit Mode** that performs a technical "diff" on previous timelines for perfect consistency.
+*   **Multimodal Fusion**: Processes visual scene transitions, audio transcripts, and user context simultaneously.
+
+> [!TIP]
+> **Deep Dive:** Check out the **[Architecture Deep-Dive](./docs/architecture.md)** for Mermaid diagrams and logic breakdowns.
+
+---
+
+## 🎨 UX Highlights
+The interface is designed for **transparency** and **iterative control**:
+*   **Version History**: Switch between generated versions instantly to find the best cut.
+*   **Live Token Metrics**: Monitor AI usage costs and token counts in real-time.
+*   **Zero-Config Preprocessing**: Automatic scene detection and transcript extraction upon upload.
+
+---
+
+## 🛠 Reproducibility
+To guarantee identical behavior across different environments:
+*   **Sample Data**: Download our [Main Reference Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) to test the pipeline.
+*   **JSON Enforcement**: Strict schemas ensure deterministic AI responses.
+*   **Precision Slicing**: FFmpeg settings calibrated for frame-accurate cuts.
+*   **Dependency Guard**: Locked environments via `package-lock.json` and `.npmrc`.
+*   **Reference Stability**: Edit mode always builds upon a fixed "Seed" timeline to avoid hallucinations.
 
 ---
 
 ## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js** (v18 or higher)
-- **Google Gemini API Key**
-
-### 🛠 External Tool Setup
-The application relies on **FFmpeg** for video processing and **PySceneDetect** for scene analysis.
-
-#### 🍏 macOS
-1. **FFmpeg**: Install via [Homebrew](https://brew.sh/):
-   ```bash
-   brew install ffmpeg
-   ```
-2. **PySceneDetect**: Install via pip (requires Python):
-   ```bash
-   pip install --upgrade scenedetect[opencv-headless]
-   ```
-
-#### 🪟 Windows
-1. **Chocolatey**: Ensure [Chocolatey](https://chocolatey.org/install) is installed to manage packages.
-2. **FFmpeg**: Install via terminal (Run as Administrator):
-   ```bash
-   choco install ffmpeg
-   ```
-3. **PySceneDetect**: 
-   - Ensure [Python](https://www.python.org/) is installed and added to PATH. 
-   - Install via terminal:
-     ```bash
-     pip install --upgrade scenedetect[opencv-headless]
-     ```
-
----
-
-### Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/navidshad/vgtu-video-summarization.git
-   cd vgtu-video-summarization
-   ```
-
-2. **Configure NPM**:
-   Create a `.npmrc` file in the root directory to access the component library:
-   ```text
-   @codebridger:registry=https://npm.pkg.github.com
-   //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-4. **Environment Variables**:
-   Provide your Gemini API key in the application settings interface upon launch.
-
-5. **Start the application**:
-   ```bash
-   npm run dev
-   ```
-
----
-
-## 📁 Repository Structure
-Following the recommended standards:
-
-- `src/`: Core source code modules (Electron main process & Vue renderer).
-- `docs/`: Slides, process diagrams, and UI screenshots.
-- `data/`: Sample input metadata and scripts for reproducibility.
-- `.agent/`: Agent configuration and skills for development.
-- `.github/workflows/`: GitHub Actions workflows for CI/CD.
-- `.vscode/settings.json`: VS Code settings for development.
-- `electron.vite.config.ts, package.json`: Project configuration and dependencies.
-
----
-
-## 🛠 Reproducibility & Seed
-- **Deterministic JSON**: All AI calls use structured JSON output to ensure consistent parsing across runs.
-- **Consistent Slicing**: FFmpeg parameters are tuned for reproducibility across different operating systems.
-- **Dependency Locking**: `package-lock.json` ensures consistent environments.
-
----
-
-## ⚠️ Known Issues
-- **First Run**: Pre-processing (transcript extraction) may take 1-2 minutes depending on video length.
-- **API Limits**: Subject to Google Gemini's rate limits (Free Tier may experience delays).
-- **FFmpeg**: Ensure your version supports H.264 encoding for smooth assembly.
+Check the **[Installation & Setup Guide](./docs/setup.md)** to configure:
+1.  **Environment**: Node.js and Gemini API Key.
+2.  **Tools**: FFmpeg and PySceneDetect for your OS.
+3.  **Launch**: `npm install && npm run dev`.
 
 ---
 
 ## 📸 Final Snapshot
-The interface allows for real-time interaction with the video content, enabling users to refine summaries until they are perfect.
-
-![App Screenshot](./docs/imgs/screenshot_chatpage.png)
+<div align="center">
+  <img src="./docs/imgs/screenshot_chatpage.png" width="800px" alt="App Screenshot" />
+</div>
 
 ---
 
 ## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
+Licensed under the MIT License - see [LICENSE](LICENSE) for details.
