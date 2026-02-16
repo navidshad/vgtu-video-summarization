@@ -29,6 +29,20 @@ class ThreadManager {
 		return path.join(this.threadsDir, `${threadId}.json`)
 	}
 
+	private saveThread(thread: Thread) {
+		const threadPath = this.getThreadPath(thread.id)
+		const jsonData = JSON.stringify(thread, null, 2)
+
+		// Save to primary storage (userData)
+		fs.writeFileSync(threadPath, jsonData)
+
+		// Mirror to artifact folder (tempDir) if it exists
+		if (thread.tempDir && fs.existsSync(thread.tempDir)) {
+			const mirrorPath = path.join(thread.tempDir, 'thread.json')
+			fs.writeFileSync(mirrorPath, jsonData)
+		}
+	}
+
 	// Create a new thread
 	createThread(videoPath: string, videoName: string): Thread {
 		const id = uuidv4()
@@ -44,7 +58,7 @@ class ThreadManager {
 			updatedAt: Date.now()
 		}
 
-		fs.writeFileSync(this.getThreadPath(id), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return thread
 	}
 
@@ -95,7 +109,7 @@ class ThreadManager {
 			updatedAt: Date.now()
 		}
 
-		fs.writeFileSync(this.getThreadPath(id), JSON.stringify(updatedThread, null, 2))
+		this.saveThread(updatedThread)
 		return updatedThread
 	}
 
@@ -189,7 +203,7 @@ class ThreadManager {
 		thread.messages.push(fullMessage)
 		thread.updatedAt = Date.now()
 
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return fullMessage
 	}
 
@@ -204,7 +218,7 @@ class ThreadManager {
 		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
 		thread.updatedAt = Date.now()
 
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return true
 	}
 
@@ -242,7 +256,7 @@ class ThreadManager {
 		}
 
 		thread.updatedAt = Date.now()
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return true
 	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
@@ -260,7 +274,7 @@ class ThreadManager {
 
 			if (hasChanges) {
 				thread.updatedAt = Date.now()
-				fs.writeFileSync(this.getThreadPath(thread.id), JSON.stringify(thread, null, 2))
+				this.saveThread(thread)
 			}
 		}
 	}

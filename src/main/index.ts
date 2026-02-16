@@ -203,6 +203,15 @@ app.whenReady().then(() => {
 		return threadManager.deleteAllThreads()
 	})
 
+	ipcMain.handle('open-thread-dir', async (_event, threadId) => {
+		const thread = threadManager.getThread(threadId)
+		if (thread && thread.tempDir && fs.existsSync(thread.tempDir)) {
+			await shell.openPath(thread.tempDir)
+			return true
+		}
+		return false
+	})
+
 	ipcMain.handle('add-message', (_event, { threadId, message }) => {
 		return threadManager.addMessageToThread(threadId, message)
 	})

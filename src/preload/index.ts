@@ -27,7 +27,8 @@ const api = {
 	deleteAllThreads: () => ipcRenderer.invoke('delete-all-threads'),
 	addMessage: (threadId: string, message: any) =>
 		ipcRenderer.invoke('add-message', { threadId, message }),
-	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath)
+	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),
+	openThreadDir: (threadId: string) => ipcRenderer.invoke('open-thread-dir', threadId)
 }
 
 if (process.contextIsolated) {
