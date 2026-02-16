@@ -16,7 +16,7 @@
 			<Card :class="[
 				'!rounded-2xl !p-4 shadow-sm dark:shadow-xl transition-colors w-fit max-w-[450px]',
 				message.role === MessageRole.User
-					? '!bg-zinc-100 dark:!bg-zinc-100 !text-zinc-900 !border-0'
+					? '!bg-zinc-100 dark:!bg-zinc-800 !text-zinc-900 dark:!text-zinc-100 !border-0 dark:!border dark:!border-zinc-700'
 					: '!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-200 dark:!border-zinc-800',
 				message.isPending ? 'opacity-80' : ''
 			]">
@@ -39,18 +39,18 @@
 								class="flex items-center justify-end gap-2">
 								<template v-if="message.role === MessageRole.AI">
 									<span v-if="message.usage"
-										class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+										class="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono bg-zinc-50 dark:bg-black/20 px-1.5 py-0.5 rounded">
 										{{ message.usage.totalTokens.toLocaleString() }} tokens
 									</span>
 									<span v-if="message.cost"
-										class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded">
+										class="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono bg-zinc-50 dark:bg-black/20 px-1.5 py-0.5 rounded">
 										${{ message.cost.toFixed(4) }}
 									</span>
 								</template>
 
 								<!-- Edit Reference Tag -->
 								<span v-if="referencedVersion"
-									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:underline"
+									class="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono bg-zinc-50 dark:bg-black/20 px-1.5 py-0.5 rounded flex items-center gap-1 cursor-pointer hover:underline"
 									@click="$emit('scroll-to-reference', message.editRefId)">
 									<span class="text-zinc-500 font-medium text-[8px]">{{ editLabel }}</span>
 									<span class="text-blue-500 font-bold">v.{{ referencedVersion }}</span>
@@ -58,7 +58,7 @@
 
 								<!-- Current Version/Type Tag -->
 								<span v-if="showVersionTag || (message.role === MessageRole.User && hasOriginalVideo)"
-									class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1">
+									class="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono bg-zinc-50 dark:bg-black/20 px-1.5 py-0.5 rounded flex items-center gap-1">
 									<span v-if="showVersionTag" class="opacity-70">v.{{ message.version ||
 										message.id.slice(0, 4) }}</span>
 									<span v-if="videoType || (message.role === MessageRole.User && hasOriginalVideo)"
@@ -71,7 +71,7 @@
 						<!-- Results Section: Timeline + Video Layout -->
 						<div v-if="(message.timeline && message.timeline.length > 0) || (message.files && message.files.length > 0)"
 							class="mt-4 pt-4 border-t flex flex-col gap-6"
-							:class="message.role === MessageRole.User ? 'border-zinc-200' : 'border-zinc-100 dark:border-zinc-800'">
+							:class="message.role === MessageRole.User ? 'border-zinc-200 dark:border-zinc-700' : 'border-zinc-100 dark:border-zinc-800'">
 							<!-- Video Section -->
 							<div v-if="message.files && message.files.length > 0" class="flex-1 space-y-3 min-w-0">
 								<VideoResult v-for="file in message.files" :key="file.url" :file="file"
