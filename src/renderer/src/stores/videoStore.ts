@@ -155,6 +155,33 @@ export const useVideoStore = defineStore('video', () => {
 		}
 		return success
 	}
+	const removeMessage = async (messageId: string) => {
+		if (!currentThreadId.value) return
+		const success = await (window as any).api.removeMessage(currentThreadId.value, messageId)
+		if (success && currentThread.value) {
+			currentThread.value.messages = currentThread.value.messages.filter((m) => m.id !== messageId)
+		}
+		return success
+	}
+
+	const retryMessage = async (messageId: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
+
+		const index = currentThread.value.messages.findIndex(m => m.id === messageId)
+		if (index === -1) return
+
+		const message = currentThread.value.messages[index]
+		if (message.role !== MessageRole.User) return
+
+		// Remove any messages that came after this one (typically the failed/unwanted AI response)
+		const messagesToRemove = currentThread.value.messages.slice(index + 1)
+		for (const msg of messagesToRemove) {
+			await removeMessage(msg.id)
+		}
+
+		// Re-trigger processing
+		await startProcessing(currentThreadId.value, message.editRefId)
+	}
 
 	return {
 		threads,
@@ -171,6 +198,8 @@ export const useVideoStore = defineStore('video', () => {
 		startProcessing,
 		deleteThread,
 		deleteAllThreads,
+		removeMessage,
+		retryMessage,
 		updateMessage
 	}
 })

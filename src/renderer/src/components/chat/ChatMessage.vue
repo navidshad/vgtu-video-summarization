@@ -1,5 +1,5 @@
 <template>
-	<div class="flex flex-col animate-fade-in-up"
+	<div class="flex flex-col group animate-in slide-in-from-bottom-4 duration-500"
 		:class="message.role === MessageRole.User ? 'items-end' : 'items-start'">
 		<!-- Role Indicator -->
 		<div class="flex items-center space-x-2 mb-2 px-1"
@@ -7,6 +7,15 @@
 			<span class="text-[10px] font-bold text-zinc-400/80 dark:text-zinc-500 uppercase tracking-[0.2em] font-heading">
 				{{ message.role === MessageRole.User ? 'You' : 'AI Assistant' }}
 			</span>
+
+			<!-- Action Buttons (Remove/Retry) -->
+			<div v-if="!message.isPending && (!isFirst || (isLatestUser && message.role === MessageRole.User))"
+				class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity scale-75">
+				<IconButton v-if="isLatestUser && message.role === MessageRole.User" icon="IconRefresh" size="xs"
+					rounded="full" title="Retry from this message" @click="handleRetry" />
+				<IconButton v-if="!isFirst" icon="IconTrashLines" size="xs" rounded="full" title="Remove Message"
+					@click="handleRemove" />
+			</div>
 		</div>
 
 		<!-- Message Content Wrapper (Text + Attachments) -->
@@ -89,7 +98,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Card } from '@codebridger/lib-vue-components/elements'
+import { Card, IconButton } from '@codebridger/lib-vue-components/elements'
 import { MessageRole, Message, FileType } from '@shared/types'
 import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'
@@ -97,20 +106,68 @@ import { useVideoStore } from '../../stores/videoStore'
 import markdownit from 'markdown-it'
 
 const props = defineProps<{
-	message: Message
+	message: Message,
+	isFirst?: boolean,
+	isLatestUser?: boolean
 }>()
 
-defineEmits(['edit', 'save-video', 'scroll-to-reference'])
+const emit = defineEmits(['edit', 'save-video', 'scroll-to-reference', 'remove', 'retry'])
 
 const videoStore = useVideoStore()
 const isTimelineExpanded = ref(false)
 
+const handleRemove = async () => {
+	const response = await (window as any).api.showConfirmation({
+		title: 'Remove Message',
+		message: 'Are you sure you want to remove this message?',
+		detail: 'This will permanently remove this message and all its generated videos. This action cannot be undone.',
+		type: 'warning',
+		buttons: ['Cancel', 'Remove'],
+		defaultId: 1,
+		cancelId: 0
+	})
+
+	if (response === 1) {
+		emit('remove', props.message.id)
+	}
+}
+
+const handleRetry = async () => {
+	const response = await (window as any).api.showConfirmation({
+		title: 'Retry Generation',
+		message: 'Are you sure you want to retry?',
+		detail: 'All subsequent AI responses will be removed and the generation will restart from this message.',
+		type: 'question',
+		buttons: ['Cancel', 'Retry'],
+		defaultId: 1,
+		cancelId: 0
+	})
+
+	if (response === 1) {
+		emit('retry', props.message.id)
+	}
+}
+
 const referencedVersion = computed(() => {
 	if (!props.message.editRefId) return null
-	const refMsg = videoStore.messages.find(m => m.id === props.message.editRefId)
-	if (!refMsg) return null
-	return refMsg.version || refMsg.id.slice(0, 4)
+	const thread = videoStore.currentThread
+	if (!thread) return null
+
+	// Find version number by counting users messages in the thread up to the ref message
+	const messages = thread.messages
+	let version = 1
+	for (const msg of messages) {
+		if (msg.id === props.message.editRefId) break
+		if (msg.role === MessageRole.User) version++
+	}
+
+	return version
 })
+
+const toggleTimeline = () => {
+	isTimelineExpanded.value = !isTimelineExpanded.value
+}
+
 
 const showVersionTag = computed(() => {
 	return props.message.role === MessageRole.AI && props.message.files && props.message.files.some(f => f.type === FileType.Preview || f.type === FileType.Actual)
@@ -140,8 +197,4 @@ const md = new markdownit({
 const renderedContent = computed(() => {
 	return md.render(props.message.content)
 })
-
-const toggleTimeline = () => {
-	isTimelineExpanded.value = !isTimelineExpanded.value
-}
 </script>

@@ -203,8 +203,38 @@ app.whenReady().then(() => {
 		return threadManager.deleteAllThreads()
 	})
 
+	ipcMain.handle('open-thread-dir', async (_event, threadId) => {
+		const thread = threadManager.getThread(threadId)
+		if (thread && thread.tempDir && fs.existsSync(thread.tempDir)) {
+			await shell.openPath(thread.tempDir)
+			return true
+		}
+		return false
+	})
+
 	ipcMain.handle('add-message', (_event, { threadId, message }) => {
 		return threadManager.addMessageToThread(threadId, message)
+	})
+
+	ipcMain.handle('remove-message', (_event, { threadId, messageId }) => {
+		return threadManager.removeMessageFromThread(threadId, messageId)
+	})
+
+	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
+		const focusedWindow = BrowserWindow.getFocusedWindow()
+		if (!focusedWindow) return cancelId
+
+		const result = await dialog.showMessageBox(focusedWindow, {
+			type: type as any,
+			buttons,
+			defaultId,
+			cancelId,
+			title,
+			message,
+			detail
+		})
+
+		return result.response
 	})
 
 	ipcMain.handle('save-video', async (_event, sourcePath: string) => {
