@@ -1,5 +1,10 @@
 <template>
-  <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8">
+  <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8 relative">
+    <!-- Back Button -->
+    <div class="absolute top-0 left-0 p-6">
+      <IconButton @click="router.back()" icon="IconArrowLeft" size="xs"/>
+    </div>
+
     <div class="text-center">
       <h1 class="text-3xl font-bold mb-2 text-zinc-900 dark:text-white transition-colors">Video Summarizer</h1>
       <p class="text-zinc-500 dark:text-zinc-400 transition-colors">Select a video to begin the AI analysis</p>
@@ -45,20 +50,14 @@
               <p class="text-xs text-zinc-500 dark:text-zinc-400">Ready to upload</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" @click="resetSelection"
-            class="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-white">
-            Change
-          </Button>
+          <Button size="sm" @click="resetSelection" label="Change" />
         </div>
 
         <TextArea v-model="prompt"
           placeholder="What would you like to focus on in this summary? (e.g. 'Summarize key takeaways')" :rows="4"
           class="!bg-white dark:!bg-zinc-900 !text-zinc-900 dark:!text-white !border-zinc-200 dark:!border-zinc-700 placeholder:text-zinc-400" />
 
-        <Button @click="startCreation" variant="primary" :disabled="!prompt.trim()"
-          class="w-full py-4 font-bold active:scale-[0.99] shadow-lg dark:shadow-blue-900/20">
-          Create Summary
-        </Button>
+        <Button @click="startCreation" color="primary" :disabled="!prompt.trim()" label="Create Summary" class="w-full"/>
       </div>
     </div>
   </div>
@@ -67,51 +66,47 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
 import { TextArea } from '@codebridger/lib-vue-components/form'
+import { MessageRole } from '@shared/types'
 import { useVideoStore } from '../stores/videoStore'
 
 const router = useRouter()
 const videoStore = useVideoStore()
 const fileSelected = ref(false)
 const fileName = ref('')
+const filePath = ref('')
 const prompt = ref('')
 
 const handleNativeSelect = async () => {
   const result = await (window as any).api?.selectVideo()
   if (result) {
     fileName.value = result.name
+    filePath.value = result.path
     fileSelected.value = true
-    videoStore.setVideoName(result.name)
-    videoStore.setVideoPath(result.path)
   }
 }
 
 const resetSelection = () => {
   fileSelected.value = false
   fileName.value = ''
-  videoStore.setVideoName('')
+  filePath.value = ''
 }
 
-const startCreation = () => {
+const startCreation = async () => {
   if (fileSelected.value && prompt.value.trim()) {
-    videoStore.clearMessages()
-    videoStore.addMessage({
-      role: 'user',
-      content: prompt.value.trim(),
-      files: [{ url: fileName.value, type: 'actual' }]
-    })
-    router.push('/chat')
+    // 1. Create a new thread
+    const threadId = await videoStore.createThread(filePath.value, fileName.value)
+
+    // 2. Add the user message
+    await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
+
+    // 3. Navigate to chat with thread ID
+    router.push(`/chat/${threadId}`)
   }
 }
 </script>
 
 <style scoped>
-:global(.dark) :deep(.text-gray-900) {
-  color: #f4f4f5 !important;
-}
-
-:global(.dark) :deep(.text-gray-500) {
-  color: #a1a1aa !important;
-}
+/* Scoped styles if needed */
 </style>

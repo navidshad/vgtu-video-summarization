@@ -33,6 +33,7 @@ export async function generateTimeline(options: GenerateTimelineOptions): Promis
             userExpectation,
             allSegments,
             fullTimelineSRT,
+            targetDuration,
             baseTimeline,
             geminiAdapter,
             modelName,
@@ -58,6 +59,7 @@ async function editTimeline(options: {
     userExpectation: string;
     allSegments: TranscriptItem[];
     fullTimelineSRT: string;
+    targetDuration: number;
     baseTimeline: TimelineSegment[];
     geminiAdapter: GeminiAdapter;
     modelName: string;
@@ -68,6 +70,7 @@ async function editTimeline(options: {
         userExpectation,
         allSegments,
         fullTimelineSRT,
+        targetDuration,
         baseTimeline,
         geminiAdapter,
         modelName,
@@ -91,6 +94,7 @@ Strict Rules for Editing:
 2. PRESERVE ORDER: Maintain the existing sequence of segments as much as possible.
 3. MINIMAL CHANGES: If a user asks to add something, keep the rest of the timeline identical. If they ask to remove something, only remove that specific part.
 4. ONE-SHOT RESULT: Return the COMPLETE list of indices for the NEW version of the timeline.
+5. RESPECT DURATION: The total duration of the NEW timeline must be close to the Target Duration if specified. If the user asks for a specific length (e.g., "30 seconds"), ensure the selected segments' durations sum up to approximately that value.
 
 Return ONLY a JSON array of indices (integers) of the segments that should make up the NEW timeline, e.g. [1, 5, 8].
 Indices must refer to the indices in the FULL transcript (SRT).
@@ -99,6 +103,7 @@ Do not include any other text.
 
     const prompt = `
 User Editing Request: ${userExpectation}
+Target Duration: ${targetDuration} seconds
 
 -----------------
 FULL transcript (SRT):
@@ -113,7 +118,7 @@ Task: Provide a list of indices representing the new timeline after applying the
 `;
 
     try {
-        const { text: responseText, record } = await geminiAdapter.generateText(prompt, systemInstruction, modelName);
+        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
         console.log(`Gemini response (Edit Mode):`, responseText);
 
         // Record usage for the edit call
@@ -205,7 +210,7 @@ Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
-            const { text: responseText, record } = await geminiAdapter.generateText(prompt, systemInstruction, modelName);
+            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             // Record usage for each iteration

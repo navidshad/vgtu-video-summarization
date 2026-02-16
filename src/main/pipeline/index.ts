@@ -18,6 +18,7 @@ export interface PipelineContext {
 	messageId: string;
 	baseTimeline?: any; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
+	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
 }
 
@@ -28,15 +29,17 @@ export class Pipeline {
 	private messageId: string
 	private threadId: string
 	private context: string
+	private editRefId?: string
 	private baseTimeline?: any
 	private intentResult?: import('../../shared/types').IntentResult
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any, editRefId?: string) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
 		this.context = context
 		this.baseTimeline = baseTimeline
+		this.editRefId = editRefId
 	}
 
 	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
@@ -73,20 +76,13 @@ export class Pipeline {
 				preprocessing: thread.preprocessing,
 				messageId: this.messageId,
 				context: this.context,
-				baseTimeline: undefined, // baseTimeline is not ready/needed for this check usually, or we can resolve it if needed. 
-				// Minimally mocking the context for the check.
-				// However, if skipIf depends on baseTimeline, we need to resolve it early.
-				// Let's copy the full context resolution logic or move it up.
-				// Better to resolve context once.
+				baseTimeline: undefined, 
 				updateStatus: () => { },
 				next: () => { },
 				finish: () => { },
 				savePreprocessing: () => { },
 				recordUsage: () => { }
 			}
-
-			// We need the REAL context to check conditions properly (especially `preprocessing` which is there)
-			// But creating the full context object (with callbacks) before checking skip might be needed.
 		}
 
 		const self = this
@@ -97,6 +93,7 @@ export class Pipeline {
 			preprocessing: thread.preprocessing,
 			messageId: this.messageId,
 			context: this.context,
+			editRefId: this.editRefId,
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
@@ -152,13 +149,22 @@ export class Pipeline {
 				this.runStep(nextData)
 			},
 			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
+				let finalVersion: number | undefined = undefined
+
+				if (options?.version) {
+					finalVersion = options.version
+				} else if (options?.shouldVersion && this.threadId) {
+					finalVersion = threadManager.getNextVersion(this.threadId)
+				}
+
 				// Send finish to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
 					type: 'finish',
 					content: message,
 					video,
-					timeline
+					timeline,
+					version: finalVersion
 				})
 
 				// Persist to Thread
@@ -166,17 +172,12 @@ export class Pipeline {
 					const updates: Partial<Message> = {
 						content: message,
 						isPending: false,
-						timeline
+						timeline,
+						version: finalVersion
 					}
 
 					if (video) {
 						updates.files = [{ url: video.path, type: video.type }]
-					}
-
-					if (options?.version) {
-						updates.version = options.version
-					} else if (options?.shouldVersion) {
-						updates.version = threadManager.getNextVersion(this.threadId)
 					}
 
 					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)

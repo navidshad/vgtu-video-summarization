@@ -87,7 +87,7 @@ app.whenReady().then(() => {
 	ipcMain.handle('select-video', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }]
+			filters: [{ name: 'Videos', extensions: ['mp4', 'avi', 'mov', 'webm'] }]
 		})
 
 		if (result.canceled || result.filePaths.length === 0) {
@@ -100,31 +100,35 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, userPromptMessageId, editReferenceMessageId }) => {
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) return
 
 		const thread = threadManager.getThread(threadId)
 		if (!thread) return
 
+		// Derive edit reference from the last user message
+		const lastUserMsg = threadManager.getLatestUserMessage(threadId)
+		const editRefId = lastUserMsg?.editRefId
+
 		// Prepare the context
 		// Full thread history is the context for the pipeline
 		const context = threadManager.getThreadContext(threadId)
 
 		// Prepare the base timeline
-		const baseTimeline = editReferenceMessageId ? thread.messages.find(m => m.id === editReferenceMessageId)?.timeline : undefined;
+		const baseTimeline = editRefId ? thread.messages.find(m => m.id === editRefId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
 
 		pipeline
+			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
 			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
 			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
 			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			// .register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
-			.register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			// .register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
@@ -166,6 +170,18 @@ app.whenReady().then(() => {
 		settingsManager.setGeminiApiKey(key)
 	})
 
+	ipcMain.handle('get-model-settings', () => {
+		return settingsManager.getModelSettings()
+	})
+
+	ipcMain.handle('set-model-settings', (_event, settings: any) => {
+		settingsManager.setModelSettings(settings)
+	})
+
+	ipcMain.handle('reset-model-settings', () => {
+		return settingsManager.resetModelSettings()
+	})
+
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
 		return threadManager.createThread(videoPath, videoName)
@@ -187,8 +203,38 @@ app.whenReady().then(() => {
 		return threadManager.deleteAllThreads()
 	})
 
+	ipcMain.handle('open-thread-dir', async (_event, threadId) => {
+		const thread = threadManager.getThread(threadId)
+		if (thread && thread.tempDir && fs.existsSync(thread.tempDir)) {
+			await shell.openPath(thread.tempDir)
+			return true
+		}
+		return false
+	})
+
 	ipcMain.handle('add-message', (_event, { threadId, message }) => {
 		return threadManager.addMessageToThread(threadId, message)
+	})
+
+	ipcMain.handle('remove-message', (_event, { threadId, messageId }) => {
+		return threadManager.removeMessageFromThread(threadId, messageId)
+	})
+
+	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
+		const focusedWindow = BrowserWindow.getFocusedWindow()
+		if (!focusedWindow) return cancelId
+
+		const result = await dialog.showMessageBox(focusedWindow, {
+			type: type as any,
+			buttons,
+			defaultId,
+			cancelId,
+			title,
+			message,
+			detail
+		})
+
+		return result.response
 	})
 
 	ipcMain.handle('save-video', async (_event, sourcePath: string) => {

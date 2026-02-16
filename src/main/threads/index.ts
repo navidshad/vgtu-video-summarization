@@ -29,6 +29,20 @@ class ThreadManager {
 		return path.join(this.threadsDir, `${threadId}.json`)
 	}
 
+	private saveThread(thread: Thread) {
+		const threadPath = this.getThreadPath(thread.id)
+		const jsonData = JSON.stringify(thread, null, 2)
+
+		// Save to primary storage (userData)
+		fs.writeFileSync(threadPath, jsonData)
+
+		// Mirror to artifact folder (tempDir) if it exists
+		if (thread.tempDir && fs.existsSync(thread.tempDir)) {
+			const mirrorPath = path.join(thread.tempDir, 'thread.json')
+			fs.writeFileSync(mirrorPath, jsonData)
+		}
+	}
+
 	// Create a new thread
 	createThread(videoPath: string, videoName: string): Thread {
 		const id = uuidv4()
@@ -44,7 +58,7 @@ class ThreadManager {
 			updatedAt: Date.now()
 		}
 
-		fs.writeFileSync(this.getThreadPath(id), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return thread
 	}
 
@@ -95,7 +109,7 @@ class ThreadManager {
 			updatedAt: Date.now()
 		}
 
-		fs.writeFileSync(this.getThreadPath(id), JSON.stringify(updatedThread, null, 2))
+		this.saveThread(updatedThread)
 		return updatedThread
 	}
 
@@ -189,7 +203,7 @@ class ThreadManager {
 		thread.messages.push(fullMessage)
 		thread.updatedAt = Date.now()
 
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return fullMessage
 	}
 
@@ -204,7 +218,7 @@ class ThreadManager {
 		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
 		thread.updatedAt = Date.now()
 
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return true
 	}
 
@@ -242,7 +256,7 @@ class ThreadManager {
 		}
 
 		thread.updatedAt = Date.now()
-		fs.writeFileSync(this.getThreadPath(threadId), JSON.stringify(thread, null, 2))
+		this.saveThread(thread)
 		return true
 	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
@@ -260,7 +274,7 @@ class ThreadManager {
 
 			if (hasChanges) {
 				thread.updatedAt = Date.now()
-				fs.writeFileSync(this.getThreadPath(thread.id), JSON.stringify(thread, null, 2))
+				this.saveThread(thread)
 			}
 		}
 	}
@@ -277,6 +291,40 @@ class ThreadManager {
 			}
 			return content
 		}).join('\n\n')
+	}
+
+	// Get the last user message in a thread
+	getLatestUserMessage(threadId: string): Message | null {
+		const thread = this.getThread(threadId)
+		if (!thread) return null
+		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
+	}
+
+	// Remove a message from a thread and delete its files
+	removeMessageFromThread(threadId: string, messageId: string): boolean {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
+		if (msgIndex === -1) return false
+
+		const msg = thread.messages[msgIndex]
+
+		// Delete associated files (except original)
+		if (msg.files) {
+			for (const file of msg.files) {
+				if (file.type !== FileType.Original) {
+					this.deleteFile(file.url)
+				}
+			}
+		}
+
+		// Remove from messages array
+		thread.messages.splice(msgIndex, 1)
+		thread.updatedAt = Date.now()
+
+		this.saveThread(thread)
+		return true
 	}
 }
 

@@ -2100,8 +2100,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This is a basic modal with default settings. You can customize the content, size, and behavior.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Confirm</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Confirm</Button>
             </div>
           </div>
         </template>
@@ -2158,8 +2158,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This is a basic modal with default settings. You can customize the content, size, and behavior.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Confirm</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Confirm</Button>
             </div>
           </div>
         </template>
@@ -2186,7 +2186,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
     template: `
       <Modal v-bind="args">
         <template #trigger="{ toggleModal }">
-          <Button variant="primary" size="lg" @click="toggleModal(true)">
+          <Button color="primary" size="lg" @click="toggleModal(true)">
             🚀 Launch Modal
           </Button>
         </template>
@@ -2197,7 +2197,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
             <p class="text-gray-600 dark:text-gray-400 mb-6">
               This modal uses a custom trigger button instead of the default one.
             </p>
-            <Button variant="primary" @click="toggleModal(false)">Close</Button>
+            <Button color="primary" @click="toggleModal(false)">Close</Button>
           </div>
         </template>
       </Modal>
@@ -2231,8 +2231,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal has a custom title in the header area.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Save Changes</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Save Changes</Button>
             </div>
           </div>
         </template>
@@ -2275,8 +2275,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal demonstrates the title slot functionality. You can add custom content, icons, and styling to the title area.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Save</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Save</Button>
             </div>
           </div>
         </template>
@@ -2313,8 +2313,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               You must use the action buttons to close it.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Dismiss</Button>
-              <Button variant="primary" @click="toggleModal(false)">Acknowledge</Button>
+              <Button outline @click="toggleModal(false)">Dismiss</Button>
+              <Button color="primary" @click="toggleModal(false)">Acknowledge</Button>
             </div>
           </div>
         </template>
@@ -2370,8 +2370,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               <textarea class="form-textarea w-full" rows="4" placeholder="Enter your message"></textarea>
             </div>
             <div class="flex justify-end space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Submit</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Submit</Button>
             </div>
           </div>
         </template>
@@ -2408,7 +2408,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
             <p class="text-gray-600 dark:text-gray-400 mb-6">
               This modal uses a zoom-in animation effect. Try opening it again to see the animation.
             </p>
-            <Button variant="primary" @click="toggleModal(false)">Awesome!</Button>
+            <Button color="primary" @click="toggleModal(false)">Awesome!</Button>
           </div>
         </template>
       </Modal>
@@ -2457,10 +2457,10 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
         
         <template #footer="{ toggleModal }">
           <div class="flex justify-between">
-            <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+            <Button outline @click="toggleModal(false)">Cancel</Button>
             <div class="space-x-2 flex">
-              <Button variant="outline">Save Draft</Button>
-              <Button variant="primary" @click="toggleModal(false)">Submit</Button>
+              <Button outline>Save Draft</Button>
+              <Button color="primary" @click="toggleModal(false)">Submit</Button>
             </div>
           </div>
         </template>
@@ -2496,8 +2496,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal has the close button hidden. You must use the action buttons to close it.
             </p>
             <div class="flex justify-center space-x-2">
-              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
-              <Button variant="primary" @click="toggleModal(false)">Proceed</Button>
+              <Button outline @click="toggleModal(false)">Cancel</Button>
+              <Button color="primary" @click="toggleModal(false)">Proceed</Button>
             </div>
           </div>
         </template>
@@ -2535,8 +2535,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               Are you sure you want to proceed?
             </p>
             <div class="flex justify-center space-x-2">
-              <Button variant="outline" size="sm" @click="toggleModal(false)">No</Button>
-              <Button variant="danger" size="sm" @click="toggleModal(false)">Yes, Delete</Button>
+              <Button outline size="sm" @click="toggleModal(false)">No</Button>
+              <Button color="danger" size="sm" @click="toggleModal(false)">Yes, Delete</Button>
             </div>
           </div>
         </template>
