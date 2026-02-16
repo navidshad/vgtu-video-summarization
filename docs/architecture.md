@@ -22,31 +22,90 @@ graph TD
 
 ---
 
-## 🚦 Phase 1: Pre-Processing
-Before any AI logic begins, the system extracts metadata and raw context:
-- **Audio Extraction**: FFmpeg extracts audio as MP3 for transcript generation.
-- **Scene Detection**: `PySceneDetect` identifies visual boundaries to help the AI "see" the cuts.
-- **Multimodal Transcript**: Gemini 1.5/2.0 processes the video and audio to create a timestamped JSON transcript.
+## 🚦 Phase 1: Pre-Processing Pipeline
+The pre-processing phase converts raw video into searchable technical context.
+
+```mermaid
+graph LR
+    Video[Raw Video] --> Target[480p Proxy]
+    Target --> Audio[MP3 Audio]
+    Target --> Vision[Scene Detection*]
+    Audio --> Gemini[Multimodal Gemini]
+    Vision --> Gemini
+    Gemini --> Transcript[JSON Transcript]
+    
+    subgraph "Planned Features"
+    Vision
+    end
+```
+
+### Technical Workflow:
+- **Low-Res Proxy**: Downscales to 480p using FFmpeg for faster AI multimodal processing.
+- **Audio Extraction**: Extracts high-quality MP3 for precise transcript timestamping.
+- **Transcript Generation**: Gemini 1.5/2.0 generates a timestamped JSON object mapping dialogue and events to video indices.
+- **Scene Detection**: 
+  > [!NOTE]
+  > **Future Scope**: Uses `PySceneDetect` to identify hard cuts and transitions. The goal is to generate visual descriptions for each scene and feed this metadata into the **Timeline Builder** for visually-aware summaries.
+
+---
 
 ## 🧠 Phase 2: The Intent Node ("The Brain")
-The **Intent Node** (`src/main/pipeline/phases/intent.ts`) is a gatekeeper that ensures the AI doesn't waste tokens or processing time.
-- **Contextual Memory**: It looks at the full conversation history.
-- **Direct Commands**: It only triggers generation if the user says "Yes", "Proceed", or gives a specific duration (e.g., "30s highlights").
-- **Drafting**: If the user is vague, the Intent Node responds with a *plan* and asks for confirmation.
+The **Intent Node** (`src/main/pipeline/phases/intent.ts`) acts as a state machine to manage user expectations.
+
+```mermaid
+flowchart TD
+    Start([User Input]) --> History[Analyze History & Transcript]
+    History --> Decision{Is Intent Ambiguous?}
+    Decision -- Yes --> Text[Action: 'text'\nAsk for Confirmation]
+    Decision -- No --> Cmd{Direct Command?}
+    Cmd -- Yes --> Gen[Action: 'generate-timeline']
+    Cmd -- No --> Logic{Modification Requested?}
+    Logic -- Yes (Edit Mode) --> Gen
+    Logic -- No (Vague) --> Text
+```
+
+### Logic Gates:
+- **Constraint Enforcement**: NEVER triggers generation for vague phrases like "Make a cool summary."
+- **Drafting Mode**: If intent is unclear, it proposes a "Drafting Plan" (e.g., "I will include the first 10s and the ending") and waits for "Yes/Proceed".
+- **Reference Awareness**: If a `baseTimeline` exists, it shifts to "Modification" logic, prioritizing consistency.
+
+---
 
 ## 🎞 Phase 3: Timeline Generation
-We use two distinct AI strategies implemented in `src/main/timeline/index.ts`:
+We use two distinct AI strategies implemented in `src/main/timeline/index.ts`.
 
-### 1. Iterative Edit Mode (The "Diff" Engine)
-When a user asks to modify an existing summary, the AI is provided with a **REFERENCE TIMELINE**. 
-- **Goal**: Maintain maximal consistency with the previous version.
-- **Logic**: The AI only changes the segments requested (e.g., "make the middle part shorter") while keeping the rest untouched.
+### 1. Iterative Search (New Mode)
+For fresh summaries, the AI performs a recursive search to build the timeline segment by segment.
 
-### 2. Recursive Search (New Mode)
-For fresh summaries, the AI iteratively selects the "next best segments" from the transcript until the target duration is reached.
+```mermaid
+graph TD
+    Start[Target Duration: e.g. 30s] --> Search[Select Next 3 Best Indices]
+    Search --> Check{Total Duration >= Target?}
+    Check -- No --> Search
+    Check -- Yes --> Final[Final Timeline JSON]
+```
 
-## 🛠 Phase 4: Video Assembly (FFmpeg Complex Filter)
-Assembly is done in a single high-performance pass:
-- **No Temporary Files**: Clips are not saved individually. Instead, a `complexFilter` trims and concatenates them in memory.
-- **Sync Control**: Video (`setpts`) and Audio (`asetpts`) streams are synced per segment to prevent drifting.
-- **Hardware Acceleration**: Uses `h264_videotoolbox` on macOS for rapid encoding.
+### 2. Refining Edit Mode (One-Shot "Diff")
+When editing, the AI receives the **Reference Timeline** and the **User Request** to produce a single-shot update.
+- **Goal**: Maximum index consistency.
+- **Logic**: It only replaces indices that conflict with the edit request (e.g., "Remove the part about the cat").
+
+---
+
+## 🛠 Phase 4: Video Assembly (FFmpeg Engine)
+Assembly is done in a single high-performance pass using FFmpeg's `complex_filter`.
+
+```mermaid
+graph TD
+    Segments[Timeline Segments] --> Trim[Trim Source Video]
+    Trim --> Sync[Sync PTS/APTS]
+    Sync --> Concat[Concat Filter]
+    Concat --> Encode[h264_videotoolbox]
+    Encode --> Final[MP4 Output]
+```
+
+### Performance Optimizations:
+- **Single Pass**: No intermediate files; segments are trimmed and merged in one command.
+- **Hardware Acceleration**: Uses `h264_videotoolbox` on macOS for rapid hardware-accelerated encoding.
+- **Stream Sync**: Ensures global timestamp consistency (`setpts=PTS-STARTPTS`) to prevent audio drift.
+
