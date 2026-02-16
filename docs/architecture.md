@@ -36,7 +36,7 @@ graph LR
 ### Technical Workflow:
 - **Low-Res Proxy**: Downscales to 480p using FFmpeg for faster AI multimodal processing.
 - **Audio Extraction**: Extracts high-quality MP3 for precise transcript timestamping.
-- **Transcript Generation**: Gemini 1.5/2.0 generates a timestamped JSON object mapping dialogue and events to video indices.
+- **Transcript Generation**: Gemini 2.5 generates a timestamped JSON object mapping dialogue and events to video indices.
 
 ---
 
