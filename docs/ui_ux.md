@@ -1,6 +1,6 @@
 # 🎨 UI & User Experience
 
-The front-end of **VGTU Video Summarization** is built to feel premium, responsive, and data-rich, guiding the user through a complex AI workflow with ease.
+The front-end is built to feel premium, responsive, and data-rich, guiding the user through a complex AI workflow with ease.
 
 ## 🛠 Tech Stack
 - **Framework**: Vue 3 with Vite.

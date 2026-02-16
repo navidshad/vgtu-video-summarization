@@ -1,6 +1,6 @@
 # 🧠 Technical Architecture
 
-This document provides a deep dive into the AI pipeline and technical logic powering **VGTU Video Summarization**.
+This document provides a deep dive into the AI pipeline and technical logic powering this platform.
 
 ## 🏗 High-Level Workflow
 

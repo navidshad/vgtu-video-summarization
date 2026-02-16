@@ -1,31 +1,29 @@
-<div align="center">
 
 # 🎬 VGTU Video Summarization
-### *AI-Powered Multimodal Video Highlighting*
+![Project Process](./docs/imgs/process.jpeg)
 
-[![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white)](https://vuejs.org/)
-[![Electron](https://img.shields.io/badge/Electron-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Gemini AI](https://img.shields.io/badge/Gemini%20AI-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white)](https://deepmind.google/technologies/gemini/)
-[![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
 
 ---
 
-**VGTU Video Summarization** is a high-fidelity application that transforms long-form video content into concise, meaningful highlights. By blending **Google Gemini's** multimodal intelligence with precise **FFmpeg** engineering, it provides a seamless chat-based refinement experience.
+A high-fidelity platform that transforms long-form video content into concise, meaningful highlights. By leveraging **Google Gemini's** multimodal intelligence and precise **FFmpeg** engineering, it provides a seamless chat-based refinement experience.
 
-[**Explore Architecture**](./docs/architecture.md) • [**UI/UX Design**](./docs/ui_ux.md) • [**Setup Guide**](./docs/setup.md)
-
-</div>
+**Key Use Cases:**
+- 🎓 **Academic Hub**: Condense 2-hour technical lectures into 5-minute study guides.
+- 📱 **Content Creation**: Generate social media teasers from raw footage with natural language.
+- 🔍 **Quick Review**: Rapidly navigate long meetings or webinars for specific insights.
 
 ---
+## 🧭 Quick Links & Navigation
 
-## 🧭 Navigation
-| Section | Description |
-| :--- | :--- |
-| 📦 **[Deliverables](#-deliverables)** | What's included in this repository. |
-| 🧠 **[The Pipeline](#-the-ai-pipeline-highlights)** | How the AI "thinks" and generates summaries. |
-| 🎨 **[Experience](#-ux-highlights)** | Interactive features and versioning system. |
-| 🛠 **[Reproducibility](#-reproducibility--seed)** | Details on deterministic AI and environmental consistency. |
-| 🚀 **[Getting Started](#-getting-started)** | Prerequisites and launch instructions. |
+| Topic | Resource / Section | Description |
+| :--- | :--- | :--- |
+| 🏗 **Architecture** | [**Technical Deep-Dive**](./docs/architecture.md) | Pipeline logic, intent nodes, and iterative generation. |
+| 🎨 **UI & UX** | [**Design Overview**](./docs/ui_ux.md) | Frontend components, state, and user interaction flow. |
+| 🚀 **Setup** | [**Setup Guide**](./docs/setup.md) | Prerequisites and environment installation instructions. |
+| 📦 **Repository** | [**Deliverables**](#-deliverables) | Formal project components and file structure. |
+| 🧠 **AI Logic** | [**The Pipeline**](#-the-ai-pipeline-highlights) | Logic overview of the 4-phase summarization engine. |
+| 🛠 **Verifiability** | [**Reproducibility**](#-reproducibility--seed) | Ensuring consistent results across environments. |
+| 📸 **Demo** | [**Final Screenshot**](#-final-snapshot) | Visual overview of the chat and video editor interface. |
 
 ---
 
@@ -39,6 +37,7 @@ This formal homework project delivers a complete production-grade ecosystem:
 ---
 
 ## 🧠 The AI Pipeline (Highlights)
+
 Our unique **4-Phase Engine** ensures that every summary is contextually accurate:
 *   **Intent Recognition**: Uses a "Brain" node to distinguish between chat and generation, preventing token waste.
 *   **Iterative Refinement**: Supports an **Edit Mode** that performs a technical "diff" on previous timelines for perfect consistency.
@@ -83,4 +82,3 @@ Check the **[Installation & Setup Guide](./docs/setup.md)** to configure:
 
 ## 📜 License
 Licensed under the MIT License - see [LICENSE](LICENSE) for details.
-
