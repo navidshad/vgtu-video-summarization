@@ -31,7 +31,7 @@ A high-fidelity platform that transforms long-form video content into concise, m
 This formal homework project delivers a complete production-grade ecosystem:
 *   **Production Code**: Electron desktop app written in Vue 3 & TypeScript.
 *   **AI Engine**: A 4-phase pipeline (Extraction, Intent, Generation, Assembly).
-*   **Reproduction Tools**: Download the [Sample Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) and use the app for a 4-phase trace.
+*   **Reproduction Tools**: Download the [Sample Videos Folder](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) (includes full and short versions) and use the app for a 4-phase trace.
 *   **Visual Documentation**: Fully documented [Architecture](./docs/architecture.md) and [UI/UX Flow](./docs/ui_ux.md).
 
 ---
@@ -58,7 +58,7 @@ The interface is designed for **transparency** and **iterative control**:
 
 ## 🛠 Reproducibility
 To guarantee identical behavior across different environments:
-*   **Sample Data**: Download our [Main Reference Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) to test the pipeline.
+*   **Sample Data**: Download our [Main Reference Videos Folder](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) (includes full and short versions) to test the pipeline.
 *   **JSON Enforcement**: Strict schemas ensure deterministic AI responses.
 *   **Precision Slicing**: FFmpeg settings calibrated for frame-accurate cuts.
 *   **Dependency Guard**: Locked environments via `package-lock.json` and `.npmrc`.
