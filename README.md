@@ -1,6 +1,6 @@
 # 🎬 VGTU Video Summarization (AI-Powered)
 
-![Project Process](./docs/process.jpeg)
+![Project Process](./docs/imgs/process.jpeg)
 
 ## 🌟 Overview
 **VGTU Video Summarization** is an advanced AI-driven application designed to transform long-form video content into concise, meaningful summaries. By leveraging state-of-the-art Multimodal LLMs (Google Gemini), the system understands the nuances of video, audio, and transcripts to generate context-aware highlights through an interactive chat interface.
@@ -135,7 +135,7 @@ Following the recommended standards:
 ## 📸 Final Snapshot
 The interface allows for real-time interaction with the video content, enabling users to refine summaries until they are perfect.
 
-![App Screenshot](./docs/screenshot_chatpage.png)
+![App Screenshot](./docs/imgs/screenshot_chatpage.png)
 
 ---
 
