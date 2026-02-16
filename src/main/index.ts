@@ -87,7 +87,7 @@ app.whenReady().then(() => {
 	ipcMain.handle('select-video', async () => {
 		const result = await dialog.showOpenDialog({
 			properties: ['openFile'],
-			filters: [{ name: 'Videos', extensions: ['mp4', 'mkv', 'avi', 'mov', 'webm'] }]
+			filters: [{ name: 'Videos', extensions: ['mp4', 'avi', 'mov', 'webm'] }]
 		})
 
 		if (result.canceled || result.filePaths.length === 0) {
@@ -121,14 +121,14 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
 
 		pipeline
+			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
 			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
 			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
 			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			// .register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
 			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			// .register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 

@@ -2,19 +2,41 @@ import ffmpeg from 'fluent-ffmpeg'
 import ffmpegPath from 'ffmpeg-static'
 import ffprobePath from 'ffprobe-static'
 import { join, basename, extname } from 'path'
+import process from 'node:process'
 import { TimelineSegment } from '../../shared/types'
+
+const IS_MAC = process.platform === 'darwin'
+
+
 
 // Set path to ffmpeg and ffprobe binaries
 if (ffmpegPath) {
 	const p = typeof ffmpegPath === 'string' ? ffmpegPath : (ffmpegPath as any).path
-	ffmpeg.setFfmpegPath(p)
+	ffmpeg.setFfmpegPath(p.replace('app.asar', 'app.asar.unpacked'))
 }
 if (ffprobePath) {
 	const p = typeof ffprobePath === 'string' ? ffprobePath : (ffprobePath as any).path
-	ffmpeg.setFfprobePath(p)
+	ffmpeg.setFfprobePath(p.replace('app.asar', 'app.asar.unpacked'))
+}
+
+/**
+ * Sanitizes a filename to ensure it only contains ASCII characters and is not too long.
+ */
+export function sanitizeFilename(name: string): string {
+	// Strip non-ASCII characters
+	let sanitized = name.replace(/[^\x00-\x7F]/g, '')
+	// Replace spaces and special characters with underscores
+	sanitized = sanitized.replace(/[^a-zA-Z0-9.-]/g, '_')
+	// Limit length
+	if (sanitized.length > 100) {
+		const ext = extname(sanitized)
+		sanitized = sanitized.substring(0, 100 - ext.length) + ext
+	}
+	return sanitized || 'file'
 }
 
 export interface VideoInfo {
+
 	width: number
 	height: number
 }
@@ -75,12 +97,50 @@ export async function toLowResolution(
 	outputDir: string,
 	onProgress?: (percent: number) => void
 ): Promise<string> {
-	const filename = basename(filePath, extname(filePath))
-	const outputPath = join(outputDir, `${filename}_480p.mp4`)
+	const ext = extname(filePath).toLowerCase()
+	const rawFilename = basename(filePath, extname(filePath))
+	const filename = sanitizeFilename(rawFilename)
+	const outputPath = join(outputDir, `${filename}_480p${ext}`)
+
 
 	return new Promise((resolve, reject) => {
-		ffmpeg(filePath)
-			.outputOptions(['-vf', 'scale=-2:480']) // Scale to 480p height, maintain aspect ratio (width even)
+		const isWebm = ext === '.webm'
+
+
+		const command = ffmpeg(filePath)
+			.outputOptions(['-vf', 'scale=-2:480'])
+
+		if (isWebm) {
+			// WebM (VP8/VP9) optimizations
+			command.outputOptions([
+				'-c:v', 'libvpx-vp9',
+				'-deadline', 'realtime',
+				'-cpu-used', '8',
+				'-threads', '0',
+				'-row-mt', '1',
+				'-b:v', '1M'
+			])
+		} else if (IS_MAC) {
+			// Mac hardware acceleration
+
+			command.outputOptions([
+				'-c:v', 'h264_videotoolbox',
+				'-b:v', '2M',
+				'-realtime', 'true',
+				'-threads', '0'
+			])
+		} else {
+			// CPU-based x264
+			command.outputOptions([
+				'-c:v', 'libx264',
+				'-preset', 'ultrafast',
+				'-crf', '32',
+				'-tune', 'fastdecode',
+				'-threads', '0'
+			])
+		}
+
+		command
 			.output(outputPath)
 			.on('progress', (progress) => {
 				if (onProgress && progress.percent) {
@@ -88,7 +148,11 @@ export async function toLowResolution(
 				}
 			})
 			.on('end', () => resolve(outputPath))
-			.on('error', (err) => reject(err))
+			.on('error', (err, stdout, stderr) => {
+				console.error('FFmpeg toLowResolution error:', err)
+				console.error('FFmpeg stderr:', stderr)
+				reject(new Error(`FFmpeg failed: ${err.message}. ${stderr}`))
+			})
 			.run()
 	})
 }
@@ -101,8 +165,10 @@ export async function toAudio(
 	outputDir: string,
 	onProgress?: (percent: number) => void
 ): Promise<string> {
-	const filename = basename(filePath, extname(filePath))
+	const rawFilename = basename(filePath, extname(filePath))
+	const filename = sanitizeFilename(rawFilename)
 	const outputPath = join(outputDir, `${filename}.mp3`)
+
 
 	return new Promise((resolve, reject) => {
 		ffmpeg(filePath)
@@ -130,8 +196,11 @@ export async function assembleVideo(
 	messageId: string,
 	onProgress?: (percent: number) => void
 ): Promise<string> {
-	const filename = basename(videoPath, extname(videoPath))
-	const outputPath = join(outputDir, `${filename}_${messageId}_result.mp4`)
+	const ext = extname(videoPath)
+	const rawFilename = basename(videoPath, ext)
+	const filename = sanitizeFilename(rawFilename)
+	const outputPath = join(outputDir, `${filename}_${messageId}_result${ext}`)
+
 
 	if (segments.length === 0) {
 		throw new Error('No segments provided for assembly')
@@ -187,16 +256,49 @@ export async function assembleVideo(
 				command.map('[outa]')
 			}
 
+			const isWebm = ext.toLowerCase() === '.webm'
+			const isMp4OrMov = ext.toLowerCase() === '.mp4' || ext.toLowerCase() === '.mov'
+
+
+			const outputOptions: string[] = []
+
+			if (isWebm) {
+				outputOptions.push(
+					'-c:v', 'libvpx-vp9',
+					'-deadline', 'realtime',
+					'-cpu-used', '8',
+					'-row-mt', '1',
+					'-c:a', 'libvorbis',
+					'-b:v', '2M',
+					'-threads', '0'
+				)
+			} else if (IS_MAC) {
+				outputOptions.push(
+					'-c:v', 'h264_videotoolbox',
+					'-b:v', '4M',
+					'-realtime', 'true',
+					'-c:a', 'aac',
+					'-b:a', '128k',
+					'-threads', '0'
+				)
+			} else {
+				outputOptions.push(
+					'-c:v', 'libx264',
+					'-preset', 'ultrafast',
+					'-crf', '23',
+					'-c:a', 'aac',
+					'-b:a', '128k',
+					'-threads', '0'
+				)
+			}
+
+			if (isMp4OrMov) {
+				outputOptions.push('-movflags', '+faststart')
+			}
+
 			command
 				.output(outputPath)
-				.outputOptions([
-					'-c:v libx264',
-					'-preset fast',
-					'-crf 23',
-					'-c:a aac',
-					'-b:a 128k',
-					'-movflags +faststart' // Good for web playback
-				])
+				.outputOptions(outputOptions)
 				.on('start', (cmd) => {
 					console.log('FFmpeg logic:', cmd)
 				})
@@ -209,9 +311,10 @@ export async function assembleVideo(
 					console.log('Video assembled successfully:', outputPath)
 					resolve(outputPath)
 				})
-				.on('error', (err) => {
+				.on('error', (err, stdout, stderr) => {
 					console.error('FFmpeg assembly error:', err)
-					reject(err)
+					console.error('FFmpeg stderr:', stderr)
+					reject(new Error(`FFmpeg assembly failed: ${err.message}. ${stderr}`))
 				})
 				.run()
 		})

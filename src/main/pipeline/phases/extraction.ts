@@ -2,7 +2,7 @@ import { PipelineFunction } from '../index'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
-import { extractRawTranscript as extractRawFromGemini, correctTranscript as correctFromGemini, generateSRT } from '../../gemini/utils'
+import { extractTranscript, generateSRT } from '../../gemini/utils'
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -50,7 +50,7 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	context.updateStatus('Extracting raw transcript...')
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
-	const { items: transcript, record } = await extractRawFromGemini(audioPath, duration)
+	const { items: transcript, record } = await extractTranscript(audioPath, duration)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
@@ -78,7 +78,7 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscript = JSON.parse(transcriptJson)
 	const rawSrt = generateSRT(rawTranscript)
 
-	const { items: transcript, record } = await correctFromGemini(audioPath, rawSrt, duration)
+	const { items: transcript, record } = await extractTranscript(audioPath, duration, rawSrt)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
