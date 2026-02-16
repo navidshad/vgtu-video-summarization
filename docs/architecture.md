@@ -29,23 +29,14 @@ The pre-processing phase converts raw video into searchable technical context.
 graph LR
     Video[Raw Video] --> Target[480p Proxy]
     Target --> Audio[MP3 Audio]
-    Target --> Vision[Scene Detection*]
     Audio --> Gemini[Multimodal Gemini]
-    Vision --> Gemini
     Gemini --> Transcript[JSON Transcript]
-    
-    subgraph "Planned Features"
-    Vision
-    end
 ```
 
 ### Technical Workflow:
 - **Low-Res Proxy**: Downscales to 480p using FFmpeg for faster AI multimodal processing.
 - **Audio Extraction**: Extracts high-quality MP3 for precise transcript timestamping.
 - **Transcript Generation**: Gemini 1.5/2.0 generates a timestamped JSON object mapping dialogue and events to video indices.
-- **Scene Detection**: 
-  > [!NOTE]
-  > **Future Scope**: Uses `PySceneDetect` to identify hard cuts and transitions. The goal is to generate visual descriptions for each scene and feed this metadata into the **Timeline Builder** for visually-aware summaries.
 
 ---
 
@@ -82,8 +73,15 @@ graph TD
     Start[Target Duration: e.g. 30s] --> Search[Select Next 3 Best Indices]
     Search --> Check{Total Duration >= Target?}
     Check -- No --> Search
-    Check -- Yes --> Final[Final Timeline JSON]
+    Check -- Yes --> Scenes[Scene Detection]
+    Scenes --> Final[Final Timeline JSON]
 ```
+
+### Scene-Aware Context:
+- **Scene Detection**: 
+  > [!NOTE]
+  > **Future Scope**: Uses `PySceneDetect` to identify hard cuts and transitions. It converts scene segments into descriptive text data, ensuring that the final summary is visually coherent and respects natural scene boundaries.
+
 
 ### 2. Refining Edit Mode (One-Shot "Diff")
 When editing, the AI receives the **Reference Timeline** and the **User Request** to produce a single-shot update.

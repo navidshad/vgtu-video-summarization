@@ -22,7 +22,7 @@ A high-fidelity platform that transforms long-form video content into concise, m
 | 🚀 **Setup** | [**Setup Guide**](./docs/setup.md) | Prerequisites and environment installation instructions. |
 | 📦 **Repository** | [**Deliverables**](#-deliverables) | Formal project components and file structure. |
 | 🧠 **AI Logic** | [**The Pipeline**](#-the-ai-pipeline-highlights) | Logic overview of the 4-phase summarization engine. |
-| 🛠 **Verifiability** | [**Reproducibility**](#-reproducibility--seed) | Ensuring consistent results across environments. |
+| 🛠 **Verifiability** | [**Reproducibility**](#-reproducibility) | Ensuring consistent results across environments. |
 | 📸 **Demo** | [**Final Screenshot**](#-final-snapshot) | Visual overview of the chat and video editor interface. |
 
 ---
@@ -31,7 +31,7 @@ A high-fidelity platform that transforms long-form video content into concise, m
 This formal homework project delivers a complete production-grade ecosystem:
 *   **Production Code**: Electron desktop app written in Vue 3 & TypeScript.
 *   **AI Engine**: A 4-phase pipeline (Extraction, Intent, Generation, Assembly).
-*   **Reproduction Tools**: Sample metadata and transcripts in the `data/` directory.
+*   **Reproduction Tools**: Download the [Sample Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) and use the app for a 4-phase trace.
 *   **Visual Documentation**: Fully documented [Architecture](./docs/architecture.md) and [UI/UX Flow](./docs/ui_ux.md).
 
 ---
@@ -56,8 +56,9 @@ The interface is designed for **transparency** and **iterative control**:
 
 ---
 
-## 🛠 Reproducibility & Seed
+## 🛠 Reproducibility
 To guarantee identical behavior across different environments:
+*   **Sample Data**: Download our [Main Reference Video](https://drive.google.com/file/d/1zJMoDeeoVh_oLeNY65_-IAx1ePE-VV37/view?usp=sharing) to test the pipeline.
 *   **JSON Enforcement**: Strict schemas ensure deterministic AI responses.
 *   **Precision Slicing**: FFmpeg settings calibrated for frame-accurate cuts.
 *   **Dependency Guard**: Locked environments via `package-lock.json` and `.npmrc`.
