@@ -9,6 +9,7 @@
 
       <!-- Theme Toggle (Temporary for testing) -->
       <div class="absolute top-4 right-4 z-50 flex space-x-2">
+        <div id="header-actions-portal"></div>
         <IconButton @click="router.push('/settings')" icon="IconSettings" size="sm"/>
         <IconButton @click="toggleTheme" :icon="appStore.theme === 'light' ? 'IconMoon' : 'IconSun'" size="sm"/>
       </div>
