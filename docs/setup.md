@@ -46,22 +46,15 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
    cd vgtu-video-summarization
    ```
 
-2. **Configure NPM**:
-   Create a `.npmrc` file in the root directory to access the component library:
-   ```text
-   @codebridger:registry=https://npm.pkg.github.com
-   //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-   ```
-
-3. **Install dependencies**:
+2. **Install dependencies**:
    ```bash
    npm install
    ```
 
-4. **Environment Variables**:
+3. **Environment Variables**:
    Provide your Gemini API key in the application settings interface upon launch.
 
-5. **Start the application**:
+4. **Start the application**:
    ```bash
    npm run dev
    ```

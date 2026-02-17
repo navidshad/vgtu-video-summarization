@@ -40,13 +40,13 @@ Install the package using npm or yarn:
 
 ```
 # Using npm
-npm install @codebridger/lib-vue-components
+npm install pilotui
 
 # Using yarn
-yarn add @codebridger/lib-vue-components
+yarn add pilotui
 
 # install from dev branch
-yarn add @codebridger/lib-vue-components@dev
+yarn add pilotui@dev
 ```
 
 ##### 3\. Integration
@@ -55,8 +55,8 @@ yarn add @codebridger/lib-vue-components@dev
 
 ```
 // Import components and Styles
-import vueComponents from "@codebridger/lib-vue-components";
-import '@codebridger/lib-vue-components/style.css';
+import vueComponents from "pilotui";
+import 'pilotui/style.css';
 
 // Configuration options
 const options = {
@@ -78,10 +78,10 @@ vueApp.use(vueComponents, options);
 1.  Create a plugin file `plugins/component-library.client.ts`:
 
 ```
-import { defineNuxtPlugin as init } from '@codebridger/lib-vue-components/nuxt';
+import { defineNuxtPlugin as init } from 'pilotui/nuxt';
 
 export default defineNuxtPlugin({
-  name: '@codebridger/lib-vue-components',
+  name: 'pilotui',
   enforce: 'pre',
   async setup(nuxtApp) {
     const options = {
@@ -102,12 +102,12 @@ export default defineNuxtPlugin({
 export default defineNuxtConfig({
   // Ensure components are transpiled during build
   build: {
-    transpile: ['@codebridger/lib-vue-components'],
+    transpile: ['pilotui'],
   },
 
   css: [
     // ... other CSS files
-    '@codebridger/lib-vue-components/style.css',
+    'pilotui/style.css',
   ],
   
   // ... other Nuxt config
@@ -162,7 +162,7 @@ All components should be wrapped with the main ancestor component called `AppRoo
 
 ```
 // All Components
-Import { Button, Input, App } form '@codebridger/lib-vue-components'
+Import { Button, Input, App } form 'pilotui'
 
 // Or Import by category:
 
@@ -173,22 +173,22 @@ import {
   ThemeCustomizer,
   SidebarMenu,
   HorizontalMenu,
-} from "@codebridger/lib-vue-components/shell";
+} from "pilotui/shell";
 
 // Element components
-import { Button } from "@codebridger/lib-vue-components/elements";
+import { Button } from "pilotui/elements";
 
 // Form components
-import { Input } from "@codebridger/lib-vue-components/form";
+import { Input } from "pilotui/form";
 
 // Complex components
-import { Modal } from "@codebridger/lib-vue-components/complex";
+import { Modal } from "pilotui/complex";
 
 // Type imports
 import type {
   SidebarItemType,
   HorizontalMenuItemType,
-} from "@codebridger/lib-vue-components/types";
+} from "pilotui/types";
 ```
 
 #### Global Configuration
@@ -196,7 +196,7 @@ import type {
 There is pinia store for global configuration. see full documentation here
 
 ```
-import { useAppStore } from "@codebridger/lib-vue-components/store.ts";
+import { useAppStore } from "pilotui/store.ts";
 
 const appStore = useAppStore();
 appStore.setTheme("dark");
@@ -213,7 +213,7 @@ Import and use the `useAppStore` in your components to access and modify the glo
 ##### Importing the Store
 
 ```
-import { useAppStore } from '@codebridger/lib-vue-components/store.ts';
+import { useAppStore } from 'pilotui/store.ts';
 ```
 
 ##### Accessing State
@@ -1653,7 +1653,7 @@ To use icons listed in this page you need to import the `icon` component and pro
 </template>
 
 <script lang="ts" setup>
-import { Icon } from '@codebridger/lib-vue-components/elements.ts'
+import { Icon } from 'pilotui/elements.ts'
 </script>
 ```
 
@@ -2010,7 +2010,7 @@ The `toast.ts` file provides utility functions for displaying toast notification
 To show a basic toast message, use the `showToast` function:
 
 ```
-import { showToast, toastSuccess, toastError, toastWarning, toastInfo } from '@codebridger/lib-vue-components/toast.ts';
+import { showToast, toastSuccess, toastError, toastWarning, toastInfo } from 'pilotui/toast.ts';
 
 showToast({ message: 'This is a basic toast message', variant: 'success' });
 
@@ -6875,7 +6875,7 @@ In this Storybook demo, the file upload process is simulated with progress updat
 
 ```
 <script setup>
-import { FileInputCombo } from "@codebridger/lib-vue-components/elements";
+import { FileInputCombo } from "pilotui/elements";
 import { ref } from "vue";
 
 // Get a reference to the component

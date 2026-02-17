@@ -23,8 +23,8 @@ All standard UI elements must come from the internal component library.
 
 ```typescript
 // Import path
-import { Card, Button, Icon } from '@codebridger/lib-vue-components/elements.ts';
-import { Modal } from '@codebridger/lib-vue-components/complex.ts';
+import { Card, Button, Icon } from 'pilotui/elements.ts';
+import { Modal } from 'pilotui/complex.ts';
 ```
 
 ### Key Components

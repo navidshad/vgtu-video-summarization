@@ -26,8 +26,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Input } from '@codebridger/lib-vue-components/form'
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Input } from 'pilotui/form'
+import { Button } from 'pilotui/elements'
 
 const apiKey = ref('')
 const router = useRouter()

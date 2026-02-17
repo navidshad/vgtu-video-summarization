@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { IconButton } from '@codebridger/lib-vue-components/elements'
+import { IconButton } from 'pilotui/elements'
 import { computed } from 'vue'
 import { useVideoStore } from '../../stores/videoStore'
 
