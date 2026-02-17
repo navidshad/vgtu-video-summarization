@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from '@codebridger/lib-vue-components/elements'
+import { Button } from 'pilotui/elements'
 
 defineEmits(['create'])
 </script>

@@ -66,8 +66,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
-import { TextArea } from '@codebridger/lib-vue-components/form'
+import { Button, IconButton } from 'pilotui/elements'
+import { TextArea } from 'pilotui/form'
 import { MessageRole } from '@shared/types'
 import { useVideoStore } from '../stores/videoStore'
 

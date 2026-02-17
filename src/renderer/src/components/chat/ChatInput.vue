@@ -36,8 +36,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { TextArea, InputGroup } from '@codebridger/lib-vue-components/form'
-import { IconButton } from '@codebridger/lib-vue-components/elements'
+import { TextArea, InputGroup } from 'pilotui/form'
+import { IconButton } from 'pilotui/elements'
 import { FileType } from '@shared/types'
 import { useVideoStore } from '../../stores/videoStore'
 
