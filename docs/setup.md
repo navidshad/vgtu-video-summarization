@@ -48,10 +48,10 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
 
 2. **Install dependencies**:
    ```bash
-   npm install
+   yarn install
    ```
 
 3. **Start the application**:
    ```bash
-   npm run dev
+   yarn dev
    ```
