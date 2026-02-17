@@ -51,10 +51,7 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
    npm install
    ```
 
-3. **Environment Variables**:
-   Provide your Gemini API key in the application settings interface upon launch.
-
-4. **Start the application**:
+3. **Start the application**:
    ```bash
    npm run dev
    ```
