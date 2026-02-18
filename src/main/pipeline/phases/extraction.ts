@@ -8,7 +8,7 @@ import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
 import { GEMINI_MODEL_2_5_FLASH_LITE } from '../../constants/gemini'
 
-const SCENE_DESCRIPTION_PROMPT = `Describe the visual action, setting, and atmosphere of this image in one concise sentence. Focus on what is happening.`
+const BASE_SCENE_PROMPT = `Describe the visual action, setting, and atmosphere of this image in one concise sentence. Focus on what is happening.`
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -163,9 +163,16 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 			const frameUri = await gemini.uploadFile(framePath, 'image/jpeg')
 
 			// 3. Describe Frame
+			// Add context from previous scenes to maintain continuity
+			let prompt = BASE_SCENE_PROMPT
+			if (descriptions.length > 0) {
+				const recentContext = descriptions.slice(-3).map(d => d.description).join('\n- ')
+				prompt += `\n\nContext from previous scenes (use this to identify recurring people/settings if applicable):\n- ${recentContext}`
+			}
+
 			const { text, record } = await gemini.generateDescriptionFromImage(
 				modelName,
-				SCENE_DESCRIPTION_PROMPT,
+				prompt,
 				frameUri
 			)
 			context.recordUsage(record)
