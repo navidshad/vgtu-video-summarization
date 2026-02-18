@@ -127,8 +127,8 @@ app.whenReady().then(() => {
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
 			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			// .register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			// .register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
+			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
