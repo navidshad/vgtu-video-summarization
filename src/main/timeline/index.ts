@@ -89,8 +89,6 @@ You are a video editor assistant.
 Your task is to EDIT an existing video timeline based on the user's technical request.
 You are provided with the FULL transcript (SRT) and the CURRENT timeline.
 
-The transcript includes [Visual Scene] and [Audio] segments. Use them if they help fulfill the request (e.g. "show more action" -> pick visual scenes).
-
 Strict Rules for Editing:
 1. MAXIMAL CONSISTENCY: Do NOT change segments from the CURRENT timeline unless the user's request explicitly requires it.
 2. PRESERVE ORDER: Maintain the existing sequence of segments as much as possible.
@@ -183,11 +181,6 @@ async function generateNewTimeline(options: {
     const systemInstruction = `
 You are a video editor assistant.
 Your task is to select the next best segments from the full transcript to build a shorter video timeline based on the user's request.
-
-You will see segments that are spoken text, and segments in brackets like [Visual Scene: ...] or [Music].
-- [Visual Scene] segments describe what is happening visually when no one is speaking. USE THESE to show relevant actions or set the scene.
-- [Music] or [Applause] can be used for impact or transitions.
-
 Return ONLY a JSON array of indices (integers) of the selected segments, e.g. [1, 5, 8].
 Do not include any other text.
 `;

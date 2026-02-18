@@ -320,35 +320,3 @@ export async function assembleVideo(
 		})
 	})
 }
-
-/**
- * Extracts a single frame from a video at a specific timestamp.
- * Resizes to 480p height to minimize token usage for AI analysis.
- */
-export async function extractFrame(
-	videoPath: string,
-	timestamp: number,
-	outputDir: string
-): Promise<string> {
-	const ext = extname(videoPath)
-	const rawFilename = basename(videoPath, ext)
-	const filename = sanitizeFilename(rawFilename)
-	const outputPath = join(outputDir, `${filename}_frame_${timestamp.toFixed(2)}.jpg`)
-
-	return new Promise((resolve, reject) => {
-		ffmpeg(videoPath)
-			.seekInput(timestamp)
-			.outputOptions([
-				'-vframes', '1',
-				'-vf', 'scale=-2:480', // Resize to 480p height, mantaining aspect ratio
-				'-q:v', '2' // High quality JPG
-			])
-			.output(outputPath)
-			.on('end', () => resolve(outputPath))
-			.on('error', (err) => {
-				console.error(`Error extracting frame at ${timestamp}:`, err)
-				reject(err)
-			})
-			.run()
-	})
-}

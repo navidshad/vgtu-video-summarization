@@ -20,7 +20,7 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
    ```
 2. **PySceneDetect**: Install via pip (requires Python):
    ```bash
-   pip install scenedetect
+   pip install --upgrade scenedetect[opencv-headless]
    ```
 
 #### 🪟 Windows
@@ -33,7 +33,7 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
    - Ensure [Python](https://www.python.org/) is installed and added to PATH. 
    - Install via terminal:
      ```bash
-     pip install scenedetect
+     pip install --upgrade scenedetect[opencv-headless]
      ```
 
 ---

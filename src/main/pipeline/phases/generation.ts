@@ -1,9 +1,6 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
-import { enrichTranscriptWithScenes, SceneDescription } from '../../timeline/enrichment'
-import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
-import { TranscriptItem } from 'src/main/gemini/utils'
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Preparing for timeline generation...')
@@ -14,27 +11,7 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   }
 
   const transcriptJson = fs.readFileSync(transcriptPath, 'utf-8')
-  let transcript = JSON.parse(transcriptJson) as TranscriptItem[]
-
-  // Enrich with scenes if available
-  if (context.preprocessing.sceneDescriptionsPath && fs.existsSync(context.preprocessing.sceneDescriptionsPath)) {
-    try {
-      const scenesJson = fs.readFileSync(context.preprocessing.sceneDescriptionsPath, 'utf-8')
-      const sceneDescriptions: SceneDescription[] = JSON.parse(scenesJson)
-
-      // We need total duration to close the last gap
-      // Ideally we get it from context or ffmpeg, but for now we can infer or use a large number
-      // Actually we can get it from ffmpegAdapter if we want, or just rely on the last timestamp of transcript
-      // Let's try to get it from metadata if possible, or just use the last transcript end time + gap
-      const videoDuration = await ffmpegAdapter.getVideoDuration(context.preprocessing.audioPath!)
-
-      transcript = enrichTranscriptWithScenes(transcript, sceneDescriptions, videoDuration)
-      context.updateStatus(`Enriched transcript with visual scene data.`)
-    } catch (e) {
-      console.warn("Failed to enrich transcript:", e)
-    }
-  }
-
+  const transcript = JSON.parse(transcriptJson)
   const userExpectation = context.intentResult?.content || context.context || "Create a highlight reel."
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
   const baseTimeline = context.baseTimeline || []

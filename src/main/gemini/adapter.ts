@@ -273,39 +273,6 @@ export class GeminiAdapter {
 	}
 
 	/**
-	 * Generates a text description from an image file.
-	 */
-	async generateDescriptionFromImage(
-		modelName: string,
-		prompt: string,
-		imageUri: string
-	): Promise<{ text: string, record: UsageRecord }> {
-		const contents = [
-			{
-				role: 'user',
-				parts: [
-					{ fileData: { fileUri: imageUri, mimeType: 'image/jpeg' } },
-					{ text: prompt }
-				]
-			}
-		];
-
-		const request: GenerateContentParameters = {
-			model: modelName,
-			contents
-		};
-
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
-
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
-	}
-
-	/**
 	 * Calculates the cost of a request based on usage and model.
 	 * @param audioDuration Duration of audio in seconds if multimodal call.
 	 */
