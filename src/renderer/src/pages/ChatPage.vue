@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col bg-transparent overflow-hidden text-zinc-900 dark:text-zinc-200 transition-colors">
+  <div class="h-full flex flex-col bg-zinc-50 dark:bg-zinc-950 overflow-hidden text-zinc-900 dark:text-zinc-200 transition-colors">
     <!-- Header -->
     <ChatHeader :title="videoStore.currentVideoName" @back="handleBack" />
 
