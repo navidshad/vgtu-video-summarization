@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { Button, IconButton } from '@codebridger/lib-vue-components/elements'
+import { Button, IconButton } from 'pilotui/elements'
 import { MessageRole, FileType, Attachment } from '@shared/types'
 
 defineProps<{

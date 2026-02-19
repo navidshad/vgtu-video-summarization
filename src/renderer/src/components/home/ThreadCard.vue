@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { Card } from '@codebridger/lib-vue-components/elements'
+import { Card } from 'pilotui/elements'
 
 defineProps<{
   thread: any

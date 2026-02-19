@@ -18,19 +18,22 @@ Text content here.
 <empty line>
 2
 00:00:05,000 --> 00:00:10,000
-Next segment text.
+[Music playing]
 """
 
 Rules:
 - Use HH:MM:SS,mmm format for timestamps.
 - Respond ONLY with the SRT content. 
-- Do not include any preamble, conversational text, or markdown code blocks.`
+- Do not include any preamble, conversational text, or markdown code blocks.
+- **IMPORTANT**: Transcribe significant audio events (e.g., [Music], [Applause], [Laughter], [Silence]) in brackets.`
 
 const TRANSCRIPT_CORRECTION_PROMPT = `You are an expert transcriber. I am providing you with an audio file and an initial transcript (in SRT format) that was generated for it. 
 Your task is to review the transcript against the audio and correct any errors (mishearings, missing words, incorrect timestamps).
 
-Respond ONLY with the FULL corrected transcript in SRT format. 
-Do not include any preamble, conversational text, or markdown code blocks.`
+Rules:
+1. Respond ONLY with the FULL corrected transcript in SRT format. 
+2. Do not include any preamble, conversational text, or markdown code blocks.
+3. **CRITICAL**: Preserve all audio event markers (e.g., [Music], [Applause]) unless they are clearly incorrect.`
 
 /**
  * Normalizes a timestamp string to HH:MM:SS,mmm format.

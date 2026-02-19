@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Card, IconButton } from '@codebridger/lib-vue-components/elements'
+import { Card, IconButton } from 'pilotui/elements'
 import { MessageRole, Message, FileType } from '@shared/types'
 import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'

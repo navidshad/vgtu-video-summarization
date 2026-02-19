@@ -23,9 +23,9 @@
 </template>
 
 <script setup lang="ts">
-import { App as AppRoot } from '@codebridger/lib-vue-components/shell'
-import { useAppStore } from '@codebridger/lib-vue-components/store'
-import { IconButton } from '@codebridger/lib-vue-components/elements'
+import { App as AppRoot } from 'pilotui/shell'
+import { useAppStore } from 'pilotui/store'
+import { IconButton } from 'pilotui/elements'
 import { onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 

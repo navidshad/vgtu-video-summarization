@@ -226,8 +226,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, toRaw } from 'vue'
 import { useRouter } from 'vue-router'
-import { Button, IconButton, Card } from '@codebridger/lib-vue-components/elements'
-import { Input } from '@codebridger/lib-vue-components/form'
+import { Button, IconButton, Card } from 'pilotui/elements'
+import { Input } from 'pilotui/form'
 import { useVideoStore } from '../stores/videoStore'
 import { ModelSettings } from '../../../shared/types'
 
