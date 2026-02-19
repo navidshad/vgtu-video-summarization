@@ -188,6 +188,11 @@ You will see segments that are spoken text, and segments in brackets like [Visua
 - [Visual Scene] segments describe what is happening visually when no one is speaking. USE THESE to show relevant actions or set the scene.
 - [Music] or [Applause] can be used for impact or transitions.
 
+IMPORTANT: Selection Logic
+1. CHRONOLOGICAL ORDER: Unless the user explicitly asks for a non-linear narrative (e.g. "start with the ending", "flashback"), you MUST select segments that appear later in the timeline than the previous ones.
+2. GRADUAL PROGRESSION: The story line should be kept based on timing, and do not mix times. Ideally select the next best segment that continues the flow naturally.
+   - Example: If the timeline has a segment at 00:10:10, do NOT select a segment at 00:08:05. The time must always move forward.
+
 Return ONLY a JSON array of indices (integers) of the selected segments, e.g. [1, 5, 8].
 Do not include any other text.
 `;

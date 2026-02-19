@@ -52,7 +52,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 	},
 	selection: {
 		'raw-transcript': GEMINI_MODEL_2_5_FLASH_LITE,
-		'corrected-transcript': GEMINI_MODEL_2_5_FLASH,
+		'corrected-transcript': GEMINI_MODEL_2_5_PRO,
 		'intent': GEMINI_MODEL_2_5_FLASH,
 		'timeline-new': GEMINI_MODEL_3_FLASH_PREVIEW,
 		'timeline-edit': GEMINI_MODEL_2_5_FLASH
