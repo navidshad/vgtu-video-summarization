@@ -25,7 +25,7 @@
 			<Card :class="[
 				'!rounded-[1.5rem] !p-5 shadow-sm dark:shadow-xl transition-all w-fit max-w-[85%] md:max-w-[75%]',
 				message.role === MessageRole.User
-					? '!bg-zinc-100 dark:!bg-zinc-800/80 !text-zinc-900 dark:!text-zinc-100 !border-0 rounded-tr-sm'
+					? '!bg-zinc-200 dark:!bg-zinc-800 !text-zinc-900 dark:!text-zinc-100 !border-0 rounded-tr-sm'
 					: '!bg-white dark:!bg-zinc-900/90 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-100 dark:!border-zinc-800 rounded-tl-sm backdrop-blur-sm',
 				message.isPending ? 'opacity-90' : ''
 			]">
