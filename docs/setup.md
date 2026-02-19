@@ -8,7 +8,7 @@ This guide provides detailed instructions on how to set up the environment and r
 
 ### Prerequisites
 - **Node.js** (v18 or higher)
-- **Google Gemini API Key**
+- **Google Gemini API Key** ([Google AI Studio](https://aistudio.google.com/app/apikey)) — *Ask us if you need an API key to test this project.*
 
 ### 🛠 External Tool Setup
 The application relies on **FFmpeg** for video processing and **PySceneDetect** for scene analysis.

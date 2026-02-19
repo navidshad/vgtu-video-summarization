@@ -10,6 +10,8 @@ import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
+import { checkFFmpegAvailability } from './ffmpeg'
+import { checkScenedetectAvailability } from './scenedetect'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 protocol.registerSchemesAsPrivileged([
@@ -98,6 +100,14 @@ app.whenReady().then(() => {
 			path: result.filePaths[0],
 			name: result.filePaths[0].split('/').pop() || ''
 		}
+	})
+
+	ipcMain.handle('check-system-requirements', async () => {
+		const [ffmpegAvailable, scenedetectAvailable] = await Promise.all([
+			checkFFmpegAvailability(),
+			checkScenedetectAvailability()
+		])
+		return { ffmpegAvailable, scenedetectAvailable }
 	})
 
 	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {

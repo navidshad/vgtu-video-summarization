@@ -11,6 +11,18 @@ const CSV_FILENAME = 'scenes.csv'
 const DURATION_TOLERANCE = 0.1
 
 /**
+ * Checks whether the scenedetect CLI is available on PATH.
+ * Returns true if the version command succeeds, false otherwise.
+ */
+export function checkScenedetectAvailability(): Promise<boolean> {
+    return new Promise((resolve) => {
+        execFile('scenedetect', ['version'], (error) => {
+            resolve(!error)
+        })
+    })
+}
+
+/**
  * Parse a timecode string (HH:MM:SS.mmm) or a plain number into seconds.
  * Throws if the value cannot be parsed.
  */

@@ -1,13 +1,56 @@
 <template>
   <div class="flex flex-col items-center justify-center h-full bg-transparent p-6 space-y-8 relative overflow-hidden">
     <!-- Back Button -->
-    <div class="absolute top-0 left-0 p-8 z-50">
-      <IconButton @click="router.back()" icon="IconArrowLeft" size="sm" class="!bg-white/50 dark:!bg-black/20 backdrop-blur-md border !border-white/20"/>
+    <div class="absolute top-0 left-0 p-6">
+      <IconButton @click="router.back()" icon="IconArrowLeft" size="xs" />
     </div>
 
     <div class="text-center z-10 animate-fade-in-up">
       <h1 class="text-4xl md:text-5xl font-heading font-black mb-4 text-zinc-900 dark:text-white transition-colors tracking-tight">Video Summarizer</h1>
       <p class="text-lg text-zinc-500 dark:text-zinc-400 transition-colors font-medium max-w-md mx-auto">Select a video to begin the AI analysis and extract key insights.</p>
+    </div>
+
+    <!-- System Requirements Banners -->
+    <!-- @TODO Use PilotUI -->
+    <div v-if="requirementsChecked" class="w-full max-w-2xl space-y-2">
+      <!-- FFmpeg missing: blocking error -->
+      <div v-if="!ffmpegAvailable"
+        class="flex items-start gap-3 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <div>
+          <p class="font-semibold text-sm">FFmpeg not found</p>
+          <p class="text-xs mt-0.5 opacity-80">FFmpeg is required for video processing. Please install it and restart
+            the app.</p>
+        </div>
+      </div>
+
+      <!-- Scenedetect missing: warning, can continue -->
+      <!-- @TODO Use PilotUI -->
+      <div v-if="ffmpegAvailable && !scenedetectAvailable"
+        class="flex items-start gap-3 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div>
+          <p class="font-semibold text-sm">scenedetect not found — Audio-only mode</p>
+          <p class="text-xs mt-0.5 opacity-80">
+            Visual scene analysis is unavailable. The AI will only analyze audio data.
+            Install <code class="font-mono bg-amber-500/20 px-1 rounded">scenedetect</code> for full visual analysis.
+            <a href="https://github.com/navidshad/vgtu-video-summarization/blob/main/docs/setup.md#-external-tool-setup"
+              target="_blank" class="underline font-medium hover:opacity-100 opacity-90 transition-opacity">
+              Installation guide ↗
+            </a>
+          </p>
+        </div>
+      </div>
     </div>
 
     <div
@@ -61,14 +104,25 @@
           placeholder="What would you like to focus on in this summary? (e.g. 'Summarize key takeaways')" :rows="4"
           class="!bg-zinc-50 dark:!bg-zinc-800/30 !text-zinc-900 dark:!text-white !border-zinc-200 dark:!border-zinc-700 placeholder:text-zinc-400 !rounded-2xl transition-all focus:!border-primary/50 focus:!ring-4 focus:!ring-primary/10" />
 
-        <Button @click="startCreation" color="primary" :disabled="!prompt.trim()" label="Create Summary" size="lg" class="w-full !rounded-xl !py-4 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-1"/>
+        <!-- Tooltip wrapper for disabled state -->
+        <div class="relative group/btn">
+          <Button @click="startCreation" color="primary" :disabled="!canSubmit" label="Create Summary" class="w-full" />
+          <!-- Tooltip shown when ffmpeg is missing -->
+          <div v-if="!ffmpegAvailable"
+            class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-700 text-white text-xs whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none shadow-lg">
+            FFmpeg is required to process video
+            <div
+              class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-700">
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Button, IconButton } from 'pilotui/elements'
 import { TextArea } from 'pilotui/form'
@@ -81,6 +135,28 @@ const fileSelected = ref(false)
 const fileName = ref('')
 const filePath = ref('')
 const prompt = ref('')
+
+// System requirements state
+const requirementsChecked = ref(false)
+const ffmpegAvailable = ref(true)
+const scenedetectAvailable = ref(true)
+
+onMounted(async () => {
+  try {
+    const result = await (window as any).api?.checkSystemRequirements()
+    if (result) {
+      ffmpegAvailable.value = result.ffmpegAvailable
+      scenedetectAvailable.value = result.scenedetectAvailable
+    }
+  } catch (e) {
+    console.error('Failed to check system requirements:', e)
+  } finally {
+    requirementsChecked.value = true
+  }
+})
+
+// Can only submit if ffmpeg is available and a file + prompt are ready
+const canSubmit = computed(() => ffmpegAvailable.value && !!prompt.value.trim())
 
 const handleNativeSelect = async () => {
   const result = await (window as any).api?.selectVideo()
@@ -98,7 +174,7 @@ const resetSelection = () => {
 }
 
 const startCreation = async () => {
-  if (fileSelected.value && prompt.value.trim()) {
+  if (fileSelected.value && prompt.value.trim() && ffmpegAvailable.value) {
     // 1. Create a new thread
     const threadId = await videoStore.createThread(filePath.value, fileName.value)
 

@@ -1,6 +1,6 @@
 {
   "name": "vgtu-video-summarization",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "AI-based Video Summarizer",
   "main": "./out/main/index.js",
@@ -55,8 +55,20 @@
     "vue-tsc": "^2.0.6"
   },
   "build": {
+    "appId": "com.vgtu.video-summarization",
+    "productName": "VGTU Video Summarizer",
+    "directories": {
+      "output": "dist"
+    },
     "extraResources": [
       "resources/**"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "navidshad",
+        "repo": "vgtu-video-summarization"
+      }
     ]
   }
 }

@@ -20,6 +20,18 @@ if (ffprobePath) {
 }
 
 /**
+ * Checks whether ffmpeg is available and functional.
+ * Returns true if the embedded binary responds correctly, false otherwise.
+ */
+export function checkFFmpegAvailability(): Promise<boolean> {
+	return new Promise((resolve) => {
+		ffmpeg.getAvailableFormats((err) => {
+			resolve(!err)
+		})
+	})
+}
+
+/**
  * Sanitizes a filename to ensure it only contains ASCII characters and is not too long.
  */
 export function sanitizeFilename(name: string): string {

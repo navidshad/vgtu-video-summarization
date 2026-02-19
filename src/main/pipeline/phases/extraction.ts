@@ -3,7 +3,7 @@ import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
 import { extractTranscript, generateSRT } from '../../gemini/utils'
-import { SceneDetector } from '../../scenedetect'
+import { SceneDetector, checkScenedetectAvailability } from '../../scenedetect'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
 import { GEMINI_MODEL_2_5_FLASH_LITE } from '../../constants/gemini'
@@ -98,6 +98,15 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 
 export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	const videoPath = context.preprocessing.lowResVideoPath || context.videoPath
+
+	// Check if scenedetect CLI is available before attempting
+	const scenedetectAvailable = await checkScenedetectAvailability()
+	if (!scenedetectAvailable) {
+		context.updateStatus('scenedetect not found — skipping visual scene analysis. Results will be audio-only.')
+		context.next(data)
+		return
+	}
+
 	context.updateStatus('Detecting scenes in video...')
 
 	const detector = new SceneDetector()
@@ -107,8 +116,6 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	} catch (error) {
 		console.error('Scene detection failed:', error)
 		context.updateStatus('Scene detection failed, proceeding without scenes.')
-		// fallback to empty scenes or default?
-		// for now, we just don't save sceneTimesPath
 		context.next(data)
 		return
 	}
