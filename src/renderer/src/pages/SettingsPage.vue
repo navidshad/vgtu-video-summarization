@@ -73,7 +73,7 @@
 							class="font-mono text-sm !bg-zinc-50 dark:!bg-zinc-950/50 !border-zinc-200 dark:!border-zinc-800 !text-zinc-900 dark:!text-white placeholder:text-zinc-400 focus:!border-amber-500 !rounded-xl !py-3 transition-all" />
 
 						<Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm"
-							class="w-full !rounded-xl !py-3 bg-amber-600 hover:bg-amber-700 border-transparent text-white" label="Save API Key" />
+							class="w-full !rounded-xl !py-3 bg-amber-600 hover:bg-amber-700 border-transparent text-white disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500" label="Save API Key" />
 					</div>
 				</Card>
 				
