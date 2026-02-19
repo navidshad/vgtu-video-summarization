@@ -10,22 +10,38 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Avoid infinite loops by skipping if the commit was a release bump
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version from package.json
-        id: package-version
+      - name: Configure Git
         run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and create tag
+        id: version-bump
+        run: |
+          # Increment patch version, create commit and tag
+          npm version patch -m "chore: release %s [skip ci]"
           VERSION=$(node -p "require('./package.json').version")
           echo "version=v$VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create Release and Tag
+      - name: Push changes and tag
+        run: |
+          git push origin main --follow-tags
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.package-version.outputs.version }}
-          name: Release ${{ steps.package-version.outputs.version }}
+          tag_name: ${{ steps.version-bump.outputs.version }}
+          name: Release ${{ steps.version-bump.outputs.version }}
           generate_release_notes: true
           draft: false
           prerelease: false
