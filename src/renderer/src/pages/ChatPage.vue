@@ -4,8 +4,8 @@
     <ChatHeader :title="videoStore.currentVideoName" @back="handleBack" />
 
     <!-- Chat Messages Stack -->
-    <main ref="scrollContainer" class="flex-1 overflow-y-auto p-6 space-y-10 custom-scrollbar">
-      <div class="max-w-4xl mx-auto space-y-8">
+    <main ref="scrollContainer" class="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+      <div class="max-w-4xl mx-auto space-y-4">
         <ChatMessage v-for="(msg, i) in videoStore.messages" :key="msg.id" :id="'message-' + msg.id" :message="msg"
           :is-first="i === 0"
           :is-latest-user="videoStore.messages.findLastIndex(m => m.role === MessageRole.User) === i"

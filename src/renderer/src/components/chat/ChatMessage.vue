@@ -19,11 +19,11 @@
 		</div>
 
 		<!-- Message Content Wrapper (Text + Attachments) -->
-		<div class="relative group flex flex-col gap-2 w-full"
+		<div class="relative group flex flex-col gap-0.5 w-full"
 			:class="message.role === MessageRole.User ? 'items-end' : 'items-start'">
 			<!-- Text Message Bubble -->
 			<Card :class="[
-				'!rounded-lg !p-5 shadow-sm dark:shadow-xl transition-all w-fit max-w-[85%] md:max-w-[75%]',
+				'!rounded-lg !p-3.5 shadow-sm dark:shadow-xl transition-all w-fit max-w-[85%] md:max-w-[75%]',
 				message.role === MessageRole.User
 					? '!bg-zinc-200 dark:!bg-zinc-800 !text-zinc-900 dark:!text-zinc-100 !border-0 rounded-tr-lg'
 					: '!bg-white dark:!bg-zinc-900/90 !text-zinc-900 dark:!text-zinc-200 border !border-zinc-100 dark:!border-zinc-800 rounded-tl-lg backdrop-blur-sm',
@@ -33,7 +33,7 @@
 					<div v-if="message.isPending" class="mt-1">
 						<div class="h-4 w-4 border-2 border-primary border-t-transparent rounded-lg animate-spin"></div>
 					</div>
-					<div class="space-y-4 w-full">
+						<div class="space-y-4 w-full">
 						<div class="flex flex-col gap-2">
 							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-800 prose-pre:rounded-lg prose-pre:text-zinc-100 prose-headings:font-heading"
 								v-html="renderedContent"></div>
@@ -74,7 +74,7 @@
 
 						<!-- Results Section: Timeline + Video Layout -->
 						<div v-if="(message.timeline && message.timeline.length > 0) || (message.files && message.files.length > 0)"
-							class="mt-4 pt-4 border-t flex flex-col gap-6"
+							class="mt-3 pt-3 border-t flex flex-col gap-4"
 							:class="message.role === MessageRole.User ? 'border-zinc-200/50' : 'border-zinc-100 dark:border-zinc-800/50'">
 							<!-- Video Section -->
 							<div v-if="message.files && message.files.length > 0" class="flex-1 space-y-3 min-w-0">
