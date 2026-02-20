@@ -13,7 +13,7 @@
       </PageHeader>
 
       <div class="flex-1 overflow-y-auto -mx-6 px-6 pb-8 custom-scrollbar">
-        <div class="max-w-4xl mx-auto space-y-8 pb-12 animate-fade-in-up" style="animation-delay: 0.1s">
+        <div class="max-w-4xl mx-auto space-y-8 pb-12">
           <!-- Temp Directory section -->
           <Card
             class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-lg border !border-zinc-200 dark:!border-zinc-700 !p-8">

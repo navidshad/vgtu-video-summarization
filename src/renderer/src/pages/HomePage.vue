@@ -14,11 +14,10 @@
 
 				<div v-else class="grid gap-10 md:grid-cols-2 lg:grid-cols-3 pb-20">
 					<!-- New Edit Card -->
-					<NewThreadCard @click="router.push('/upload')" class="animate-fade-in-up" style="animation-delay: 0.1s" />
+					<NewThreadCard @click="router.push('/upload')" />
 
 					<ThreadCard v-for="(thread, index) in videoStore.threads" :key="thread.id" :thread="thread"
-						@open="openThread" @delete="handleDeleteThread" class="animate-fade-in-up"
-						:style="{ animationDelay: `${(index + 2) * 0.1}s` }" />
+						@open="openThread" @delete="handleDeleteThread" />
 				</div>
 			</div>
 		</div>

@@ -14,7 +14,7 @@
 
       <div class="flex-1 overflow-y-auto -mx-6 px-6 pb-8 custom-scrollbar flex flex-col items-center">
         <!-- System Requirements Banners -->
-        <div v-if="requirementsChecked && (!ffmpegAvailable || !scenedetectAvailable)" class="w-full max-w-2xl space-y-4 mb-8 animate-fade-in-up">
+        <div v-if="requirementsChecked && (!ffmpegAvailable || !scenedetectAvailable)" class="w-full max-w-2xl space-y-4 mb-8">
           <!-- FFmpeg missing: blocking error -->
           <div v-if="!ffmpegAvailable"
             class="flex items-start gap-4 px-5 py-4 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 backdrop-blur-sm">
@@ -62,9 +62,8 @@
 
         <!-- Main Upload Card -->
         <Card
-          class="w-full max-w-2xl !rounded-lg !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 animate-fade-in-up transition-all duration-500"
+          class="w-full max-w-2xl !rounded-lg !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 transition-all duration-500"
           :class="{ '!border-primary/50 !bg-blue-50/50 dark:!bg-blue-500/5 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)]': fileSelected }"
-          style="animation-delay: 0.1s"
         >
           <div class="p-10 flex flex-col items-center justify-center min-h-[400px]">
             <div v-if="!fileSelected" class="w-full h-full flex-1">
