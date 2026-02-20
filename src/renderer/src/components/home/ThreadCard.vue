@@ -1,16 +1,11 @@
 <template>
   <div class="h-full group cursor-pointer" @click="$emit('open', thread.id)">
     <Card
-      class="h-full !rounded-[2.5rem] !bg-white dark:!bg-zinc-900 border !border-zinc-100 dark:!border-zinc-800/50 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-none dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-500 hover:-translate-y-2 relative overflow-hidden"
+      class="h-full !rounded-lg !bg-white dark:!bg-zinc-900 border !border-zinc-100 dark:!border-zinc-800/50 transition-all duration-300 hover:-translate-y-1 hover:scale-95"
     >
-      <!-- Decorative Gradient Blob -->
-      <div
-        class="absolute -right-10 -top-10 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors duration-500"
-      ></div>
-
       <div class="p-6 flex flex-col h-full relative z-10">
         <div class="flex items-start justify-between mb-6">
-          <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary p-3">
+          <div class="w-12 h-12 rounded-lg bg-primary/10 text-primary p-3">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               class="w-full h-full"

@@ -16,10 +16,10 @@
         <div class="max-w-4xl mx-auto space-y-8 pb-12 animate-fade-in-up" style="animation-delay: 0.1s">
           <!-- Temp Directory section -->
           <Card
-            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-[2.5rem] border !border-zinc-200 dark:!border-zinc-700 !p-8 shadow-xl shadow-zinc-200/50 dark:shadow-black/50">
+            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-lg border !border-zinc-200 dark:!border-zinc-700 !p-8">
             <div class="flex items-center space-x-5 mb-8">
               <div
-                class="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-500/20">
+                class="w-14 h-14 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 10V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6" />
@@ -34,25 +34,24 @@
 
             <div class="space-y-6">
               <div
-                class="p-5 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 font-mono text-sm text-zinc-600 dark:text-zinc-400 break-all shadow-inner">
+                class="p-5 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800 font-mono text-sm text-zinc-600 dark:text-zinc-400 break-all">
                 {{ tempDir || 'Loading...' }}
               </div>
 
               <div class="flex gap-4 justify-between">
-                <Button @click="handleChange" outline color="secondary" size="sm" label="Change Location"
-                  class="w-full !rounded-xl !py-3 !border-zinc-200 dark:!border-zinc-700 hover:!bg-zinc-50 dark:hover:!bg-zinc-800" />
-                <Button @click="handleOpen" size="sm" label="Open Folder" class="w-full !rounded-xl !py-3 !bg-zinc-900 dark:!bg-white !text-white dark:!text-zinc-900" />
-                <Button @click="handleReset" outline size="sm" label="Reset to Default" class="w-full !rounded-xl !py-3 !border-zinc-200 dark:!border-zinc-700 hover:!bg-zinc-50 dark:hover:!bg-zinc-800" />
+                <Button @click="handleChange" outline color="secondary" size="sm" label="Change Location" class="w-full"/>
+                <Button @click="handleOpen" color="primary" size="sm" label="Open Folder" class="w-full"/>
+                <Button @click="handleReset" size="sm" label="Reset to Default" class="w-full"/>
               </div>
             </div>
           </Card>
 
           <!-- Gemini API Key section -->
           <Card
-            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-[2.5rem] border !border-zinc-200 dark:!border-zinc-700 !p-8 shadow-xl shadow-zinc-200/50 dark:shadow-black/50">
+            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-lg border !border-zinc-200 dark:!border-zinc-700 !p-8">
             <div class="flex items-center space-x-5 mb-8">
               <div
-                class="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-sm border border-amber-100 dark:border-amber-500/20">
+                class="w-14 h-14 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 2l-2 2" />
@@ -68,21 +67,18 @@
             </div>
 
             <div class="space-y-4">
-              <Input v-model="apiKey" type="password" placeholder="Enter API Key..."
-                class="font-mono text-sm !bg-zinc-50 dark:!bg-zinc-950/50 !border-zinc-200 dark:!border-zinc-800 !text-zinc-900 dark:!text-white placeholder:text-zinc-400 focus:!border-amber-500 !rounded-xl !py-3 transition-all" />
-
-              <Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm"
-                class="w-full !rounded-xl !py-3 bg-amber-600 hover:bg-amber-700 border-transparent text-white disabled:bg-zinc-200 disabled:text-zinc-400 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500 shadow-lg shadow-amber-600/20" label="Save API Key" />
+              <Input v-model="apiKey" type="password" placeholder="Enter API Key..."/>
+              <Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm" class="w-full disabled:bg-zinc-200 dark:disabled:bg-zinc-800" label="Save API Key" />
             </div>
           </Card>
           
           <!-- Model Selection section -->
           <Card
-            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-[2.5rem] border !border-zinc-200 dark:!border-zinc-700 !p-8 shadow-xl shadow-zinc-200/50 dark:shadow-black/50">
+            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-lg border !border-zinc-200 dark:!border-zinc-700 !p-8">
             <div class="flex items-center justify-between mb-8">
               <div class="flex items-center space-x-5">
                 <div
-                  class="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 shadow-sm border border-purple-100 dark:border-purple-500/20">
+                  class="w-14 h-14 rounded-lg bg-purple-50 dark:bg-purple-500/10 flex items-center justify-center text-purple-600 dark:text-purple-400 border border-purple-100 dark:border-purple-500/20">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -96,12 +92,12 @@
                   <p class="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Assign models to specific operations</p>
                 </div>
               </div>
-              <Button @click="handleResetModels" outline size="xs" label="Reset Models" class="!rounded-lg !border-zinc-200 dark:!border-zinc-700 hover:!bg-zinc-50 dark:hover:!bg-zinc-800" />
+              <Button @click="handleResetModels" outline size="xs" label="Reset Models" />
             </div>
 
             <div class="space-y-4">
               <div v-for="(model, op) in modelSettings.selection" :key="op"
-                class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-2xl border border-zinc-200 dark:border-zinc-800 hover:border-purple-500/30 transition-colors">
+                class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-purple-500/30 transition-colors">
                 <span class="text-sm font-bold text-zinc-700 dark:text-zinc-300 capitalize">{{
                   String(op).replace('-', ' ') }}</span>
                 <select v-model="modelSettings.selection[op]" @change="handleSaveModelSettings"
@@ -115,11 +111,11 @@
 
           <!-- Model Pricing section -->
           <Card
-            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-[2.5rem] border !border-zinc-200 dark:!border-zinc-700 !p-8 shadow-xl shadow-zinc-200/50 dark:shadow-black/50">
+            class="!bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl !rounded-lg border !border-zinc-200 dark:!border-zinc-700 !p-8">
             <div class="flex items-center justify-between mb-8">
               <div class="flex items-center space-x-5">
                 <div
-                  class="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-100 dark:border-emerald-500/20">
+                  class="w-14 h-14 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                     stroke-linejoin="round">
@@ -132,7 +128,7 @@
                   <p class="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Configure cost per 1M tokens (USD)</p>
                 </div>
               </div>
-              <Button @click="handleResetPricing" outline size="xs" label="Reset Pricing" class="!rounded-lg !border-zinc-200 dark:!border-zinc-700 hover:!bg-zinc-50 dark:hover:!bg-zinc-800" />
+              <Button @click="handleResetPricing" outline size="xs" label="Reset Pricing" />
             </div>
 
             <div class="overflow-x-auto">
@@ -189,10 +185,10 @@
 
           <!-- Danger Zone -->
           <Card
-            class="!bg-red-50/50 dark:!bg-red-900/10 backdrop-blur-xl !rounded-[2.5rem] border !border-red-200 dark:!border-red-500/20 !p-8 shadow-sm hover:border-red-300 dark:hover:border-red-500/30 transition-colors">
+            class="!bg-red-50/50 dark:!bg-red-900/10 backdrop-blur-xl !rounded-lg border !border-red-200 dark:!border-red-500/20 !p-8 hover:border-red-300 dark:hover:border-red-500/30 transition-colors">
             <div class="flex items-center space-x-5 mb-6">
               <div
-                class="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 shadow-sm">
+                class="w-14 h-14 rounded-lg bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 6h18" />
@@ -211,8 +207,7 @@
                 Permanently delete all chats, video summaries, and cached files. This action cannot be
                 undone.
               </p>
-              <Button @click="handleDeleteAll" label="Delete All Data" outline color="danger"
-                class="w-full !rounded-xl !py-4 hover:!bg-red-600 hover:!text-white border-red-500/50 text-red-600 dark:text-red-400 transition-all font-bold" />
+              <Button @click="handleDeleteAll" label="Delete All Data" outline color="danger" class="w-full" />
             </div>
           </Card>
         </div>

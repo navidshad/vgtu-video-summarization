@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col items-center justify-center py-20 text-center animate-fade-in-up">
-		<div class="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-6">
+		<div class="w-24 h-24 rounded-lg bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center mb-6">
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-zinc-400" viewBox="0 0 24 24" fill="none"
 				stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />

@@ -17,8 +17,8 @@
         <div v-if="requirementsChecked && (!ffmpegAvailable || !scenedetectAvailable)" class="w-full max-w-2xl space-y-4 mb-8 animate-fade-in-up">
           <!-- FFmpeg missing: blocking error -->
           <div v-if="!ffmpegAvailable"
-            class="flex items-start gap-4 px-5 py-4 rounded-2xl border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 backdrop-blur-sm">
-            <div class="p-2 rounded-xl bg-red-500/20 shrink-0">
+            class="flex items-start gap-4 px-5 py-4 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 backdrop-blur-sm">
+            <div class="p-2 rounded-lg bg-red-500/20 shrink-0">
                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10" />
@@ -35,8 +35,8 @@
 
           <!-- Scenedetect missing: warning -->
           <div v-if="ffmpegAvailable && !scenedetectAvailable"
-            class="flex items-start gap-4 px-5 py-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400 backdrop-blur-sm">
-             <div class="p-2 rounded-xl bg-amber-500/20 shrink-0">
+            class="flex items-start gap-4 px-5 py-4 rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400 backdrop-blur-sm">
+             <div class="p-2 rounded-lg bg-amber-500/20 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -62,19 +62,19 @@
 
         <!-- Main Upload Card -->
         <Card
-          class="w-full max-w-2xl !rounded-[2.5rem] !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 animate-fade-in-up transition-all duration-500"
+          class="w-full max-w-2xl !rounded-lg !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 animate-fade-in-up transition-all duration-500"
           :class="{ '!border-primary/50 !bg-blue-50/50 dark:!bg-blue-500/5 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)]': fileSelected }"
           style="animation-delay: 0.1s"
         >
           <div class="p-10 flex flex-col items-center justify-center min-h-[400px]">
             <div v-if="!fileSelected" class="w-full h-full flex-1">
               <div @click="handleNativeSelect"
-                class="w-full h-full min-h-[320px] border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-3xl flex flex-col items-center justify-center space-y-6 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:border-primary/50 cursor-pointer transition-all duration-300 group relative overflow-hidden">
+                class="w-full h-full min-h-[320px] border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg flex flex-col items-center justify-center space-y-6 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:border-primary/50 cursor-pointer transition-all duration-300 group relative overflow-hidden">
                 
                 <div class="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:to-primary/5 transition-all duration-500"></div>
                 
                 <div
-                  class="w-24 h-24 rounded-3xl bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-400 group-hover:scale-110 group-hover:-rotate-3 group-hover:text-primary transition-all duration-500 z-10 shadow-md group-hover:shadow-xl border border-zinc-100 dark:border-zinc-600">
+                  class="w-24 h-24 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-400 group-hover:scale-110 group-hover:-rotate-3 group-hover:text-primary transition-all duration-500 z-10 shadow-md group-hover:shadow-xl border border-zinc-100 dark:border-zinc-600">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -91,10 +91,10 @@
 
             <div v-else class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div
-                class="flex items-center justify-between p-5 bg-zinc-100 dark:bg-zinc-800 rounded-3xl border border-zinc-200 dark:border-zinc-700 shadow-inner">
+                class="flex items-center justify-between p-5 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-inner">
                 <div class="flex items-center space-x-5">
                   <div
-                    class="w-16 h-16 rounded-2xl bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-600">
+                    class="w-16 h-16 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m22 8-6 4 6 4V8Z" />
@@ -104,25 +104,25 @@
                   <div>
                     <p class="font-bold text-zinc-900 dark:text-white truncate max-w-[200px] text-xl mb-1">{{ fileName }}</p>
                     <div class="flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                      <span class="w-2 h-2 rounded-lg bg-green-500 animate-pulse"></span>
                       <p class="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Ready to upload</p>
                     </div>
                   </div>
                 </div>
-                <Button size="sm" @click="resetSelection" label="Change" outline class="!rounded-xl !bg-white dark:!bg-zinc-700 !border-zinc-200 dark:!border-zinc-600" />
+                <Button size="sm" @click="resetSelection" label="Change" outline class="!rounded-lg !bg-white dark:!bg-zinc-700 !border-zinc-200 dark:!border-zinc-600" />
               </div>
 
               <div class="space-y-3">
                  <label class="text-sm font-bold text-zinc-900 dark:text-zinc-100 ml-1">Instruction Prompt</label>
                 <TextArea v-model="prompt"
                   placeholder="What would you like to focus on in this summary? (e.g. 'Summarize key takeaways')" :rows="4"
-                  class="!bg-zinc-50 dark:!bg-zinc-800/50 !text-zinc-900 dark:!text-white !border-zinc-300 dark:!border-zinc-600 placeholder:text-zinc-400 !rounded-2xl transition-all focus:!border-primary/50 focus:!ring-4 focus:!ring-primary/10 resize-none shadow-sm" />
+                  class="!bg-zinc-50 dark:!bg-zinc-800/50 !text-zinc-900 dark:!text-white !border-zinc-300 dark:!border-zinc-600 placeholder:text-zinc-400 !rounded-lg transition-all focus:!border-primary/50 focus:!ring-4 focus:!ring-primary/10 resize-none shadow-sm" />
               </div>
              
 
               <!-- Tooltip wrapper for disabled state -->
               <div class="relative group/btn pt-2">
-                <Button @click="startCreation" color="primary" :disabled="!canSubmit" label="Create Summary" size="lg" class="w-full !rounded-2xl !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]" />
+                <Button @click="startCreation" color="primary" :disabled="!canSubmit" label="Create Summary" size="lg" class="w-full !rounded-lg !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]" />
                 
                 <!-- Tooltip shown when ffmpeg is missing -->
                 <div v-if="!ffmpegAvailable"

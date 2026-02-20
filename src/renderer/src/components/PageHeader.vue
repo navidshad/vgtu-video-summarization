@@ -1,5 +1,5 @@
 <template>
-  <div class="animate-fade-in-up mb-6 border-b border-zinc-200 dark:border-zinc-700 pb-6">
+  <div class="animate-fade-in-up mb-4 border-b border-zinc-200 dark:border-zinc-700 pb-3">
     <div v-if="overline" class="text-xs font-bold uppercase tracking-widest text-primary mb-2">
       {{ overline }}
     </div>

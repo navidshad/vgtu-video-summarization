@@ -7,7 +7,7 @@
 			<div class="flex-1 overflow-y-auto -mx-6 px-6 pb-8 custom-scrollbar">
 				<!-- Thread List -->
 				<div v-if="loading" class="flex justify-center py-20">
-					<div class="animate-spin rounded-full h-10 w-10 border-4 border-primary border-t-transparent"></div>
+					<div class="animate-spin rounded-lg h-10 w-10 border-4 border-primary border-t-transparent"></div>
 				</div>
 
 				<EmptyState v-else-if="videoStore.threads.length === 0" @create="router.push('/upload')" />

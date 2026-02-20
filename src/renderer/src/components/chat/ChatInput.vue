@@ -5,7 +5,7 @@
       <div class="flex items-end space-x-4">
         <!-- Main Input area -->
         <InputGroup
-          class="!rounded-2xl overflow-hidden flex-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm focus-within:border-blue-500/50 transition-colors">
+          class="!rounded-lg overflow-hidden flex-1 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm focus-within:border-blue-500/50 transition-colors">
           <TextArea v-model="userPrompt" placeholder="Ask a follow-up question..." :rows="2"
             class="flex-1 !border-0 focus:!ring-0 bg-transparent" @enter="handleSend" />
 
@@ -15,7 +15,7 @@
               class="flex items-center space-x-1.5 bg-blue-50/80 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100/50 dark:border-blue-800/30 text-[11px] text-blue-600 dark:text-blue-400 mb-0.5 animate-in fade-in slide-in-from-right-2 duration-300">
               <span class="font-bold font-mono cursor-pointer hover:underline"
                 @click="$emit('scroll-to-reference', editingMessageId)">{{ branchedVersion }}</span>
-              <button class="hover:bg-blue-100 dark:hover:bg-blue-800/50 p-0.5 rounded-md transition-colors"
+              <button class="hover:bg-blue-100 dark:hover:bg-blue-800/50 p-0.5 rounded-lg transition-colors"
                 @click="$emit('cancel-edit')">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

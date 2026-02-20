@@ -1,35 +1,35 @@
 <template>
-  <div @click="$emit('click')" class="h-full group cursor-pointer">
+  <div @click="$emit('click')" class="h-full group cursor-pointer relative">
     <Card
-      class="h-full !rounded-[2.5rem] !bg-white dark:!bg-zinc-900 border !border-zinc-100 dark:!border-zinc-800/50 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] dark:shadow-none dark:hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] transition-all duration-500 hover:-translate-y-2 relative overflow-hidden flex flex-col items-center justify-center p-6"
-    >
-      <!-- Dashed Inner Border Area -->
-      <div
-        class="w-full h-full rounded-3xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 group-hover:border-primary/50 dark:group-hover:border-primary/50 transition-colors duration-500 flex flex-col items-center justify-center p-6 bg-zinc-50/50 dark:bg-zinc-900/50 group-hover:bg-primary/5 dark:group-hover:bg-primary/5"
-      >
+      class="h-full !rounded-lg border !border-white/20 dark:!border-zinc-800/50 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl transition-all duration-500 flex flex-col items-center justify-center text-center p-8 hover:-translate-y-2 hover:scale-95 overflow-hidden"
+    >      
+      <div class="relative z-10 flex flex-col items-center">
         <div
-          class="w-16 h-16 rounded-2xl bg-white dark:bg-zinc-800 shadow-sm group-hover:shadow-md group-hover:scale-110 transition-all duration-300 flex items-center justify-center mb-4 text-zinc-400 group-hover:text-primary"
+          class="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none group-hover:shadow-[0_20px_40px_rgba(59,130,246,0.2)] group-hover:scale-110 group-hover:-rotate-3 transition-all duration-500 flex items-center justify-center mb-6 text-zinc-400 group-hover:text-blue-500 border border-zinc-100/50 dark:border-zinc-700/30"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="w-8 h-8"
+            class="w-10 h-10"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.5"
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <path d="M12 5v14M5 12h14" />
           </svg>
         </div>
+
         <h3
-          class="font-bold text-lg text-zinc-900 dark:text-white group-hover:text-primary transition-colors"
+          class="font-heading font-bold text-xl text-zinc-900 dark:text-white mb-3 line-clamp-2 group-hover:text-primary transition-colors leading-tight"
         >
           Create New Edit
         </h3>
-        <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Start a new video analysis</p>
+        
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 flex-grow leading-relaxed">
+          Transform your video into a concise masterpiece
+        </p>
       </div>
     </Card>
   </div>
