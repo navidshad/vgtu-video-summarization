@@ -33,14 +33,14 @@
 					<div v-if="message.isPending" class="mt-1">
 						<div class="h-4 w-4 border-2 border-primary border-t-transparent rounded-lg animate-spin"></div>
 					</div>
-						<div class="space-y-4 w-full">
-						<div class="flex flex-col gap-2">
-							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-pre:bg-zinc-800 prose-pre:rounded-lg prose-pre:text-zinc-100 prose-headings:font-heading"
+						<div class="flex flex-col gap-1 w-full">
+						<div class="flex flex-col gap-0.5">
+							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:my-0.5 prose-pre:bg-zinc-800 prose-pre:rounded-lg prose-pre:text-zinc-100 prose-headings:font-heading"
 								v-html="renderedContent"></div>
 							
 							<!-- Meta/Status Row -->
 							<div v-if="!message.isPending && (message.role === MessageRole.AI || (message.role === MessageRole.User && (hasOriginalVideo || referencedVersion)))"
-								class="flex items-center justify-end gap-2 pt-2 opacity-60 hover:opacity-100 transition-opacity">
+								class="flex items-center justify-end gap-2 pt-0.5 opacity-60 hover:opacity-100 transition-opacity">
 								<template v-if="message.role === MessageRole.AI">
 									<span v-if="message.usage"
 										class="text-[9px] text-zinc-400 font-mono bg-zinc-50 dark:bg-zinc-800/50 px-1.5 py-0.5 rounded">
@@ -74,7 +74,7 @@
 
 						<!-- Results Section: Timeline + Video Layout -->
 						<div v-if="(message.timeline && message.timeline.length > 0) || (message.files && message.files.length > 0)"
-							class="mt-3 pt-3 border-t flex flex-col gap-4"
+							class="mt-2 pt-2 border-t flex flex-col gap-2"
 							:class="message.role === MessageRole.User ? 'border-zinc-200/50' : 'border-zinc-100 dark:border-zinc-800/50'">
 							<!-- Video Section -->
 							<div v-if="message.files && message.files.length > 0" class="flex-1 space-y-3 min-w-0">
