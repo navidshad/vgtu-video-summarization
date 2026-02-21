@@ -1,7 +1,7 @@
 <template>
   <div class="flex items-center justify-center h-full bg-transparent p-4">
     <div
-      class="w-full max-w-md bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-8 shadow-xl dark:shadow-2xl transition-colors">
+      class="w-full max-w-md bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-8 shadow-xl dark:shadow-2xl transition-colors">
       <h1 class="text-2xl font-bold text-center mb-6 text-zinc-900 dark:text-white transition-colors">Gemini API Key
       </h1>
       <p class="text-zinc-500 dark:text-zinc-400 text-center mb-8 transition-colors">Please provide your Gemini API key

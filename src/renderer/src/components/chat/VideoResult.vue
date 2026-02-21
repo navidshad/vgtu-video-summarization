@@ -1,15 +1,15 @@
 <template>
-	<div class="rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
+	<div class="rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950">
 		<!-- Video Preview -->
 		<div
-			class="aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
+			class="max-h-[220px] aspect-video bg-zinc-100 dark:bg-zinc-900 flex items-center justify-center relative overflow-hidden group/video">
 			<video :src="getMediaUrl(file.url)" controls class="w-full h-full object-contain"
 				preload="metadata"></video>
 		</div>
 
 		<!-- Footer info for AI files -->
 		<div v-if="role === MessageRole.AI"
-			class="p-3 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
+			class="p-2 flex items-center justify-between bg-white dark:bg-zinc-900 border-t border-zinc-100 dark:border-zinc-800">
 			<div></div>
 			<div class="flex gap-2 items-center">
 				<Button label="Save" size="sm" @click="$emit('save', file.url)" />
