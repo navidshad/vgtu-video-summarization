@@ -29,12 +29,21 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
    ```bash
    choco install ffmpeg
    ```
-3. **PySceneDetect**: 
-   - Ensure [Python](https://www.python.org/) is installed and added to PATH. 
-   - Install via terminal:
-     ```bash
-     pip install scenedetect
-     ```
+3. **PySceneDetect**:
+   There are two options to install PySceneDetect:
+   1. **(Python Package Option)**: 
+      - Ensure [Python](https://www.python.org/) is installed and added to PATH. 
+      - Install via terminal:
+        ```bash
+        pip install scenedetect
+        ``` 
+   2. **PySceneDetect (Windows Installer)**: 
+      - Download the installer from [PySceneDetect Download](https://www.scenedetect.com/download).
+      - Run the installer and follow the instructions.
+      - You might need to install open-cv as well:
+        ```bash
+        pip install opencv-python
+        ```
 
 ---
 
