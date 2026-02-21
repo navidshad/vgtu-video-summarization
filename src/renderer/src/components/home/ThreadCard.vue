@@ -1,7 +1,7 @@
 <template>
   <div class="h-full group cursor-pointer" @click="$emit('open', thread.id)">
     <Card
-      class="h-full !rounded-lg !bg-white dark:!bg-zinc-900 border !border-zinc-100 dark:!border-zinc-800/50 transition-all duration-300 hover:-translate-y-1 hover:scale-95"
+      class="h-full dark:!bg-zinc-900 dark:!border-zinc-800/50 !shadow-sm hover:!shadow-md"
     >
       <div class="p-6 flex flex-col h-full relative z-10">
         <div class="flex items-start justify-between mb-6">
@@ -83,7 +83,7 @@
 
           <button
             @click.stop="$emit('delete', thread.id)"
-            class="p-2.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 duration-300"
+            class="p-2.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-fade opacity-0 group-hover:opacity-100 duration-500"
             title="Delete Thread"
           >
             <svg

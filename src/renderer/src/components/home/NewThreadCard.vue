@@ -1,7 +1,8 @@
 <template>
   <div @click="$emit('click')" class="h-full group cursor-pointer relative">
     <Card
-      class="h-full !rounded-lg border !border-white/20 dark:!border-zinc-800/50 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl transition-all duration-500 flex flex-col items-center justify-center text-center p-8 hover:-translate-y-2 hover:scale-95 overflow-hidden"
+
+      class="h-full !shadow-none border-2 !rounded-2xl border-dashed dark:!border-zinc-800/50 bg-zinc-50/50 dark:bg-zinc-900/40 flex flex-col items-center justify-center text-center p-8"
     >      
       <div class="relative z-10 flex flex-col items-center">
         <div
