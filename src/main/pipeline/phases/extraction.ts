@@ -56,10 +56,13 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	context.updateStatus('Extracting raw transcript...')
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
-	const { items: transcript, record } = await extractTranscript(audioPath, duration)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
+	const rawResponsePath = path.join(tempDir, `raw_transcript_response.txt`)
+	fs.writeFileSync(rawResponsePath, rawResponseText)
+
 	const rawTranscriptPath = path.join(tempDir, `raw_transcript.json`)
 	fs.writeFileSync(rawTranscriptPath, JSON.stringify(transcript, null, 2))
 
@@ -84,10 +87,13 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscript = JSON.parse(transcriptJson)
 	const rawSrt = generateSRT(rawTranscript)
 
-	const { items: transcript, record } = await extractTranscript(audioPath, duration, rawSrt)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawSrt)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
+	const rawResponsePath = path.join(tempDir, `corrected_transcript_response.txt`)
+	fs.writeFileSync(rawResponsePath, rawResponseText)
+
 	const correctedTranscriptPath = path.join(tempDir, `corrected_transcript.json`)
 	fs.writeFileSync(correctedTranscriptPath, JSON.stringify(transcript, null, 2))
 
@@ -204,4 +210,42 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	context.savePreprocessing({ sceneDescriptionsPath })
 	context.updateStatus('Scene descriptions generated.')
 	context.next({ ...data, sceneDescriptions: descriptions })
+}
+
+
+// Wait functions for pipeline to use
+export const waitForEnsureLowResolution: PipelineFunction = async (data, context) => {
+	context.updateStatus('Ensuring optimal video resolution...')
+	await context.waitForTask('downscale')
+	context.next(data)
+}
+
+export const waitForConvertToAudio: PipelineFunction = async (data, context) => {
+	context.updateStatus('Waiting for audio extraction...')
+	await context.waitForTask('audio')
+	context.next(data)
+}
+
+export const waitForExtractRawTranscript: PipelineFunction = async (data, context) => {
+	context.updateStatus('Waiting for raw transcript...')
+	await context.waitForTask('rawTranscript')
+	context.next(data)
+}
+
+export const waitForExtractCorrectedTranscript: PipelineFunction = async (data, context) => {
+	context.updateStatus('Waiting for transcript refinement...')
+	await context.waitForTask('correctedTranscript')
+	context.next(data)
+}
+
+export const waitForExtractSceneTiming: PipelineFunction = async (data, context) => {
+	context.updateStatus('Waiting for scene timing detection...')
+	await context.waitForTask('sceneTiming')
+	context.next(data)
+}
+
+export const waitForGenerateSceneDescription: PipelineFunction = async (data, context) => {
+	context.updateStatus('Waiting for scene descriptions...')
+	await context.waitForTask('sceneDescriptions')
+	context.next(data)
 }

@@ -11,6 +11,7 @@ export interface PipelineContext {
 	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => void;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => void;
+	waitForTask: (taskId: string) => Promise<void>;
 	threadId: string;
 	videoPath: string;
 	tempDir: string;
@@ -21,6 +22,8 @@ export interface PipelineContext {
 	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
 }
+
+import { backgroundTaskManager } from '../tasks'
 
 export class Pipeline {
 	private steps: { fn: PipelineFunction; options?: { skipIf?: (context: PipelineContext) => boolean } }[] = []
@@ -76,11 +79,12 @@ export class Pipeline {
 				preprocessing: thread.preprocessing,
 				messageId: this.messageId,
 				context: this.context,
-				baseTimeline: undefined, 
+				baseTimeline: undefined,
 				updateStatus: () => { },
 				next: () => { },
 				finish: () => { },
 				savePreprocessing: () => { },
+				waitForTask: async () => { },
 				recordUsage: () => { }
 			}
 		}
@@ -97,6 +101,9 @@ export class Pipeline {
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
+			waitForTask: async (taskId: string) => {
+				return backgroundTaskManager.waitForTask(this.threadId, taskId);
+			},
 			updateStatus: (status: string) => {
 				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {

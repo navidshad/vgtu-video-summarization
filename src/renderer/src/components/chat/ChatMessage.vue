@@ -30,11 +30,21 @@
 				message.isPending ? 'opacity-90' : ''
 			]">
 				<div class="flex items-start space-x-4">
-					<div v-if="message.isPending" class="mt-1">
-						<div class="h-4 w-4 border-2 border-primary border-t-transparent rounded-lg animate-spin"></div>
+					<div v-if="message.isPending" class="mt-1 flex-shrink-0">
+						<div class="h-4 w-4 border-2 border-primary border-t-transparent rounded-[4px] animate-spin"></div>
 					</div>
-						<div class="flex flex-col gap-1 w-full">
+						<div class="flex flex-col gap-1 w-full min-w-0">
 						<div class="flex flex-col gap-0.5">
+							<div class="flex items-center gap-2 mb-1" v-if="message.isPending && videoStore.isBackgroundProcessingActive && isPipelineWaiting">
+								<div class="flex flex-wrap gap-1">
+									<span v-for="task in videoStore.activeBackgroundTasks" :key="task.id" 
+										class="text-[9px] font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded flex items-center gap-1 border border-blue-200 dark:border-blue-500/20">
+										<div class="h-1.5 w-1.5 border-[1.5px] border-current border-t-transparent rounded-full animate-spin"></div>
+										{{ task.name }}
+									</span>
+								</div>
+							</div>
+
 							<div class="prose prose-sm max-w-none dark:prose-invert prose-p:leading-relaxed prose-p:my-0.5 prose-pre:bg-zinc-800 prose-pre:rounded-lg prose-pre:text-zinc-100 prose-headings:font-heading"
 								v-html="renderedContent"></div>
 							
@@ -168,6 +178,9 @@ const toggleTimeline = () => {
 	isTimelineExpanded.value = !isTimelineExpanded.value
 }
 
+const isPipelineWaiting = computed(() => {
+	return props.message.content.includes('Waiting for') || props.message.content.includes('Ensuring')
+})
 
 const showVersionTag = computed(() => {
 	return props.message.role === MessageRole.AI && props.message.files && props.message.files.some(f => f.type === FileType.Preview || f.type === FileType.Actual)
