@@ -13,6 +13,7 @@ export type { Message }
 
 class ThreadManager {
 	private threadsDir: string
+	private updateQueues: Map<string, Promise<any>> = new Map()
 
 	constructor() {
 		this.threadsDir = path.join(app.getPath('userData'), 'threads')
@@ -98,19 +99,37 @@ class ThreadManager {
 		}
 	}
 
-	// Update a thread
-	updateThread(id: string, updates: Partial<Thread>): Thread | null {
-		const thread = this.getThread(id)
-		if (!thread) return null
+	// Update a thread atomically
+	updateThread(id: string, updates: Partial<Thread>): Promise<Thread | null> {
+		const existingQueue = this.updateQueues.get(id) || Promise.resolve()
 
-		const updatedThread = {
-			...thread,
-			...updates,
-			updatedAt: Date.now()
-		}
+		const nextUpdate = existingQueue.then(async () => {
+			const thread = this.getThread(id)
+			if (!thread) return null
 
-		this.saveThread(updatedThread)
-		return updatedThread
+			const updatedThread = {
+				...thread,
+				...updates,
+				updatedAt: Date.now()
+			}
+
+			this.saveThread(updatedThread)
+			return updatedThread
+		}).catch(err => {
+			console.error(`Atomic update failed for thread ${id}:`, err)
+			return null
+		})
+
+		this.updateQueues.set(id, nextUpdate)
+
+		// Optional: clean up map if queue is idle (not strictly necessary for small number of threads)
+		nextUpdate.finally(() => {
+			if (this.updateQueues.get(id) === nextUpdate) {
+				// Don't delete if another update was already queued
+			}
+		})
+
+		return nextUpdate
 	}
 
 	private deleteFile(filePath: string) {
@@ -190,36 +209,30 @@ class ThreadManager {
 	}
 
 	// Helper to add a message to a thread
-	addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Message | null {
-		const thread = this.getThread(threadId)
-		if (!thread) return null
-
+	async addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Promise<Message | null> {
+		const id = uuidv4()
+		const createdAt = Date.now()
 		const fullMessage: Message = {
-			id: uuidv4(),
-			createdAt: Date.now(),
+			id,
+			createdAt,
 			...message
 		}
 
-		thread.messages.push(fullMessage)
-		thread.updatedAt = Date.now()
+		await this.updateThread(threadId, {
+			messages: [...(this.getThread(threadId)?.messages || []), fullMessage]
+		})
 
-		this.saveThread(thread)
 		return fullMessage
 	}
 
 	// Update specific message in a thread
-	updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
-
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
-
-		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
-		thread.updatedAt = Date.now()
-
-		this.saveThread(thread)
-		return true
+	async updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m =>
+				m.id === messageId ? { ...m, ...updates } : m
+			)
+		})
+		return !!result
 	}
 
 	getNextVersion(threadId: string): number {
@@ -232,32 +245,26 @@ class ThreadManager {
 	}
 
 	// Update usage and cost for a message
-	updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
+	async updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m => {
+				if (m.id !== messageId) return m
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
+				const newUsage: Usage = {
+					promptTokens: (m.usage?.promptTokens || 0) + record.usage.promptTokens,
+					candidatesTokens: (m.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
+					thinkingTokens: (m.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
+					totalTokens: (m.usage?.totalTokens || 0) + record.usage.totalTokens
+				}
 
-		const currentMsg = thread.messages[msgIndex]
-		const newUsage: Usage = {
-			promptTokens: (currentMsg.usage?.promptTokens || 0) + record.usage.promptTokens,
-			candidatesTokens: (currentMsg.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
-			thinkingTokens: (currentMsg.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
-			totalTokens: (currentMsg.usage?.totalTokens || 0) + record.usage.totalTokens
-		}
-
-		const newCost = (currentMsg.cost || 0) + record.cost
-
-		thread.messages[msgIndex] = {
-			...currentMsg,
-			usage: newUsage,
-			cost: newCost
-		}
-
-		thread.updatedAt = Date.now()
-		this.saveThread(thread)
-		return true
+				return {
+					...m,
+					usage: newUsage,
+					cost: (m.cost || 0) + record.cost
+				}
+			})
+		})
+		return !!result
 	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
 	resetPendingMessages(): void {
@@ -334,14 +341,12 @@ class ThreadManager {
 	}
 
 	// Remove a message from a thread and delete its files
-	removeMessageFromThread(threadId: string, messageId: string): boolean {
+	async removeMessageFromThread(threadId: string, messageId: string): Promise<boolean> {
 		const thread = this.getThread(threadId)
 		if (!thread) return false
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
-
-		const msg = thread.messages[msgIndex]
+		const msg = thread.messages.find(m => m.id === messageId)
+		if (!msg) return false
 
 		// Delete associated files (except original)
 		if (msg.files) {
@@ -352,12 +357,11 @@ class ThreadManager {
 			}
 		}
 
-		// Remove from messages array
-		thread.messages.splice(msgIndex, 1)
-		thread.updatedAt = Date.now()
+		const result = await this.updateThread(threadId, {
+			messages: thread.messages.filter(m => m.id !== messageId)
+		})
 
-		this.saveThread(thread)
-		return true
+		return !!result
 	}
 }
 

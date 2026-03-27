@@ -112,16 +112,28 @@ app.whenReady().then(() => {
 		return { ffmpegAvailable, scenedetectAvailable }
 	})
 
+	ipcMain.handle('debug-log', (_event, ...args: any[]) => {
+		console.log('[FRONTEND LOG]', ...args)
+	})
+
 	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
+		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}`)
 		const window = BrowserWindow.fromWebContents(event.sender)
-		if (!window) return
+		if (!window) {
+			console.log(`[DEBUG IPC] FAILED: window not found`)
+			return
+		}
 
 		const thread = threadManager.getThread(threadId)
-		if (!thread) return
+		if (!thread) {
+			console.log(`[DEBUG IPC] FAILED: thread not found`)
+			return
+		}
 
 		// The newly created AI pending message links back to the user prompt via editRefId
 		const aiMsg = thread.messages.find(m => m.id === newAiMessageId)
 		const userMsgId = aiMsg?.editRefId
+		console.log(`[DEBUG IPC] aiMsg found? ${!!aiMsg}, userMsgId=${userMsgId}`)
 
 		// Traverse graph lineage backwards
 		const context = threadManager.getBranchContext(threadId, userMsgId)
@@ -132,18 +144,24 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
 
 		pipeline
-			.register(extraction.waitForEnsureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
-			.register(extraction.waitForConvertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.waitForExtractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
+			.register(extraction.waitForEnsureLowResolution)
+			.register(extraction.waitForConvertToAudio)
+			.register(extraction.waitForExtractRawTranscript)
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.waitForExtractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
-			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
+			.register(extraction.waitForExtractCorrectedTranscript)
+			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
-		await pipeline.start({})
+		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
+		try {
+			await pipeline.start({})
+			console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
+		} catch (e) {
+			console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+		}
 	})
 
 	ipcMain.handle('get-temp-dir', () => {
@@ -230,12 +248,12 @@ app.whenReady().then(() => {
 		return false
 	})
 
-	ipcMain.handle('add-message', (_event, { threadId, message }) => {
-		return threadManager.addMessageToThread(threadId, message)
+	ipcMain.handle('add-message', async (_event, { threadId, message }) => {
+		return await threadManager.addMessageToThread(threadId, message)
 	})
 
-	ipcMain.handle('remove-message', (_event, { threadId, messageId }) => {
-		return threadManager.removeMessageFromThread(threadId, messageId)
+	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
+		return await threadManager.removeMessageFromThread(threadId, messageId)
 	})
 
 	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {

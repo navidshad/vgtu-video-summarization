@@ -108,11 +108,20 @@ export const useVideoStore = defineStore('video', () => {
 	}
 
 	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
-		if (!threadId) return
-		if (!currentThread.value) return
+		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId })
+		if (!threadId) {
+			;(window as any).api.debugLog('startProcessing ABORTED: !threadId')
+			return
+		}
+		if (!currentThread.value) {
+			;(window as any).api.debugLog('startProcessing ABORTED: !currentThread.value')
+			return
+		}
 
 		// Add initial AI status message
-		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId)
+		;(window as any).api.debugLog('startProcessing adding AI Message...')
+		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId);
+		;(window as any).api.debugLog('startProcessing AI Message Pushed! ID:', newAiMessageId)
 
 		if ((window as any).api) {
 			// Setup listener
@@ -138,10 +147,18 @@ export const useVideoStore = defineStore('video', () => {
 				}
 			})
 
-			await (window as any).api.startPipeline({
-				threadId,
-				newAiMessageId
-			})
+			;(window as any).api.debugLog('startProcessing dispatching startPipeline IPC...')
+			try {
+				await (window as any).api.startPipeline({
+					threadId,
+					newAiMessageId
+				})
+				;(window as any).api.debugLog('startProcessing startPipeline IPC completed.')
+			} catch (e) {
+				;(window as any).api.debugLog('startProcessing startPipeline IPC FAILED:', e)
+			}
+		} else {
+			console.error('API not found attached to window.')
 		}
 	}
 

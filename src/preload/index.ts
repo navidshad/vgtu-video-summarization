@@ -12,6 +12,7 @@ const api = {
 	},
 	getBackgroundTasks: (threadId: string) => ipcRenderer.invoke('get-background-tasks', threadId),
 	retryPreprocessing: (threadId: string) => ipcRenderer.invoke('retry-preprocessing', threadId),
+	debugLog: (...args: any[]) => ipcRenderer.invoke('debug-log', ...args),
 	onBackgroundTaskUpdate: (callback: (data: any) => void) => {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('background-task-update', listener)
