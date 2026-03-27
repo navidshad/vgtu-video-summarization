@@ -27,6 +27,16 @@ export const useVideoStore = defineStore('video', () => {
 		return msgs
 	})
 
+	const backgroundTasks = computed(() => {
+		return currentThread.value?.backgroundTasks || {}
+	})
+
+	const activeBackgroundTasks = computed(() => {
+		return Object.values(backgroundTasks.value).filter(t => t.state === 'running' || t.state === 'pending')
+	})
+
+	const isBackgroundProcessingActive = computed(() => activeBackgroundTasks.value.length > 0)
+
 	const currentVideoName = computed(() => currentThread.value?.title || '')
 	const currentVideoPath = computed(() => currentThread.value?.videoPath || '')
 
@@ -51,6 +61,12 @@ export const useVideoStore = defineStore('video', () => {
 				threads.value.unshift(thread)
 			}
 			currentThreadId.value = id
+			if ((window as any).api) {
+				const tasks = await (window as any).api.getBackgroundTasks(id)
+				if (currentThread.value) {
+					currentThread.value.backgroundTasks = tasks
+				}
+			}
 		}
 	}
 
@@ -133,6 +149,19 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	// Setup global listener for background tasks
+	if (typeof window !== 'undefined' && (window as any).api) {
+		(window as any).api.onBackgroundTaskUpdate((data: { threadId: string, taskId: string, task: import('@shared/types').BackgroundTask }) => {
+			const thread = threads.value.find(t => t.id === data.threadId)
+			if (thread) {
+				thread.backgroundTasks = {
+					...(thread.backgroundTasks || {}),
+					[data.taskId]: data.task
+				}
+			}
+		})
+	}
+
 	const deleteThread = async (id: string) => {
 		const success = await (window as any).api.deleteThread(id)
 		if (success) {
@@ -185,6 +214,9 @@ export const useVideoStore = defineStore('video', () => {
 		currentThreadId,
 		currentThread,
 		messages,
+		backgroundTasks,
+		activeBackgroundTasks,
+		isBackgroundProcessingActive,
 		currentVideoName,
 
 		fetchThreads,

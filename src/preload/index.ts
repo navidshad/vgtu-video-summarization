@@ -10,6 +10,12 @@ const api = {
 		ipcRenderer.on('pipeline-update', listener)
 		return () => ipcRenderer.removeListener('pipeline-update', listener)
 	},
+	getBackgroundTasks: (threadId: string) => ipcRenderer.invoke('get-background-tasks', threadId),
+	onBackgroundTaskUpdate: (callback: (data: any) => void) => {
+		const listener = (_event: any, data: any) => callback(data)
+		ipcRenderer.on('background-task-update', listener)
+		return () => ipcRenderer.removeListener('background-task-update', listener)
+	},
 	getTempDir: () => ipcRenderer.invoke('get-temp-dir'),
 	setTempDir: () => ipcRenderer.invoke('set-temp-dir'),
 	resetTempDir: () => ipcRenderer.invoke('reset-temp-dir'),

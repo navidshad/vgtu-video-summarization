@@ -10,6 +10,7 @@ import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
+import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -57,6 +58,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+	backgroundTaskManager.init()
 	electronApp.setAppUserModelId('com.electron')
 
 	app.on('browser-window-created', (_, window) => {
@@ -131,14 +133,14 @@ app.whenReady().then(() => {
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
 
 		pipeline
-			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
-			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
+			.register(extraction.waitForEnsureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
+			.register(extraction.waitForConvertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
+			.register(extraction.waitForExtractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			.register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
-			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
+			.register(extraction.waitForExtractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
+			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
+			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
@@ -194,7 +196,9 @@ app.whenReady().then(() => {
 
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
-		return threadManager.createThread(videoPath, videoName)
+		const newThread = threadManager.createThread(videoPath, videoName)
+		backgroundTaskManager.startPreprocessing(newThread.id)
+		return newThread
 	})
 
 	ipcMain.handle('get-all-threads', () => {
