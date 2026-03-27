@@ -5,6 +5,8 @@ import ChatPage from './pages/ChatPage.vue'
 import SettingsPage from './pages/SettingsPage.vue'
 import HomePage from './pages/HomePage.vue'
 
+import GraphChatPage from './pages/GraphChatPage.vue'
+
 const routes = [
 	{
 		path: '/',
@@ -28,6 +30,10 @@ const routes = [
 	{
 		path: '/chat/:id',
 		component: ChatPage
+	},
+	{
+		path: '/graph/:id',
+		component: GraphChatPage
 	},
 	{
 		path: '/settings',

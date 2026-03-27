@@ -38,7 +38,7 @@ const videoStore = useVideoStore()
 const loading = ref(true)
 
 const openThread = (id: string) => {
-	router.push(`/chat/${id}`)
+	router.push(`/graph/${id}`)
 }
 
 const handleDeleteThread = async (id: string) => {
