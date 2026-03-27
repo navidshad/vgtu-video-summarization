@@ -293,6 +293,39 @@ class ThreadManager {
 		}).join('\n\n')
 	}
 
+	// Traverse the node tree backwards via editRefId as the parent link to form an isolated branch context
+	getBranchContext(threadId: string, messageId?: string): string {
+		const thread = this.getThread(threadId)
+		if (!thread) return ''
+
+		if (!messageId) {
+			return this.getThreadContext(threadId)
+		}
+
+		const branchMessages: Message[] = []
+		let currentMsgId: string | undefined = messageId
+
+		while (currentMsgId) {
+			const msg = thread.messages.find(m => m.id === currentMsgId)
+			if (!msg) break
+			
+			branchMessages.push(msg)
+			currentMsgId = msg.editRefId
+		}
+
+		// Array is constructed backward (leaf to root), reverse it chronologically
+		branchMessages.reverse()
+
+		return branchMessages.map(m => {
+			let content = `${m.role.toUpperCase()}: ${m.content}`
+			if (m.timeline && m.timeline.length > 0) {
+				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
+				content += `\n(AI Generated Timeline):\n${timelineText}`
+			}
+			return content
+		}).join('\n\n')
+	}
+
 	// Get the last user message in a thread
 	getLatestUserMessage(threadId: string): Message | null {
 		const thread = this.getThread(threadId)

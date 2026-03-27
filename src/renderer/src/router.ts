@@ -1,7 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import ApiKeyPage from './pages/ApiKeyPage.vue'
 import UploadPage from './pages/UploadPage.vue'
-import ChatPage from './pages/ChatPage.vue'
 import SettingsPage from './pages/SettingsPage.vue'
 import HomePage from './pages/HomePage.vue'
 
@@ -29,12 +28,10 @@ const routes = [
 	},
 	{
 		path: '/chat/:id',
-		component: ChatPage
-	},
-	{
-		path: '/graph/:id',
+		name: 'chat',
 		component: GraphChatPage
 	},
+
 	{
 		path: '/settings',
 		component: SettingsPage

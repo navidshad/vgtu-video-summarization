@@ -119,18 +119,17 @@ app.whenReady().then(() => {
 		const thread = threadManager.getThread(threadId)
 		if (!thread) return
 
-		// Derive edit reference from the last user message
-		const lastUserMsg = threadManager.getLatestUserMessage(threadId)
-		const editRefId = lastUserMsg?.editRefId
+		// The newly created AI pending message links back to the user prompt via editRefId
+		const aiMsg = thread.messages.find(m => m.id === newAiMessageId)
+		const userMsgId = aiMsg?.editRefId
 
-		// Prepare the context
-		// Full thread history is the context for the pipeline
-		const context = threadManager.getThreadContext(threadId)
+		// Traverse graph lineage backwards
+		const context = threadManager.getBranchContext(threadId, userMsgId)
 
 		// Prepare the base timeline
-		const baseTimeline = editRefId ? thread.messages.find(m => m.id === editRefId)?.timeline : undefined;
+		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
 
 		pipeline
 			.register(extraction.waitForEnsureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
@@ -199,6 +198,11 @@ app.whenReady().then(() => {
 		const newThread = threadManager.createThread(videoPath, videoName)
 		backgroundTaskManager.startPreprocessing(newThread.id)
 		return newThread
+	})
+
+	ipcMain.handle('retry-preprocessing', async (_event, threadId) => {
+		await backgroundTaskManager.startPreprocessing(threadId)
+		return true
 	})
 
 	ipcMain.handle('get-all-threads', () => {

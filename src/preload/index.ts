@@ -11,6 +11,7 @@ const api = {
 		return () => ipcRenderer.removeListener('pipeline-update', listener)
 	},
 	getBackgroundTasks: (threadId: string) => ipcRenderer.invoke('get-background-tasks', threadId),
+	retryPreprocessing: (threadId: string) => ipcRenderer.invoke('retry-preprocessing', threadId),
 	onBackgroundTaskUpdate: (callback: (data: any) => void) => {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('background-task-update', listener)
