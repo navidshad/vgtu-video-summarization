@@ -266,6 +266,13 @@ class ThreadManager {
 		})
 		return !!result
 	}
+
+	async updateThreadNodePositions(threadId: string, positions: Record<string, { x: number; y: number }>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			nodePositions: positions
+		})
+		return !!result
+	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
 	resetPendingMessages(): void {
 		const threads = this.getAllThreads()

@@ -255,7 +255,11 @@ app.whenReady().then(() => {
 	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
 		return await threadManager.removeMessageFromThread(threadId, messageId)
 	})
-
+ 
+	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
+		return await threadManager.updateThreadNodePositions(threadId, positions)
+	})
+ 
 	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
 		if (!focusedWindow) return cancelId

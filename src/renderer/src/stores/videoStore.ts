@@ -107,6 +107,18 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	const updateNodePositions = async (positions: Record<string, { x: number; y: number }>) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		currentThread.value.nodePositions = {
+			...(currentThread.value.nodePositions || {}),
+			...positions
+		}
+		
+		const cleanPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions))
+		await (window as any).api.saveNodePositions(currentThreadId.value, cleanPositions)
+	}
+
 	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
 		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId })
 		if (!threadId) {
@@ -248,6 +260,7 @@ export const useVideoStore = defineStore('video', () => {
 		removeMessage,
 		retryMessage,
 		updateMessage,
+		updateNodePositions,
 		retryPreprocessing
 	}
 })

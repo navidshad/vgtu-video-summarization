@@ -2,10 +2,7 @@
   <div class="bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[320px] max-w-[420px] border border-white/20 dark:border-zinc-700/50 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
-    <!-- Draggable Header/Handle -->
-    <div class="h-2 w-full cursor-move bg-black/5 dark:bg-white/5 hover:bg-blue-500/20 transition-colors"></div>
-
-    <!-- Messages List -->
+    <!-- Messages List (Self-expanding height, Draggable) -->
     <div class="p-4 space-y-4 nowheel">
       <div v-for="msg in data.messages" :key="msg.id" 
            class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -59,7 +56,7 @@
         <textarea 
           v-model="input"
           placeholder="Ask a follow-up..."
-          class="flex-1 bg-transparent border-none text-sm focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden nodrag"
+          class="flex-1 bg-transparent border-none text-sm focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden"
           rows="1"
           @keydown.enter.prevent="submit"
           @input="adjustTextarea"
@@ -67,7 +64,7 @@
         ></textarea>
         <button 
           @click="submit"
-          class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-600/20 nodrag"
+          class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-600/20"
           :disabled="!input.trim()"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>

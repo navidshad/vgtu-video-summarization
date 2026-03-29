@@ -36,6 +36,8 @@ const api = {
 	deleteAllThreads: () => ipcRenderer.invoke('delete-all-threads'),
 	addMessage: (threadId: string, message: any) =>
 		ipcRenderer.invoke('add-message', { threadId, message }),
+	saveNodePositions: (threadId: string, positions: Record<string, { x: number; y: number }>) =>
+		ipcRenderer.invoke('save-node-positions', { threadId, positions }),
 	removeMessage: (threadId: string, messageId: string) =>
 		ipcRenderer.invoke('remove-message', { threadId, messageId }),
 	showConfirmation: (options: { title: string, message: string, detail?: string, type?: string, buttons?: string[], defaultId?: number, cancelId?: number }) =>

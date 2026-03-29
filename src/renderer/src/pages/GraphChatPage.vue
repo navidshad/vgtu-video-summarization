@@ -15,6 +15,7 @@
         :edges="graphStore.edges" 
         class="vue-flow-custom" 
         @pane-ready="onPaneReady"
+        @node-drag-stop="onNodeDragStop"
       >
         <Background pattern-color="#888" :gap="20" />
         <Controls />
@@ -70,6 +71,14 @@ const router = useRouter()
 
 const onPaneReady = () => {
   fitView()
+}
+
+const onNodeDragStop = (event: any) => {
+  const { node } = event
+  const newPositions = {
+    [node.id]: node.position
+  }
+  videoStore.updateNodePositions(newPositions)
 }
 
 // Hydrate Graph from active real messages
@@ -153,7 +162,10 @@ watch(() => videoStore.messages, (messages) => {
   })
 
   // 2. Position Nodes
-  const nodePositions: Record<string, {x: number, y: number}> = { 'root-media': { x: 0, y: 0 } }
+  // Initialize from saved positions if available
+  const nodePositions: Record<string, {x: number, y: number}> = { 
+    'root-media': videoStore.currentThread?.nodePositions?.['root-media'] || { x: 0, y: 0 } 
+  }
   
   // Root Media Node (Always branching)
   newNodes.push({
@@ -177,26 +189,30 @@ watch(() => videoStore.messages, (messages) => {
     const parentNodeId = msgToNodeId[strand.parentId] || strand.parentId
     const parentPos = nodePositions[parentNodeId] || { x: 0, y: 0 }
     
-    const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
-    const index = siblings.indexOf(strand)
-
-    let x = parentPos.x
-    let y = parentPos.y
-    
-    if (strand.parentId === 'root-media') {
-       // Media -> Horizontally offset branches
-       x = parentPos.x + H_SPACING
-       y = parentPos.y + (V_SPACING * index)
+    // IF we have a saved position, USE IT. Otherwise calculate.
+    if (videoStore.currentThread?.nodePositions?.[strand.id]) {
+      nodePositions[strand.id] = videoStore.currentThread.nodePositions[strand.id]
     } else {
-       // Sequential children vertical, branches horizontal
-       if (index === 0) {
-         y = parentPos.y + V_SPACING
-       } else {
-         x = parentPos.x + (H_SPACING * index)
-       }
-    }
+      const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
+      const index = siblings.indexOf(strand)
 
-    nodePositions[strand.id] = { x, y }
+      let x = parentPos.x
+      let y = parentPos.y
+      
+      if (strand.parentId === 'root-media') {
+         // Media -> Horizontally offset branches
+         x = parentPos.x + H_SPACING
+         y = parentPos.y + (V_SPACING * index)
+      } else {
+         // Sequential children vertical, branches horizontal
+         if (index === 0) {
+           y = parentPos.y + V_SPACING
+         } else {
+           x = parentPos.x + (H_SPACING * index)
+         }
+      }
+      nodePositions[strand.id] = { x, y }
+    }
 
     if (strand.isResult) {
       const msg = messageLookup[strand.id]
@@ -221,14 +237,14 @@ watch(() => videoStore.messages, (messages) => {
           }
         }
       }
-      newNodes.push({ id: strand.id, type: nodeType, position: { x, y }, data })
+      newNodes.push({ id: strand.id, type: nodeType, position: nodePositions[strand.id], data })
     } else {
       // Conversation
       const lastId = strand.messageIds[strand.messageIds.length-1]
       newNodes.push({
         id: strand.id,
         type: 'conversation',
-        position: { x, y },
+        position: nodePositions[strand.id],
         data: {
           messages: strand.messageIds.map(id => messageLookup[id]),
           hasInput: (childMap[lastId] || []).length === 0,
