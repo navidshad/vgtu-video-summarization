@@ -221,7 +221,22 @@ watch(() => videoStore.messages, (messages) => {
 
       if (msg.isPending) {
         nodeType = 'task'
-        data = { type: 'processing', status: 'running', progress: null, steps: [{name: msg.content || 'Processing...', status: 'active'}] }
+        data = { 
+          type: 'processing', 
+          status: 'running', 
+          progress: null, 
+          steps: [{name: msg.content || 'Processing...', status: 'active'}], 
+          onDelete: async () => {
+             const confirmed = await (window as any).api.showConfirmation({
+               title: 'Delete Task Node',
+               message: 'Are you sure you want to delete this running task and all its branches?',
+               type: 'warning'
+             })
+             if (confirmed === 1) {
+               await videoStore.removeMessageBranch(strand.id)
+             }
+          }
+        }
       } else {
         nodeType = 'result'
         data = { 
@@ -230,6 +245,16 @@ watch(() => videoStore.messages, (messages) => {
           files: msg.files, 
           timeline: msg.timeline,
           version: msg.version,
+          onDelete: async () => {
+             const confirmed = await (window as any).api.showConfirmation({
+               title: 'Delete Node',
+               message: 'Are you sure you want to delete this result and all its branches?',
+               type: 'warning'
+             })
+             if (confirmed === 1) {
+               await videoStore.removeMessageBranch(strand.id)
+             }
+          },
           onSubmit: async (val: string) => {
             const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id)
             if (newMsgId && videoStore.currentThreadId) {
@@ -248,7 +273,17 @@ watch(() => videoStore.messages, (messages) => {
         position: nodePositions[strand.id],
         data: {
           messages: strand.messageIds.map(id => messageLookup[id]),
-          hasInput: (childMap[lastId] || []).length === 0,
+          hasInputInitially: (childMap[lastId] || []).length === 0,
+          onDelete: async () => {
+             const confirmed = await (window as any).api.showConfirmation({
+               title: 'Delete Node',
+               message: 'Are you sure you want to delete this conversation and all its branches?',
+               type: 'warning'
+             })
+             if (confirmed === 1) {
+               await videoStore.removeMessageBranch(strand.id)
+             }
+          },
           onSubmit: async (val: string) => {
             const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId)
             if (newMsgId && videoStore.currentThreadId) {

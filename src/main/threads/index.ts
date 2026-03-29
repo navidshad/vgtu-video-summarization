@@ -347,25 +347,35 @@ class ThreadManager {
 		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
 	}
 
-	// Remove a message from a thread and delete its files
-	async removeMessageFromThread(threadId: string, messageId: string): Promise<boolean> {
+	// Remove a message from a thread and all its descendants recursively
+	async removeMessageBranchFromThread(threadId: string, messageId: string): Promise<boolean> {
 		const thread = this.getThread(threadId)
 		if (!thread) return false
 
-		const msg = thread.messages.find(m => m.id === messageId)
-		if (!msg) return false
+		const toRemove = new Set<string>()
+		const collect = (id: string) => {
+			if (toRemove.has(id)) return
+			toRemove.add(id)
+			const children = thread.messages.filter(m => m.editRefId === id)
+			children.forEach(c => collect(c.id))
+		}
 
-		// Delete associated files (except original)
-		if (msg.files) {
-			for (const file of msg.files) {
-				if (file.type !== FileType.Original) {
-					this.deleteFile(file.url)
+		collect(messageId)
+
+		// Delete associated files for all messages in the branch (except original)
+		for (const id of toRemove) {
+			const msg = thread.messages.find(m => m.id === id)
+			if (msg && msg.files) {
+				for (const file of msg.files) {
+					if (file.type !== FileType.Original) {
+						this.deleteFile(file.url)
+					}
 				}
 			}
 		}
 
 		const result = await this.updateThread(threadId, {
-			messages: thread.messages.filter(m => m.id !== messageId)
+			messages: thread.messages.filter(m => !toRemove.has(m.id))
 		})
 
 		return !!result

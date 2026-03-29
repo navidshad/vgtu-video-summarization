@@ -211,11 +211,18 @@ export const useVideoStore = defineStore('video', () => {
 		}
 		return success
 	}
-	const removeMessage = async (messageId: string) => {
-		if (!currentThreadId.value) return
+	const removeMessageBranch = async (messageId: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
 		const success = await (window as any).api.removeMessage(currentThreadId.value, messageId)
 		if (success && currentThread.value) {
-			currentThread.value.messages = currentThread.value.messages.filter((m) => m.id !== messageId)
+			const toRemove = new Set<string>()
+			const collect = (id: string) => {
+				toRemove.add(id)
+				const children = currentThread.value!.messages.filter(m => m.editRefId === id)
+				children.forEach(c => collect(c.id))
+			}
+			collect(messageId)
+			currentThread.value.messages = currentThread.value.messages.filter((m) => !toRemove.has(m.id))
 		}
 		return success
 	}
@@ -229,10 +236,10 @@ export const useVideoStore = defineStore('video', () => {
 		const message = currentThread.value.messages[index]
 		if (message.role !== MessageRole.User) return
 
-		// Remove any messages that came after this one (typically the failed/unwanted AI response)
-		const messagesToRemove = currentThread.value.messages.slice(index + 1)
-		for (const msg of messagesToRemove) {
-			await removeMessage(msg.id)
+		// Remove any messages that branch from this one
+		const children = currentThread.value.messages.filter(m => m.editRefId === messageId)
+		for (const child of children) {
+			await removeMessageBranch(child.id)
 		}
 
 		// Re-trigger processing attaching to the user message
@@ -258,7 +265,7 @@ export const useVideoStore = defineStore('video', () => {
 		startProcessing,
 		deleteThread,
 		deleteAllThreads,
-		removeMessage,
+		removeMessageBranch,
 		retryMessage,
 		updateMessage,
 		updateNodePositions,

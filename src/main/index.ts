@@ -255,7 +255,7 @@ app.whenReady().then(() => {
 	})
 
 	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
-		return await threadManager.removeMessageFromThread(threadId, messageId)
+		return await threadManager.removeMessageBranchFromThread(threadId, messageId)
 	})
  
 	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
