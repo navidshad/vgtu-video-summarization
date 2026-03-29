@@ -28,9 +28,11 @@
     </div>
 
     <!-- Summary Type -->
-    <div v-if="data.type === 'summary'" class="p-3 text-xs text-zinc-200 leading-relaxed max-h-32 overflow-y-auto custom-scrollbar">
-      {{ data.content }}
-    </div>
+    <div 
+      v-if="data.type === 'summary'" 
+      v-html="renderMarkdown(data.content)"
+      class="p-3 text-xs text-zinc-200 leading-relaxed max-h-48 overflow-y-auto custom-scrollbar prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-2 prose-li:my-0"
+    ></div>
     
     <!-- Cover Type -->
     <div v-else-if="data.type === 'cover'" class="p-2 flex gap-1">
@@ -81,6 +83,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps<{ data: any }>()
 const videoRef = ref<HTMLVideoElement | null>(null)

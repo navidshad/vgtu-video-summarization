@@ -22,10 +22,17 @@
             msg.isPending ? 'ring-2 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10 transition-all duration-1000 animate-pulse' : ''
           ]"
         >
-          <div v-if="msg.isPending && !msg.content" class="text-zinc-400 italic font-medium flex items-center space-x-2">
+          <div 
+            v-if="msg.isPending && !msg.content" 
+            class="text-zinc-400 italic font-medium flex items-center space-x-2"
+          >
              <span>AI is thinking...</span>
           </div>
-          <div v-else>{{ msg.content }}</div>
+          <div 
+            v-else 
+            v-html="renderMarkdown(msg.content)" 
+            class="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+          ></div>
           
           <!-- Files (Exclude Original) -->
           <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0" class="mt-2 space-y-2">
@@ -80,6 +87,7 @@
 import { ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
+import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
