@@ -235,6 +235,7 @@ export const useVideoStore = defineStore('video', () => {
 		activeBackgroundTasks,
 		isBackgroundProcessingActive,
 		currentVideoName,
+		currentVideoPath,
 
 		fetchThreads,
 		createThread,

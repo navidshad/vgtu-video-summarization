@@ -19,8 +19,8 @@
         <Background pattern-color="#888" :gap="20" />
         <Controls />
         
-        <template #node-message="props">
-          <MessageNode v-bind="props" />
+        <template #node-conversation="props">
+          <ConversationNode v-bind="props" />
         </template>
         <template #node-media="props">
           <MediaNode v-bind="props" />
@@ -52,7 +52,7 @@ import { useGraphStore } from '../stores/graphStore'
 import { useTaskStore } from '../stores/taskStore'
 import { useVideoStore } from '../stores/videoStore'
 
-import MessageNode from '../components/graph/MessageNode.vue'
+import ConversationNode from '../components/graph/ConversationNode.vue'
 import MediaNode from '../components/graph/MediaNode.vue'
 import TaskProgressNode from '../components/graph/TaskProgressNode.vue'
 import ResultNode from '../components/graph/ResultNode.vue'
@@ -78,75 +78,177 @@ watch(() => videoStore.messages, (messages) => {
 
   const newNodes: any[] = []
   const newEdges: any[] = []
+  
+  // 1. Pre-process mapping
+  const childMap: Record<string, string[]> = { 'root-media': [] }
+  const messageLookup: Record<string, any> = {}
+  
+  messages.forEach(m => {
+    messageLookup[m.id] = m
+    const pId = m.editRefId || 'root-media'
+    if (!childMap[pId]) childMap[pId] = []
+    childMap[pId].push(m.id)
+  })
 
-  // Add the root media node
+  // Folding Constants
+  const V_SPACING = 600
+  const H_SPACING = 600
+
+  const strandGroups: Array<{ id: string, messageIds: string[], parentId: string, isResult: boolean }> = []
+  const processedMessageIds = new Set<string>()
+
+  // Recursive strand building
+  const buildStrands = (pId: string) => {
+    const children = childMap[pId] || []
+    
+      children.forEach((cId) => {
+      if (processedMessageIds.has(cId)) return
+
+      const msg = messageLookup[cId]
+      // A "Result" is anything with real files, or timeline. (Pending text stays in conversation)
+      const hasRealFiles = msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0
+      const isResult = !!(hasRealFiles || (msg.timeline && msg.timeline.length > 0))
+
+      if (isResult) {
+        // Results are always their own node
+        strandGroups.push({ id: cId, messageIds: [cId], parentId: pId, isResult: true })
+        processedMessageIds.add(cId)
+        buildStrands(cId)
+      } else {
+        // It's a text message strand
+        const strand: string[] = [cId]
+        processedMessageIds.add(cId)
+        
+        let currentId = cId
+        while (true) {
+          const nextChildren = childMap[currentId] || []
+          if (nextChildren.length !== 1) break
+          
+          const nextId = nextChildren[0]
+          const nextMsg = messageLookup[nextId]
+          const nextHasRealFiles = nextMsg.files && nextMsg.files.filter((f: any) => f.type !== 'original').length > 0
+          const nextIsResult = !!(nextHasRealFiles || (nextMsg.timeline && nextMsg.timeline.length > 0))
+          
+          if (nextIsResult) break
+          
+          strand.push(nextId)
+          processedMessageIds.add(nextId)
+          currentId = nextId
+        }
+        
+        strandGroups.push({ id: strand[0], messageIds: strand, parentId: pId, isResult: false })
+        buildStrands(currentId)
+      }
+    })
+  }
+
+  buildStrands('root-media')
+
+  // 1.5 Create Message-to-Node mapping
+  const msgToNodeId: Record<string, string> = { 'root-media': 'root-media' }
+  strandGroups.forEach(strand => {
+    strand.messageIds.forEach(mId => {
+      msgToNodeId[mId] = strand.id
+    })
+  })
+
+  // 2. Position Nodes
+  const nodePositions: Record<string, {x: number, y: number}> = { 'root-media': { x: 0, y: 0 } }
+  
+  // Root Media Node (Always branching)
   newNodes.push({
     id: 'root-media',
     type: 'media',
-    position: { x: 250, y: 50 },
-    data: { filename: videoStore.currentVideoName, size: 'Original File' }
-  })
-
-  // Simple layout logic based on logical depth
-  const levelOffsets: Record<number, number> = {}
-  const nodeDepths: Record<string, number> = { 'root-media': 0 }
-
-  messages.forEach(m => {
-    let parentId = m.editRefId || 'root-media'
-    
-    // Determine logical depth based on parent
-    let depth = (nodeDepths[parentId] ?? 0) + 1
-    nodeDepths[m.id] = depth
-    
-    if (levelOffsets[depth] === undefined) levelOffsets[depth] = 0
-    let xOffset = levelOffsets[depth]++
-    
-    let x = 250 + (xOffset * 350)
-    let y = 50 + (depth * 250)
-
-    let nodeType = 'message'
-    let data: any = { sender: m.role, text: m.content }
-
-    if (m.role === 'ai') {
-        if (m.isPending) {
-            nodeType = 'task'
-            data = { type: 'processing', status: 'running', progress: null, steps: [{name: m.content || 'Processing...', status: 'active'}] }
-        } else if ((m.files && m.files.length > 0) || (m.timeline && m.timeline.length > 0)) {
-            nodeType = 'result'
-            data = { type: (m.files && m.files.length > 0) ? 'video' : 'summary', content: m.content, files: m.files, timeline: m.timeline }
-        } else {
-             data = { sender: 'ai', text: m.content }
-        }
-    }
-
-    newNodes.push({ id: m.id, type: nodeType, position: {x,y}, data })
-    newEdges.push({ id: `e-${parentId}-${m.id}`, source: parentId, target: m.id, animated: m.isPending })
-  })
-
-  // Add Interactive ChatInputNode bound to the leaf of the active branch
-  const lastMsg = messages[messages.length - 1]
-  const inputParent = lastMsg ? lastMsg.id : 'root-media'
-  const inputDepth = (nodeDepths[inputParent] ?? 0) + 1
-
-  if (levelOffsets[inputDepth] === undefined) levelOffsets[inputDepth] = 0
-  let inputXOffset = levelOffsets[inputDepth]
-
-  newNodes.push({
-    id: 'chat-input',
-    type: 'input',
-    position: { x: 250 + (inputXOffset * 350), y: 50 + (inputDepth * 250) },
-    data: {
+    position: nodePositions['root-media'],
+    data: { 
+      filename: videoStore.currentVideoName, 
+      videoPath: videoStore.currentVideoPath,
       onSubmit: async (val: string) => {
-         const parentId = inputParent === 'root-media' ? undefined : inputParent
-         const newMsgId = await videoStore.addMessage(val, MessageRole.User, parentId)
+         const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined)
          if (newMsgId && videoStore.currentThreadId) {
-             await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+           await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
          }
       }
     }
   })
-  
-  newEdges.push({ id: `e-${inputParent}-input`, source: inputParent, target: 'chat-input', style: { strokeDasharray: '5,5' } })
+
+  // Layout strands
+  strandGroups.forEach((strand) => {
+    const parentNodeId = msgToNodeId[strand.parentId] || strand.parentId
+    const parentPos = nodePositions[parentNodeId] || { x: 0, y: 0 }
+    
+    const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
+    const index = siblings.indexOf(strand)
+
+    let x = parentPos.x
+    let y = parentPos.y
+    
+    if (strand.parentId === 'root-media') {
+       // Media -> Horizontally offset branches
+       x = parentPos.x + H_SPACING
+       y = parentPos.y + (V_SPACING * index)
+    } else {
+       // Sequential children vertical, branches horizontal
+       if (index === 0) {
+         y = parentPos.y + V_SPACING
+       } else {
+         x = parentPos.x + (H_SPACING * index)
+       }
+    }
+
+    nodePositions[strand.id] = { x, y }
+
+    if (strand.isResult) {
+      const msg = messageLookup[strand.id]
+      let nodeType = 'message'
+      let data: any = { sender: msg.role, text: msg.content }
+
+      if (msg.isPending) {
+        nodeType = 'task'
+        data = { type: 'processing', status: 'running', progress: null, steps: [{name: msg.content || 'Processing...', status: 'active'}] }
+      } else {
+        nodeType = 'result'
+        data = { 
+          type: (msg.files && msg.files.length > 0) ? 'video' : 'summary', 
+          content: msg.content, 
+          files: msg.files, 
+          timeline: msg.timeline,
+          onSubmit: async (val: string) => {
+            const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id)
+            if (newMsgId && videoStore.currentThreadId) {
+               await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+            }
+          }
+        }
+      }
+      newNodes.push({ id: strand.id, type: nodeType, position: { x, y }, data })
+    } else {
+      // Conversation
+      const lastId = strand.messageIds[strand.messageIds.length-1]
+      newNodes.push({
+        id: strand.id,
+        type: 'conversation',
+        position: { x, y },
+        data: {
+          messages: strand.messageIds.map(id => messageLookup[id]),
+          hasInput: (childMap[lastId] || []).length === 0,
+          onSubmit: async (val: string) => {
+            const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId)
+            if (newMsgId && videoStore.currentThreadId) {
+               await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+            }
+          }
+        }
+      })
+    }
+
+    newEdges.push({ 
+      id: `e-${parentNodeId}-${strand.id}`, 
+      source: parentNodeId, 
+      target: strand.id,
+      animated: strand.isResult && messageLookup[strand.id].isPending
+    })
+  })
 
   graphStore.setNodes(newNodes)
   graphStore.setEdges(newEdges)
