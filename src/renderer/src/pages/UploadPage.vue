@@ -199,10 +199,14 @@ const startCreation = async () => {
     const threadId = await videoStore.createThread(filePath.value, fileName.value)
 
     // 2. Add the user message
-    await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
+    const userMsgId = await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
 
     // 3. Navigate to chat with thread ID
     router.push(`/chat/${threadId}`)
+
+    // 4. Start the AI processing pipeline
+    // Pass userMsgId so the AI response is correctly linked to it in the graph
+    await videoStore.startProcessing(threadId, userMsgId)
   }
 }
 </script>

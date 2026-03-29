@@ -32,7 +32,7 @@ export const useVideoStore = defineStore('video', () => {
 	})
 
 	const activeBackgroundTasks = computed(() => {
-		return Object.values(backgroundTasks.value).filter(t => t.state === 'running' || t.state === 'pending')
+		return Object.values(backgroundTasks.value).filter(t => t.state === 'running' || t.state === 'pending' || t.state === 'error')
 	})
 
 	const isBackgroundProcessingActive = computed(() => activeBackgroundTasks.value.length > 0)
@@ -107,23 +107,40 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	const updateNodePositions = async (positions: Record<string, { x: number; y: number }>) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		currentThread.value.nodePositions = {
+			...(currentThread.value.nodePositions || {}),
+			...positions
+		}
+		
+		const cleanPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions))
+		await (window as any).api.saveNodePositions(currentThreadId.value, cleanPositions)
+	}
+
 	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
-		if (!threadId) return
-
-		// Ensure we are working with fresh data
-		await selectThread(threadId)
-
-		if (!currentThread.value) return
+		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId })
+		if (!threadId) {
+			;(window as any).api.debugLog('startProcessing ABORTED: !threadId')
+			return
+		}
+		if (!currentThread.value) {
+			;(window as any).api.debugLog('startProcessing ABORTED: !currentThread.value')
+			return
+		}
 
 		// Add initial AI status message
-		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId)
+		;(window as any).api.debugLog('startProcessing adding AI Message...')
+		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId);
+		;(window as any).api.debugLog('startProcessing AI Message Pushed! ID:', newAiMessageId)
 
 		if ((window as any).api) {
 			// Setup listener
 			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
-				if (data.id === newAiMessageId) {
-					if (data.type === 'status') {
-						updateMessage(newAiMessageId, { content: data.content })
+				if (data.id === newAiMessageId || data.messageId === newAiMessageId) {
+					if (data.type === 'status' || data.status) {
+						updateMessage(newAiMessageId, { content: data.status || data.content, isPending: true })
 					} else if (data.type === 'finish') {
 						updateMessage(newAiMessageId, {
 							content: data.content,
@@ -142,11 +159,23 @@ export const useVideoStore = defineStore('video', () => {
 				}
 			})
 
-			await (window as any).api.startPipeline({
-				threadId,
-				newAiMessageId
-			})
+			;(window as any).api.debugLog('startProcessing dispatching startPipeline IPC...')
+			try {
+				await (window as any).api.startPipeline({
+					threadId,
+					newAiMessageId
+				})
+				;(window as any).api.debugLog('startProcessing startPipeline IPC completed.')
+			} catch (e) {
+				;(window as any).api.debugLog('startProcessing startPipeline IPC FAILED:', e)
+			}
+		} else {
+			console.error('API not found attached to window.')
 		}
+	}
+
+	const retryPreprocessing = async (threadId: string) => {
+		return await (window as any).api.retryPreprocessing(threadId)
 	}
 
 	// Setup global listener for background tasks
@@ -205,8 +234,8 @@ export const useVideoStore = defineStore('video', () => {
 			await removeMessage(msg.id)
 		}
 
-		// Re-trigger processing
-		await startProcessing(currentThreadId.value, message.editRefId)
+		// Re-trigger processing attaching to the user message
+		await startProcessing(currentThreadId.value, message.id)
 	}
 
 	return {
@@ -218,6 +247,7 @@ export const useVideoStore = defineStore('video', () => {
 		activeBackgroundTasks,
 		isBackgroundProcessingActive,
 		currentVideoName,
+		currentVideoPath,
 
 		fetchThreads,
 		createThread,
@@ -229,6 +259,8 @@ export const useVideoStore = defineStore('video', () => {
 		deleteAllThreads,
 		removeMessage,
 		retryMessage,
-		updateMessage
+		updateMessage,
+		updateNodePositions,
+		retryPreprocessing
 	}
 })

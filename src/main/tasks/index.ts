@@ -23,7 +23,7 @@ class BackgroundTaskManager extends EventEmitter {
 		return `${threadId}:${taskId}`
 	}
 
-	private updateTask(threadId: string, taskId: string, updates: Partial<BackgroundTask>) {
+	private async updateTask(threadId: string, taskId: string, updates: Partial<BackgroundTask>) {
 		const thread = threadManager.getThread(threadId)
 		if (!thread) return
 
@@ -33,7 +33,7 @@ class BackgroundTaskManager extends EventEmitter {
 		}
 
 		tasks[taskId] = { ...tasks[taskId], ...updates }
-		threadManager.updateThread(threadId, { backgroundTasks: tasks })
+		await threadManager.updateThread(threadId, { backgroundTasks: tasks })
 
 		// Emit IPC update to all windows
 		BrowserWindow.getAllWindows().forEach(win => {
@@ -49,15 +49,26 @@ class BackgroundTaskManager extends EventEmitter {
 	}
 
 	public async waitForTask(threadId: string, taskId: string): Promise<void> {
+		console.log(`[TASK MANAGER] waitForTask('${taskId}') for thread ${threadId}`)
 		const thread = threadManager.getThread(threadId)
-		if (!thread) return
+		if (!thread) {
+			console.log(`[TASK MANAGER] thread not found: ${threadId}`)
+			return
+		}
 
 		const task = thread.backgroundTasks?.[taskId]
-		if (task?.state === 'completed') return
+		console.log(`[TASK MANAGER] current task state for '${taskId}': ${task?.state || 'undefined'}`)
+		
+		if (task?.state === 'completed') {
+			console.log(`[TASK MANAGER] task '${taskId}' already completed. Returning.`)
+			return
+		}
 		if (task?.state === 'error') throw new Error(`Task ${taskId} failed: ${task.error}`)
 
 		return new Promise((resolve, reject) => {
+			console.log(`[TASK MANAGER] waiting for 'task-update:${threadId}:${taskId}' event...`)
 			const listener = (updatedTask: BackgroundTask) => {
+				console.log(`[TASK MANAGER] event received: 'task-update:${threadId}:${taskId}', new state: ${updatedTask.state}`)
 				if (updatedTask.state === 'completed') {
 					this.removeListener(`task-update:${threadId}:${taskId}`, listener)
 					resolve()
@@ -86,18 +97,18 @@ class BackgroundTaskManager extends EventEmitter {
 			baseTimeline: undefined,
 			get intentResult() { return intentResult },
 			set intentResult(val) { intentResult = val },
-			updateStatus: (status: string) => {
+			updateStatus: async (status: string) => {
 				this.updateTask(threadId, taskId, { state: 'running' })
 				console.log(`[BG ${taskId}] ${status}`)
 			},
-			recordUsage: (record) => {
+			recordUsage: async (record) => {
 				// We don't have a message to attach it to, but we can log it or add to thread totals if needed.
 				console.log(`[BG ${taskId}] Usage: ${record.usage.totalTokens} tokens, Cost: $${record.cost}`)
 			},
-			savePreprocessing: (updates) => {
+			savePreprocessing: async (updates) => {
 				const currentThread = threadManager.getThread(threadId)
 				if (currentThread) {
-					threadManager.updateThread(threadId, {
+					await threadManager.updateThread(threadId, {
 						preprocessing: {
 							...(currentThread.preprocessing || {}),
 							...updates
@@ -107,7 +118,7 @@ class BackgroundTaskManager extends EventEmitter {
 			},
 			waitForTask: async () => { },
 			next: () => { },
-			finish: () => { }
+			finish: async () => { }
 		}
 	}
 
@@ -116,20 +127,20 @@ class BackgroundTaskManager extends EventEmitter {
 		if (!thread) return
 
 		// Initialize task if not present
-		this.updateTask(threadId, taskId, { name, state: 'pending' })
+		await this.updateTask(threadId, taskId, { name, state: 'pending' })
 
 		const taskKey = this.getTaskKey(threadId, taskId)
 		if (this.runningTasks.has(taskKey)) return
 		this.runningTasks.add(taskKey)
 
 		try {
-			this.updateTask(threadId, taskId, { state: 'running' })
+			await this.updateTask(threadId, taskId, { state: 'running' })
 			const context = this.createMockContext(threadId, taskId)
 			await fn(context)
-			this.updateTask(threadId, taskId, { state: 'completed' })
+			await this.updateTask(threadId, taskId, { state: 'completed' })
 		} catch (error) {
 			console.error(`Task ${taskId} failed:`, error)
-			this.updateTask(threadId, taskId, {
+			await this.updateTask(threadId, taskId, {
 				state: 'error',
 				error: error instanceof Error ? error.message : String(error)
 			})
@@ -152,7 +163,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.ensureLowResolution({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'downscale', { name: 'Downscaling Video', state: 'completed' })
+				await this.updateTask(threadId, 'downscale', { name: 'Downscaling Video', state: 'completed' })
 			}
 
 			if (!thread.preprocessing.audioPath) {
@@ -160,7 +171,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.convertToAudio({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'audio', { name: 'Extracting Audio', state: 'completed' })
+				await this.updateTask(threadId, 'audio', { name: 'Extracting Audio', state: 'completed' })
 			}
 
 			if (!thread.preprocessing.rawTranscriptPath) {
@@ -168,7 +179,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.extractRawTranscript({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'rawTranscript', { name: 'Extracting Raw Transcript', state: 'completed' })
+				await this.updateTask(threadId, 'rawTranscript', { name: 'Extracting Raw Transcript', state: 'completed' })
 			}
 
 			if (!thread.preprocessing.correctedTranscriptPath) {
@@ -176,7 +187,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.extractCorrectedTranscript({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'correctedTranscript', { name: 'Refining Transcript', state: 'completed' })
+				await this.updateTask(threadId, 'correctedTranscript', { name: 'Refining Transcript', state: 'completed' })
 			}
 		}
 
@@ -189,7 +200,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.extractSceneTiming({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'sceneTiming', { name: 'Detecting Scenes', state: 'completed' })
+				await this.updateTask(threadId, 'sceneTiming', { name: 'Detecting Scenes', state: 'completed' })
 			}
 
 			if (!thread.preprocessing.sceneDescriptionsPath) {
@@ -197,7 +208,7 @@ class BackgroundTaskManager extends EventEmitter {
 					await extraction.generateSceneDescription({}, ctx)
 				})
 			} else {
-				this.updateTask(threadId, 'sceneDescriptions', { name: 'Describing Scenes', state: 'completed' })
+				await this.updateTask(threadId, 'sceneDescriptions', { name: 'Describing Scenes', state: 'completed' })
 			}
 		}
 

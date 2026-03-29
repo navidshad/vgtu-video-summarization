@@ -103,6 +103,7 @@ export interface Thread {
 	tempDir: string
 	messages: Message[]
 	backgroundTasks?: Record<string, BackgroundTask>
+	nodePositions?: Record<string, { x: number; y: number }>
 	versionCounter?: number
 	createdAt: number
 	updatedAt: number

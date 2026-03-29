@@ -215,37 +215,49 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 
 // Wait functions for pipeline to use
 export const waitForEnsureLowResolution: PipelineFunction = async (data, context) => {
-	context.updateStatus('Ensuring optimal video resolution...')
+	console.log(`[EXTRACTION PHASE] Entering waitForEnsureLowResolution`)
+	await context.updateStatus('Ensuring optimal video resolution...')
 	await context.waitForTask('downscale')
+	console.log(`[EXTRACTION PHASE] Leaving waitForEnsureLowResolution`)
 	context.next(data)
 }
 
 export const waitForConvertToAudio: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for audio extraction...')
+	console.log(`[EXTRACTION PHASE] Entering waitForConvertToAudio`)
+	await context.updateStatus('Waiting for audio extraction...')
 	await context.waitForTask('audio')
+	console.log(`[EXTRACTION PHASE] Leaving waitForConvertToAudio`)
 	context.next(data)
 }
 
 export const waitForExtractRawTranscript: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for raw transcript...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractRawTranscript`)
+	await context.updateStatus('Waiting for raw transcript...')
 	await context.waitForTask('rawTranscript')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractRawTranscript`)
 	context.next(data)
 }
 
 export const waitForExtractCorrectedTranscript: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for transcript refinement...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractCorrectedTranscript`)
+	await context.updateStatus('Waiting for transcript refinement...')
 	await context.waitForTask('correctedTranscript')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractCorrectedTranscript`)
 	context.next(data)
 }
 
 export const waitForExtractSceneTiming: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for scene timing detection...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractSceneTiming`)
+	await context.updateStatus('Waiting for scene timing detection...')
 	await context.waitForTask('sceneTiming')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractSceneTiming`)
 	context.next(data)
 }
 
 export const waitForGenerateSceneDescription: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for scene descriptions...')
+	console.log(`[EXTRACTION PHASE] Entering waitForGenerateSceneDescription`)
+	await context.updateStatus('Waiting for scene descriptions...')
 	await context.waitForTask('sceneDescriptions')
+	console.log(`[EXTRACTION PHASE] Leaving waitForGenerateSceneDescription`)
 	context.next(data)
 }

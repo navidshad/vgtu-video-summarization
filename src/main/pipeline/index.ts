@@ -6,11 +6,11 @@ export type PipelineFunction = (data: any, context: PipelineContext) => Promise<
 import { threadManager } from '../threads'
 
 export interface PipelineContext {
-	updateStatus: (status: string) => void;
+	updateStatus: (status: string) => Promise<void>;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => void;
-	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => void;
-	recordUsage: (record: import('../../shared/types').UsageRecord) => void;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => Promise<void>;
+	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => Promise<void>;
+	recordUsage: (record: import('../../shared/types').UsageRecord) => Promise<void>;
 	waitForTask: (taskId: string) => Promise<void>;
 	threadId: string;
 	videoPath: string;
@@ -35,6 +35,7 @@ export class Pipeline {
 	private editRefId?: string
 	private baseTimeline?: any
 	private intentResult?: import('../../shared/types').IntentResult
+	private isFinished: boolean = false
 
 	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any, editRefId?: string) {
 		this.browserWindow = browserWindow
@@ -51,6 +52,7 @@ export class Pipeline {
 	}
 
 	async start(initialData: any): Promise<void> {
+		console.log(`[PIPELINE CORE] start() called. Total steps registered: ${this.steps.length}`)
 		this.currentStepIndex = 0;
 		if (this.steps.length > 0) {
 			await this.runStep(initialData);
@@ -58,17 +60,20 @@ export class Pipeline {
 	}
 
 	private async runStep(data: any): Promise<void> {
-		if (this.currentStepIndex >= this.steps.length) {
+		console.log(`[PIPELINE CORE] runStep() called. Index=${this.currentStepIndex}, isFinished=${this.isFinished}`)
+		if (this.isFinished || this.currentStepIndex >= this.steps.length) {
+			console.log(`[PIPELINE CORE] runStep() returning early.`)
 			return;
 		}
 
 		const thread = threadManager.getThread(this.threadId)
 		if (!thread) {
-			console.error(`Thread ${this.threadId} not found during pipeline execution`)
+			console.error(`[PIPELINE CORE] Thread ${this.threadId} not found during pipeline execution`)
 			return
 		}
 
 		const step = this.steps[this.currentStepIndex];
+		console.log(`[PIPELINE CORE] Target step name: ${step.fn.name || 'anonymous function'}`)
 
 		// check if we should skip this step
 		if (step.options?.skipIf) {
@@ -80,12 +85,12 @@ export class Pipeline {
 				messageId: this.messageId,
 				context: this.context,
 				baseTimeline: undefined,
-				updateStatus: () => { },
+				updateStatus: async () => { },
 				next: () => { },
-				finish: () => { },
-				savePreprocessing: () => { },
+				finish: async () => { },
+				savePreprocessing: async () => { },
 				waitForTask: async () => { },
-				recordUsage: () => { }
+				recordUsage: async () => { }
 			}
 		}
 
@@ -102,9 +107,12 @@ export class Pipeline {
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
 			waitForTask: async (taskId: string) => {
-				return backgroundTaskManager.waitForTask(this.threadId, taskId);
+				console.log(`[PIPELINE CONTEXT] waitForTask('${taskId}') called.`)
+				await backgroundTaskManager.waitForTask(this.threadId, taskId);
+				console.log(`[PIPELINE CONTEXT] waitForTask('${taskId}') RESOLVED.`)
 			},
-			updateStatus: (status: string) => {
+			updateStatus: async (status: string) => {
+				console.log(`[PIPELINE CONTEXT] updateStatus('${status}') called.`)
 				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
@@ -114,15 +122,15 @@ export class Pipeline {
 
 				// Persist to Thread
 				if (this.threadId) {
-					threadManager.updateMessageInThread(this.threadId, this.messageId, {
+					await threadManager.updateMessageInThread(this.threadId, this.messageId, {
 						content: status,
 						isPending: true
 					})
 				}
 			},
-			recordUsage: (record: import('../../shared/types').UsageRecord) => {
+			recordUsage: async (record: import('../../shared/types').UsageRecord) => {
 				if (this.threadId) {
-					threadManager.updateMessageUsage(this.threadId, this.messageId, record)
+					await threadManager.updateMessageUsage(this.threadId, this.messageId, record)
 
 					// Send update to UI for real-time cost display
 					const updatedThread = threadManager.getThread(this.threadId)
@@ -138,11 +146,12 @@ export class Pipeline {
 					}
 				}
 			},
-			savePreprocessing: (updates: Partial<Thread['preprocessing']>) => {
+			savePreprocessing: async (updates: Partial<Thread['preprocessing']>) => {
+				console.log(`[PIPELINE CONTEXT] savePreprocessing() called.`)
 				if (this.threadId) {
 					const currentThread = threadManager.getThread(this.threadId)
 					if (currentThread) {
-						threadManager.updateThread(this.threadId, {
+						await threadManager.updateThread(this.threadId, {
 							preprocessing: {
 								...(currentThread.preprocessing || {}),
 								...updates
@@ -151,11 +160,13 @@ export class Pipeline {
 					}
 				}
 			},
-			next: (nextData: any) => {
+			next: (nextData?: any) => {
+				console.log(`[PIPELINE CONTEXT] context.next() called. Moving to index ${this.currentStepIndex + 1}`)
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
+			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
+				console.log(`[PIPELINE CONTEXT] context.finish() called. Setting isFinished.`)
 				let finalVersion: number | undefined = undefined
 
 				if (options?.version) {
@@ -187,7 +198,7 @@ export class Pipeline {
 						updates.files = [{ url: video.path, type: video.type }]
 					}
 
-					threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
+					await threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
 				}
 			}
 		}
