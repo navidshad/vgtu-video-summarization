@@ -8,7 +8,8 @@ import { threadManager } from '../threads'
 export interface PipelineContext {
 	updateStatus: (status: string) => Promise<void>;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean }) => Promise<void>;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => Promise<void>;
+	fail: (error: string) => Promise<void>;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => Promise<void>;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => Promise<void>;
 	waitForTask: (taskId: string) => Promise<void>;
@@ -74,25 +75,6 @@ export class Pipeline {
 
 		const step = this.steps[this.currentStepIndex];
 		console.log(`[PIPELINE CORE] Target step name: ${step.fn.name || 'anonymous function'}`)
-
-		// check if we should skip this step
-		if (step.options?.skipIf) {
-			const contextForCheck: PipelineContext = {
-				threadId: this.threadId,
-				videoPath: thread.videoPath,
-				tempDir: thread.tempDir,
-				preprocessing: thread.preprocessing,
-				messageId: this.messageId,
-				context: this.context,
-				baseTimeline: undefined,
-				updateStatus: async () => { },
-				next: () => { },
-				finish: async () => { },
-				savePreprocessing: async () => { },
-				waitForTask: async () => { },
-				recordUsage: async () => { }
-			}
-		}
 
 		const self = this
 		const context: PipelineContext = {
@@ -165,57 +147,82 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean }) => {
+			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => {
 				console.log(`[PIPELINE CONTEXT] context.finish() called. Setting isFinished.`)
-				let finalVersion: number | undefined = undefined
+				if (this.isFinished) return
+				this.isFinished = true
 
-				if (options?.version) {
-					finalVersion = options.version
-				} else if (options?.shouldVersion && this.threadId) {
-					finalVersion = threadManager.getNextVersion(this.threadId)
+				const updates: Partial<Message> = {
+					content: message,
+					files: options?.files || (video ? [{ url: video.path, type: video.type }] : []),
+					timeline: timeline || [],
+					resultType: options?.resultType,
+					isPending: false
 				}
 
-				// Send finish to UI
+				if (options?.shouldVersion !== false) {
+					updates.version = options?.version || Date.now()
+				}
+
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
 					type: 'finish',
 					content: message,
-					video,
-					timeline,
-					version: finalVersion
+					files: updates.files,
+					timeline: updates.timeline,
+					resultType: updates.resultType,
+					version: updates.version
+				})
+
+				if (this.threadId) {
+					await threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
+				}
+			},
+			fail: async (error: string) => {
+				console.log(`[PIPELINE CONTEXT] context.fail() called: ${error}`)
+				if (this.isFinished) return
+				this.isFinished = true
+
+				// Send error to UI
+				this.browserWindow.webContents.send('pipeline-update', {
+					id: this.messageId,
+					type: 'status',
+					content: `Error: ${error}`
+				})
+
+				this.browserWindow.webContents.send('pipeline-update', {
+					id: this.messageId,
+					type: 'finish',
+					content: `Error: ${error}`
 				})
 
 				// Persist to Thread
 				if (this.threadId) {
-					const updates: Partial<Message> = {
-						content: message,
-						isPending: false,
-						timeline,
-						version: finalVersion
-					}
-
-					if (video) {
-						updates.files = [{ url: video.path, type: video.type }]
-					}
-
-					await threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
+					await threadManager.updateMessageInThread(this.threadId, this.messageId, {
+						content: `Error: ${error}`,
+						isPending: false
+					})
 				}
 			}
 		}
 
 		// Check skip condition
 		if (step.options?.skipIf && step.options.skipIf(context)) {
-			// Skip this step and proceed to next immediately with SAME data
+			console.log(`[PIPELINE CORE] Skipping step index ${this.currentStepIndex}`)
 			this.currentStepIndex++
 			this.runStep(data)
 			return
 		}
 
+		// If manually finished or failed, stop chain
+		if (this.isFinished) return
+
 		try {
 			await step.fn(data, context);
 		} catch (error) {
 			console.error('Pipeline step failed:', error);
-			context.updateStatus(`Error: ${error instanceof Error ? error.message : String(error)}`);
+			const errorMessage = error instanceof Error ? error.message : String(error)
+			await context.fail(errorMessage);
 		}
 	}
 }

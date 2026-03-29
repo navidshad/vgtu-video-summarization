@@ -4,6 +4,7 @@ export const GEMINI_MODEL_2_5_PRO = 'gemini-2.5-pro'
 export const GEMINI_MODEL_2_5_FLASH = 'gemini-2.5-flash'
 export const GEMINI_MODEL_2_5_FLASH_LITE = 'gemini-2.5-flash-lite'
 export const GEMINI_MODEL_3_FLASH_PREVIEW = 'gemini-3-flash-preview'
+export const GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW = 'gemini-3.1-flash-image-preview'
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 	pricing: {
@@ -48,6 +49,15 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 			output: {
 				standard: 3.00
 			}
+		},
+		[GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW]: {
+			input: {
+				standard: 0.50
+			},
+			output: {
+				standard: 3.00,
+				image: 0.0672
+			}
 		}
 	},
 	selection: {
@@ -55,6 +65,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 		'corrected-transcript': GEMINI_MODEL_2_5_PRO,
 		'intent': GEMINI_MODEL_2_5_FLASH,
 		'timeline-new': GEMINI_MODEL_3_FLASH_PREVIEW,
-		'timeline-edit': GEMINI_MODEL_2_5_FLASH
+		'timeline-edit': GEMINI_MODEL_2_5_FLASH,
+		'thumbnail': GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW
 	}
 }

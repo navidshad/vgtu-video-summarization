@@ -23,6 +23,13 @@ class SettingsManager {
 		this.settings = this.loadSettings()
 	}
 
+	private mergeModelSettings(existing: ModelSettings): ModelSettings {
+		return {
+			pricing: { ...DEFAULT_MODEL_SETTINGS.pricing, ...existing.pricing },
+			selection: { ...DEFAULT_MODEL_SETTINGS.selection, ...existing.selection }
+		}
+	}
+
 	private loadSettings(): Settings {
 		try {
 			if (existsSync(this.settingsPath)) {
@@ -31,7 +38,7 @@ class SettingsManager {
 				return {
 					tempDir: parsed.tempDir || this.defaultTempDir,
 					geminiApiKey: parsed.geminiApiKey,
-					modelSettings: parsed.modelSettings || DEFAULT_MODEL_SETTINGS
+					modelSettings: this.mergeModelSettings(parsed.modelSettings || DEFAULT_MODEL_SETTINGS)
 				}
 			}
 		} catch (error) {
@@ -103,7 +110,7 @@ class SettingsManager {
 	}
 
 	setModelSettings(settings: ModelSettings): void {
-		this.settings.modelSettings = settings
+		this.settings.modelSettings = this.mergeModelSettings(settings)
 		this.saveSettings()
 	}
 

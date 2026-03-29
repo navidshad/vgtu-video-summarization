@@ -145,9 +145,10 @@ export const useVideoStore = defineStore('video', () => {
 						updateMessage(newAiMessageId, {
 							content: data.content,
 							isPending: false,
-							files: data.video ? [{ url: data.video.path, type: data.video.type } as Attachment] : [],
+							files: data.files || (data.video ? [{ url: data.video.path, type: data.video.type }] : []),
 							timeline: data.timeline,
-							version: data.version
+							version: data.version,
+							resultType: data.resultType
 						})
 						cleanup() // Remove listener when done
 					} else if (data.type === 'usage') {

@@ -225,7 +225,7 @@ watch(() => videoStore.messages, (messages) => {
       } else {
         nodeType = 'result'
         data = { 
-          type: (msg.files && msg.files.length > 0) ? 'video' : 'summary', 
+          type: msg.resultType || ((msg.files && msg.files.length > 0) ? 'video' : 'summary'), 
           content: msg.content, 
           files: msg.files, 
           timeline: msg.timeline,
