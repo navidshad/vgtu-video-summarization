@@ -10,6 +10,16 @@ export enum FileType {
 	Original = 'original'
 }
 
+export type BackgroundTaskState = 'pending' | 'running' | 'completed' | 'error'
+
+export interface BackgroundTask {
+	id: string
+	name: string
+	state: BackgroundTaskState
+	progress?: number
+	error?: string
+}
+
 export interface Attachment {
 	url: string;
 	type: FileType;
@@ -92,6 +102,8 @@ export interface Thread {
 	}
 	tempDir: string
 	messages: Message[]
+	backgroundTasks?: Record<string, BackgroundTask>
+	nodePositions?: Record<string, { x: number; y: number }>
 	versionCounter?: number
 	createdAt: number
 	updatedAt: number

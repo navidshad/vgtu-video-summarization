@@ -116,7 +116,7 @@ export async function extractTranscript(
 	audioPath: string,
 	audioDuration: number = 0,
 	rawSrt?: string
-): Promise<{ items: TranscriptItem[], record: UsageRecord }> {
+): Promise<{ items: TranscriptItem[], rawResponseText: string, record: UsageRecord }> {
 	const adapter = GeminiAdapter.create()
 	const modelSettings = settingsManager.getModelSettings()
 
@@ -144,6 +144,7 @@ export async function extractTranscript(
 
 	return {
 		items: parseSRT(text),
+		rawResponseText: text,
 		record
 	}
 }

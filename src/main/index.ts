@@ -10,6 +10,7 @@ import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
+import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -57,6 +58,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+	backgroundTaskManager.init()
 	electronApp.setAppUserModelId('com.electron')
 
 	app.on('browser-window-created', (_, window) => {
@@ -110,39 +112,56 @@ app.whenReady().then(() => {
 		return { ffmpegAvailable, scenedetectAvailable }
 	})
 
+	ipcMain.handle('debug-log', (_event, ...args: any[]) => {
+		console.log('[FRONTEND LOG]', ...args)
+	})
+
 	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
+		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}`)
 		const window = BrowserWindow.fromWebContents(event.sender)
-		if (!window) return
+		if (!window) {
+			console.log(`[DEBUG IPC] FAILED: window not found`)
+			return
+		}
 
 		const thread = threadManager.getThread(threadId)
-		if (!thread) return
+		if (!thread) {
+			console.log(`[DEBUG IPC] FAILED: thread not found`)
+			return
+		}
 
-		// Derive edit reference from the last user message
-		const lastUserMsg = threadManager.getLatestUserMessage(threadId)
-		const editRefId = lastUserMsg?.editRefId
+		// The newly created AI pending message links back to the user prompt via editRefId
+		const aiMsg = thread.messages.find(m => m.id === newAiMessageId)
+		const userMsgId = aiMsg?.editRefId
+		console.log(`[DEBUG IPC] aiMsg found? ${!!aiMsg}, userMsgId=${userMsgId}`)
 
-		// Prepare the context
-		// Full thread history is the context for the pipeline
-		const context = threadManager.getThreadContext(threadId)
+		// Traverse graph lineage backwards
+		const context = threadManager.getBranchContext(threadId, userMsgId)
 
 		// Prepare the base timeline
-		const baseTimeline = editRefId ? thread.messages.find(m => m.id === editRefId)?.timeline : undefined;
+		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
 
 		pipeline
-			.register(extraction.ensureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
-			.register(extraction.convertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.extractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
+			.register(extraction.waitForEnsureLowResolution)
+			.register(extraction.waitForConvertToAudio)
+			.register(extraction.waitForExtractRawTranscript)
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.extractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			.register(extraction.extractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
-			.register(extraction.generateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
+			.register(extraction.waitForExtractCorrectedTranscript)
+			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 
-		await pipeline.start({})
+		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
+		try {
+			await pipeline.start({})
+			console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
+		} catch (e) {
+			console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+		}
 	})
 
 	ipcMain.handle('get-temp-dir', () => {
@@ -194,7 +213,14 @@ app.whenReady().then(() => {
 
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
-		return threadManager.createThread(videoPath, videoName)
+		const newThread = threadManager.createThread(videoPath, videoName)
+		backgroundTaskManager.startPreprocessing(newThread.id)
+		return newThread
+	})
+
+	ipcMain.handle('retry-preprocessing', async (_event, threadId) => {
+		await backgroundTaskManager.startPreprocessing(threadId)
+		return true
 	})
 
 	ipcMain.handle('get-all-threads', () => {
@@ -222,14 +248,18 @@ app.whenReady().then(() => {
 		return false
 	})
 
-	ipcMain.handle('add-message', (_event, { threadId, message }) => {
-		return threadManager.addMessageToThread(threadId, message)
+	ipcMain.handle('add-message', async (_event, { threadId, message }) => {
+		return await threadManager.addMessageToThread(threadId, message)
 	})
 
-	ipcMain.handle('remove-message', (_event, { threadId, messageId }) => {
-		return threadManager.removeMessageFromThread(threadId, messageId)
+	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
+		return await threadManager.removeMessageFromThread(threadId, messageId)
 	})
-
+ 
+	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
+		return await threadManager.updateThreadNodePositions(threadId, positions)
+	})
+ 
 	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
 		if (!focusedWindow) return cancelId

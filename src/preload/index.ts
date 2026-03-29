@@ -10,6 +10,14 @@ const api = {
 		ipcRenderer.on('pipeline-update', listener)
 		return () => ipcRenderer.removeListener('pipeline-update', listener)
 	},
+	getBackgroundTasks: (threadId: string) => ipcRenderer.invoke('get-background-tasks', threadId),
+	retryPreprocessing: (threadId: string) => ipcRenderer.invoke('retry-preprocessing', threadId),
+	debugLog: (...args: any[]) => ipcRenderer.invoke('debug-log', ...args),
+	onBackgroundTaskUpdate: (callback: (data: any) => void) => {
+		const listener = (_event: any, data: any) => callback(data)
+		ipcRenderer.on('background-task-update', listener)
+		return () => ipcRenderer.removeListener('background-task-update', listener)
+	},
 	getTempDir: () => ipcRenderer.invoke('get-temp-dir'),
 	setTempDir: () => ipcRenderer.invoke('set-temp-dir'),
 	resetTempDir: () => ipcRenderer.invoke('reset-temp-dir'),
@@ -28,6 +36,8 @@ const api = {
 	deleteAllThreads: () => ipcRenderer.invoke('delete-all-threads'),
 	addMessage: (threadId: string, message: any) =>
 		ipcRenderer.invoke('add-message', { threadId, message }),
+	saveNodePositions: (threadId: string, positions: Record<string, { x: number; y: number }>) =>
+		ipcRenderer.invoke('save-node-positions', { threadId, positions }),
 	removeMessage: (threadId: string, messageId: string) =>
 		ipcRenderer.invoke('remove-message', { threadId, messageId }),
 	showConfirmation: (options: { title: string, message: string, detail?: string, type?: string, buttons?: string[], defaultId?: number, cancelId?: number }) =>
