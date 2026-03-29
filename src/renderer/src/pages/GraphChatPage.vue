@@ -229,6 +229,7 @@ watch(() => videoStore.messages, (messages) => {
           content: msg.content, 
           files: msg.files, 
           timeline: msg.timeline,
+          version: msg.version,
           onSubmit: async (val: string) => {
             const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id)
             if (newMsgId && videoStore.currentThreadId) {

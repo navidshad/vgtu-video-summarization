@@ -2,10 +2,28 @@
   <div class="bg-zinc-900/90 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[280px] max-w-[320px] border border-green-500/20 overflow-hidden flex flex-col group transition-all duration-300 hover:border-green-500/50">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
-    <div class="p-3 flex items-center justify-between border-b border-white/5">
-      <div class="text-[9px] font-black uppercase tracking-widest text-green-400">Result: {{ data.type }}</div>
-      <button @click="handleSave" class="p-1 hover:bg-white/10 rounded transition" title="Save Video">
-          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="p-3 flex items-center justify-between border-b border-white/5 bg-zinc-800/50">
+      <div class="flex items-center space-x-2">
+        <div class="text-[9px] font-black uppercase tracking-widest text-green-400">Result: {{ data.type }}</div>
+        
+        <!-- Version Badge -->
+        <div v-if="data.version" class="px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-[8px] font-bold text-blue-400 uppercase leading-none">
+          V{{ data.version }}
+        </div>
+
+        <!-- File Type Badge -->
+        <div v-if="fileTypeBadge" 
+             class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase leading-none border"
+             :class="[
+               fileTypeBadge === 'actual' ? 'bg-green-500/20 border-green-500/30 text-green-400' : 'bg-amber-500/20 border-amber-500/30 text-amber-400'
+             ]"
+        >
+          {{ fileTypeBadge }}
+        </div>
+      </div>
+
+      <button @click="handleSave" class="p-1 hover:bg-white/10 rounded transition text-zinc-400 hover:text-white" title="Save Video">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </div>
 
@@ -74,6 +92,11 @@ const videoUrl = computed(() => {
   if (!file) return null
   const url = file.url
   return url.startsWith('media://') ? url : `media://${url}`
+})
+
+const fileTypeBadge = computed(() => {
+  const file = props.data.files?.[0]
+  return file ? file.type : null
 })
 
 const togglePlay = () => {
