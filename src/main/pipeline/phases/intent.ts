@@ -1,7 +1,7 @@
 import { PipelineFunction } from '../index'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { IntentResult } from '../../../shared/types'
-import { TranscriptItem, generateSRT } from '../../gemini/utils'
+import { TranscriptItem, formatTranscript } from '../../gemini/utils'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 
@@ -76,7 +76,7 @@ export const determineIntent: PipelineFunction = async (data, context) => {
 	}
 
 	// Include timestamps for better context in intent analysis
-	const rawSrt = generateSRT(transcript);
+	const transcriptText = formatTranscript(transcript);
 
 	// Get video duration from ffmpeg (source of truth)
 	const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
@@ -95,7 +95,7 @@ ${context.baseTimeline.map((s: any) => `• [${s.start} --> ${s.end}] (${s.durat
 ${baseTimelineContext}
 
 START OF TRANSCRIPT (keep in mind as reference):
-${rawSrt}
+${transcriptText}
 END OF TRANSCRIPT
 
 Conversation History:

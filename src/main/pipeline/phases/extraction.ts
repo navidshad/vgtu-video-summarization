@@ -2,7 +2,7 @@ import { PipelineFunction } from '../index'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
-import { extractTranscript, generateSRT } from '../../gemini/utils'
+import { extractTranscript, formatTranscript } from '../../gemini/utils'
 import { SceneDetector, checkScenedetectAvailability } from '../../scenedetect'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
@@ -85,9 +85,9 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 
 	const transcriptJson = fs.readFileSync(rawTranscriptPath, 'utf-8')
 	const rawTranscript = JSON.parse(transcriptJson)
-	const rawSrt = generateSRT(rawTranscript)
+	const rawTranscriptText = formatTranscript(rawTranscript)
 
-	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawSrt)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
