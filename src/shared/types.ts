@@ -48,6 +48,7 @@ export interface Message {
 	cost?: number;
 	version?: number;
 	editRefId?: string;
+	resultType?: 'video' | 'thumbnail' | 'summary';
 	createdAt: number;
 }
 
@@ -99,6 +100,13 @@ export interface Thread {
 		 * Used to enrich the transcript with visual context.
 		 */
 		sceneDescriptionsPath?: string;
+
+		/**
+		 * Path to the unified enriched transcript JSON.
+		 * Merges text transcript with visual scene descriptions.
+		 * Used as a source of truth for both video and thumbnail pipelines.
+		 */
+		enrichedTranscriptPath?: string;
 	}
 	tempDir: string
 	messages: Message[]
@@ -118,7 +126,7 @@ export interface TimelineSegment {
 }
 
 export interface IntentResult {
-	type: 'text' | 'generate-timeline';
+	type: 'text' | 'generate-timeline' | 'generate-thumbnail';
 	content: string; // Brief description or the text answer
 	duration?: number; // Duration in seconds
 }
@@ -135,10 +143,11 @@ export interface ModelPricing {
 		standard: number
 		longContext?: number // Only for Pro
 		threshold?: number   // Only for Pro
+		image?: number       // Only for Image Gen
 	}
 }
 
-export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit'
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail'
 
 export interface ModelSelection {
 	[key: string]: string // operation -> model name

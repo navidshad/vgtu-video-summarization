@@ -96,10 +96,10 @@
             </div>
 
             <div class="space-y-4">
-              <div v-for="(model, op) in modelSettings.selection" :key="op"
+              <div v-for="op in orderedOperations" :key="op"
                 class="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-purple-500/30 transition-colors">
                 <span class="text-sm font-bold text-zinc-700 dark:text-zinc-300 capitalize">{{
-                  String(op).replace('-', ' ') }}</span>
+                  getOpLabel(op) }}</span>
                 <select v-model="modelSettings.selection[op]" @change="handleSaveModelSettings"
                   class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all cursor-pointer font-medium hover:border-purple-500/50">
                   <option v-for="mName in availableModels" :key="mName" :value="mName">{{ mName }}
@@ -139,6 +139,7 @@
                     <th class="pb-4 pr-4 font-bold uppercase tracking-wider text-xs">Model</th>
                     <th class="pb-4 px-4 font-bold uppercase tracking-wider text-xs text-center">Input (Std)</th>
                     <th class="pb-4 px-4 font-bold uppercase tracking-wider text-xs text-center">Output (Std)</th>
+                    <th class="pb-4 px-4 font-bold uppercase tracking-wider text-xs text-center">Output (Image)</th>
                     <th class="pb-4 pl-4 font-bold uppercase tracking-wider text-xs text-center">Input (Audio)</th>
                   </tr>
                 </thead>
@@ -162,6 +163,19 @@
                         <input type="number" step="0.01" v-model.number="pricing.output.standard"
                           @change="handleSaveModelSettings"
                           class="w-20 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-center outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-mono text-xs" />
+                      </div>
+                    </td>
+                    <td class="py-5 px-2">
+                      <div class="flex items-center justify-center">
+                        <template v-if="pricing.output.image !== undefined">
+                          <span class="text-zinc-400 mr-1.5 font-mono">$</span>
+                          <input type="number" step="0.0001" v-model.number="pricing.output.image"
+                            @change="handleSaveModelSettings"
+                            class="w-24 bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1.5 text-center outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all font-mono text-xs" />
+                        </template>
+                        <template v-else>
+                          <span class="text-zinc-400 font-mono opacity-30">—</span>
+                        </template>
                       </div>
                     </td>
                     <td class="py-5 pl-2">
@@ -224,6 +238,10 @@ import { Input } from 'pilotui/form'
 import { useVideoStore } from '../stores/videoStore'
 import PageHeader from '../components/PageHeader.vue'
 import { ModelSettings } from '../../../shared/types'
+// In a real scenario we'd import constants, but we can also use the IPC-returned defaults if we added a method.
+// For now, we'll manually ensure the new model and selection are present if missing.
+const NEW_MODEL = 'gemini-3.1-flash-image-preview'
+const NEW_OP = 'thumbnail'
 
 const router = useRouter()
 const videoStore = useVideoStore()
@@ -235,6 +253,17 @@ const modelSettings = ref<ModelSettings>({
   pricing: {},
   selection: {}
 })
+
+const orderedOperations = computed(() => {
+  const allOps = Object.keys(modelSettings.value.selection)
+  const priority = ['raw-transcript', 'corrected-transcript', 'intent', 'timeline-new', 'timeline-edit', 'thumbnail']
+  return priority.filter(p => allOps.includes(p))
+})
+
+const getOpLabel = (op: string) => {
+  if (op === 'thumbnail') return 'Thumbnail Generation'
+  return String(op).replace('-', ' ')
+}
 
 const availableModels = computed(() => Object.keys(modelSettings.value.pricing))
 
@@ -248,6 +277,19 @@ const fetchSettings = async () => {
 
   const mSettings = await (window as any).api.getModelSettings()
   if (mSettings) {
+    // Failsafe: Ensure new model is in pricing
+    if (!mSettings.pricing[NEW_MODEL]) {
+      mSettings.pricing[NEW_MODEL] = {
+        input: { standard: 0.50 },
+        output: { standard: 3.00, image: 0.0672 }
+      }
+    }
+    // Failsafe: Ensure new operation is in selection
+    if (!mSettings.selection[NEW_OP]) {
+       mSettings.selection[NEW_OP] = NEW_MODEL
+    }
+    
+    // Apply to ref
     modelSettings.value = mSettings
   }
 }

@@ -11,8 +11,9 @@ You are an AI assistant for a video editing tool. Your goal is to understand the
 
 Task:
 You must decide between two types of actions:
-1. "text": Conversational response. Use this for general questions, proposing a summary plan, or asking for final confirmation. This is the DEFAULT and preferred action.
+1. "text": Conversational response. Use this for general questions, proposing a summary plan, proposing a thumbnail idea, or asking for final confirmation. This is the DEFAULT and preferred action.
 2. "generate-timeline": Signal to actually build the video.
+3. "generate-thumbnail": Signal to generate a thumbnail.
 
 Reference Timeline (Edit Mode):
 - If a "REFERENCE TIMELINE" is provided below, it means the user is currently editing an existing summary.
@@ -24,8 +25,15 @@ Confirmation Rules (STRICT ENFORCEMENT):
 - For any of the above, use "text" to describe what you will include in the summary (e.g. "I will create a 30s summary focusing on [X].") and ask: "Shall I proceed with generating this video?".
 - ONLY trigger "generate-timeline" if:
     a) The user gives a direct, unambiguous COMMAND including a duration (e.g., "Generate/Create a 30s video now").
-    b) The user explicitly confirms a proposal you just made (e.g., "Yes", "Go ahead", "Do it", "Proceed").
+    b) The user explicitly confirms a previously proposed VIDEO/SUMMARY idea (e.g., "Yes", "Go ahead", "Do it"). If the conversation history shows your last response was a summary proposal, interpret "Yes/Go ahead" as "generate-timeline".
     c) The user explicitly asks to MODIFY the existing REFERENCE TIMELINE (e.g., "Change the middle part to show X", "Make it longer").
+
+Thumbnail Rules:
+- If the user asks for a thumbnail (e.g., "Make a thumbnail", "Suggest a thumbnail", "How about a thumbnail for this video?"), your FIRST step must be to propose an idea using "type": "text".
+- Propose a specific idea based on the video content (e.g., "I suggest a thumbnail showing the logo reveal at 00:45 with a 'New Product' text. Shall I generate it?").
+- ONLY trigger "generate-thumbnail" if:
+    a) The user explicitly confirms a previously proposed THUMBNAIL idea (e.g., "Yes", "Go ahead", "Do it", "Looks good", "cool", "coll"). If the conversation history shows your last response was a thumbnail proposal, interpret "Yes/Go ahead" as "generate-thumbnail".
+    b) The user gives a direct, unambiguous COMMAND for a specific thumbnail (e.g., "Generate a thumbnail with a blue background and text 'Hello'").
 - If the user asks "Tell me about the video", provide a detailed text description in the chat and do NOT trigger generation.
 
 Behavioral Guidelines:
@@ -35,20 +43,21 @@ Behavioral Guidelines:
 
 Respond ONLY with a JSON object following this schema:
 {
-  "type": "text" | "generate-timeline",
-  "content": "A detailed description of what to generate (if generate-timeline) OR the final text answer (if text)",
+  "type": "text" | "generate-timeline" | "generate-thumbnail",
+  "content": "A detailed idea/prompt for the thumbnail (if generate-thumbnail) OR a description for timeline builder (if generate-timeline) OR the final text answer (if text)",
   "duration": number (only if type is "generate-timeline")
 }
 
 Specific rules for 'content' field:
 - If type is 'text': This is the message shown directly to the user.
-- If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent. It should include all user preferences, specific moments mentioned, style constraints, and context from previous iterations.
-- CRITICAL: When editing an existing timeline, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user.`
+- If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent.
+- If type is 'generate-thumbnail': This is a COMPREHENSIVE and DETAILED technical description for the thumbnail generator. Include visual elements, frames to extract (YOU MUST list specific timestamps in [HH:MM:SS] format for at least 2-3 relevant scenes), and any overlay text.
+- CRITICAL: When editing an existing timeline or thumbnail, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user. 'content' for 'generate-thumbnail' MUST be technical and precise.`
 
 const INTENT_SCHEMA = {
 	type: 'object',
 	properties: {
-		type: { type: 'string', enum: ['text', 'generate-timeline'] },
+		type: { type: 'string', enum: ['text', 'generate-timeline', 'generate-thumbnail'] },
 		content: { type: 'string' },
 		duration: { type: 'number' }
 	},
@@ -111,6 +120,9 @@ END OF CONVERSATION HISTORY
 
 		if (result.type === 'text') {
 			context.finish(result.content)
+		} else if (result.type === 'generate-thumbnail') {
+			context.updateStatus(`Intent recognized: Preparing thumbnail: ${result.content.substring(0, 50)}...`)
+			context.next(data)
 		} else {
 			context.updateStatus(`Intent recognized: Generating a ${result.duration}s video...`)
 			context.next(data)

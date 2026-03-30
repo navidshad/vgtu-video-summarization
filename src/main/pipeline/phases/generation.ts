@@ -8,7 +8,7 @@ import { TranscriptItem } from 'src/main/gemini/utils'
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Preparing for timeline generation...')
 
-  const transcriptPath = context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
+  const transcriptPath = context.preprocessing?.enrichedTranscriptPath || context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
     throw new Error('Transcript file not found. Cannot generate timeline.')
   }
@@ -16,20 +16,15 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   const transcriptJson = fs.readFileSync(transcriptPath, 'utf-8')
   let transcript = JSON.parse(transcriptJson) as TranscriptItem[]
 
-  // Enrich with scenes if available
-  if (context.preprocessing.sceneDescriptionsPath && fs.existsSync(context.preprocessing.sceneDescriptionsPath)) {
+  // Only run enrichment if it wasn't pre-enriched
+  if (!context.preprocessing.enrichedTranscriptPath && context.preprocessing.sceneDescriptionsPath && fs.existsSync(context.preprocessing.sceneDescriptionsPath)) {
     try {
       const scenesJson = fs.readFileSync(context.preprocessing.sceneDescriptionsPath, 'utf-8')
       const sceneDescriptions: SceneDescription[] = JSON.parse(scenesJson)
-
-      // We need total duration to close the last gap
-      // Ideally we get it from context or ffmpeg, but for now we can infer or use a large number
-      // Actually we can get it from ffmpegAdapter if we want, or just rely on the last timestamp of transcript
-      // Let's try to get it from metadata if possible, or just use the last transcript end time + gap
-      const videoDuration = await ffmpegAdapter.getVideoDuration(context.preprocessing.audioPath!)
+      const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
 
       transcript = enrichTranscriptWithScenes(transcript, sceneDescriptions, videoDuration)
-      context.updateStatus(`Enriched transcript with visual scene data.`)
+      context.updateStatus(`Enriched transcript with visual scene data (on-demand).`)
     } catch (e) {
       console.warn("Failed to enrich transcript:", e)
     }

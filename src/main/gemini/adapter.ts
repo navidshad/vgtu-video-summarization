@@ -12,7 +12,7 @@ export class GeminiAdapter {
 	constructor(apiKey: string) {
 		this.client = new GoogleGenAI({
 			apiKey,
-			apiVersion: 'v1alpha' // Using v1alpha for latest features like thinking
+			apiVersion: 'v1beta' // required for gemini-3.1-flash-image-preview
 		});
 	}
 
@@ -306,6 +306,103 @@ export class GeminiAdapter {
 	}
 
 	/**
+	 * MOCK: Generates an image based on a prompt.
+	 * In a real scenario, this would call the Imagen/Gemini V6 API.
+	 */
+	async generateImage(
+		modelName: string,
+		prompt: string,
+		outputPath: string,
+		imagePaths: string[] = []
+	): Promise<{ path: string, record: UsageRecord }> {
+		try {
+			// Prepare parts: Image parts FIRST, then text prompt
+			const parts: any[] = []
+			
+			for (const imgPath of imagePaths) {
+				if (fs.existsSync(imgPath)) {
+					const data = fs.readFileSync(imgPath).toString('base64')
+					parts.push({
+						inlineData: {
+							data,
+							mimeType: 'image/jpeg'
+						}
+					})
+				}
+			}
+			
+			parts.push({ text: prompt })
+
+			// For gemini-3.1-flash-image-preview, we use generateContent
+			const response = await this.client.models.generateContent({
+				model: modelName,
+				contents: [{ role: 'user', parts }]
+			});
+
+			if (!response.candidates || response.candidates.length === 0) {
+				throw new Error('No candidates returned from the model.');
+			}
+
+			// Extract the image from candidates (inlineData part)
+			let base64Data: string | undefined;
+			for (const part of response.candidates[0].content?.parts || []) {
+				if (part.inlineData) {
+					base64Data = part.inlineData.data;
+					break;
+				}
+			}
+
+			if (!base64Data) {
+				// Fallback: check if it's in the text part (not expected for this model but good for safety)
+				const text = response.candidates[0].content?.parts?.[0]?.text;
+				if (text) {
+					throw new Error(`Model returned text instead of an image: ${text.substring(0, 100)}...`);
+				}
+				throw new Error('No image data found in the model response.');
+			}
+
+			const buffer = Buffer.from(base64Data, 'base64');
+
+			// Save to specified path
+			fs.writeFileSync(outputPath, buffer);
+
+			// Calculate cost
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage);
+
+			return {
+				path: outputPath,
+				record: { usage, cost }
+			};
+		} catch (error: any) {
+			console.error('Gemini image generation failed:', error);
+			// ... existing error parsing logic ...
+			let message = 'Image generation failed.';
+
+			// Try to extract a clean message from common error formats
+			let rawError = error.message;
+			if (typeof rawError === 'string' && rawError.startsWith('{')) {
+				try {
+					const parsed = JSON.parse(rawError);
+					if (parsed.error && parsed.error.message) {
+						rawError = parsed.error.message;
+					} else if (parsed.message) {
+						rawError = parsed.message;
+					}
+				} catch (e) { /* ignore parse error */ }
+			}
+
+			if (error.status === 'NOT_FOUND' || (rawError && rawError.toLowerCase().includes('not found'))) {
+				message = `Model '${modelName}' not found. Please verify your Imagen model settings. Note: 'gemini-3.1-flash-image-preview' is recommended for Gemini 3.`;
+			} else if (rawError) {
+				message = `Gemini Error: ${rawError}`;
+			}
+
+			throw new Error(message);
+		}
+	}
+
+	/**
 	 * Calculates the cost of a request based on usage and model.
 	 * @param audioDuration Duration of audio in seconds if multimodal call.
 	 */
@@ -346,6 +443,11 @@ export class GeminiAdapter {
 			// Output price applies to both candidates and thinking tokens
 			const totalOutputTokens = usage.candidatesTokens + (usage.thinkingTokens || 0);
 			outputCost = (totalOutputTokens / 1000000) * pricing.output.standard;
+
+			// Handle per-image cost if applicable
+			if (pricing.output.image) {
+				outputCost += pricing.output.image; // Assuming 1 image per call for now
+			}
 		}
 
 		return inputCost + outputCost;

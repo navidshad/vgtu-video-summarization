@@ -2,6 +2,31 @@
   <div class="bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[320px] max-w-[420px] border border-white/20 dark:border-zinc-700/50 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
+    <!-- Header with Actions -->
+    <div class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+        <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
+      </div>
+      <div class="flex items-center space-x-1">
+        <button 
+          v-if="!showInput && !data.hasInputInitially" 
+          @click="showInput = true" 
+          class="p-1 hover:bg-blue-500/10 rounded-md text-zinc-400 hover:text-blue-500 transition-colors"
+          title="Branch from this node"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        </button>
+        <button 
+          @click="data.onDelete" 
+          class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors"
+          title="Delete node and branches"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Messages List (Self-expanding height, Draggable) -->
     <div class="p-4 space-y-4 nowheel">
       <div v-for="msg in data.messages" :key="msg.id" 
@@ -58,11 +83,11 @@
     </div>
 
     <!-- Integrated Input -->
-    <div v-if="data.hasInput" class="p-3 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/5">
+    <div v-if="data.hasInputInitially || showInput" class="p-3 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/5 animate-in slide-in-from-top-1 duration-200">
       <div class="flex items-end space-x-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-inner focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
         <textarea 
           v-model="input"
-          placeholder="Ask a follow-up..."
+          :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'"
           class="flex-1 bg-transparent border-none text-sm focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden"
           rows="1"
           @keydown.enter.prevent="submit"
@@ -92,6 +117,7 @@ import { renderMarkdown } from '../../utils/markdown'
 const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
 const input = ref('')
+const showInput = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 const adjustTextarea = () => {
@@ -105,6 +131,7 @@ const submit = () => {
   if (input.value.trim() && props.data.onSubmit) {
     props.data.onSubmit(input.value)
     input.value = ''
+    showInput.value = false
     setTimeout(() => adjustTextarea(), 0)
   }
 }

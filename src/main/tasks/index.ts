@@ -4,6 +4,11 @@ import { threadManager } from '../threads'
 import { BackgroundTask, BackgroundTaskState, Thread } from '../../shared/types'
 import { PipelineContext } from '../pipeline'
 import * as extraction from '../pipeline/phases/extraction'
+import { enrichTranscriptWithScenes, SceneDescription } from '../timeline/enrichment'
+import { TranscriptItem } from '../gemini/utils'
+import * as ffmpegAdapter from '../ffmpeg'
+import fs from 'fs'
+import path from 'path'
 
 class BackgroundTaskManager extends EventEmitter {
 	private runningTasks = new Set<string>()
@@ -215,6 +220,40 @@ class BackgroundTaskManager extends EventEmitter {
 		// Start both chains concurrently
 		processingChain()
 		visualChain()
+
+		// Chain 3: Enrichment (Wait for BOTH)
+		const enrichmentChain = async () => {
+			await Promise.all([
+				this.waitForTask(threadId, 'correctedTranscript').catch(() => { }),
+				this.waitForTask(threadId, 'sceneDescriptions').catch(() => { })
+			])
+
+			const currentThread = threadManager.getThread(threadId)
+			if (!currentThread) return
+
+			if (!currentThread.preprocessing.enrichedTranscriptPath) {
+				await run('enrichment', 'Unifying Visuals & Text', async (ctx) => {
+					const transcriptPath = ctx.preprocessing.correctedTranscriptPath || ctx.preprocessing.rawTranscriptPath
+					const scenesPath = ctx.preprocessing.sceneDescriptionsPath
+
+					if (transcriptPath && scenesPath && fs.existsSync(transcriptPath) && fs.existsSync(scenesPath)) {
+						const transcript = JSON.parse(fs.readFileSync(transcriptPath, 'utf-8')) as TranscriptItem[]
+						const scenes = JSON.parse(fs.readFileSync(scenesPath, 'utf-8')) as SceneDescription[]
+						const duration = await ffmpegAdapter.getVideoDuration(ctx.videoPath)
+
+						const enriched = enrichTranscriptWithScenes(transcript, scenes, duration)
+						const enrichedPath = path.join(ctx.tempDir, 'enriched_transcript.json')
+						fs.writeFileSync(enrichedPath, JSON.stringify(enriched, null, 2))
+
+						await ctx.savePreprocessing({ enrichedTranscriptPath: enrichedPath })
+					}
+				})
+			} else {
+				await this.updateTask(threadId, 'enrichment', { name: 'Unifying Visuals & Text', state: 'completed' })
+			}
+		}
+
+		enrichmentChain()
 	}
 }
 

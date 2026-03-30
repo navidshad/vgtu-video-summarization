@@ -10,6 +10,7 @@ import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
+import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
@@ -151,9 +152,10 @@ app.whenReady().then(() => {
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
 			.register(extraction.waitForExtractCorrectedTranscript)
 			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
+			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 
 		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
 		try {
@@ -253,7 +255,7 @@ app.whenReady().then(() => {
 	})
 
 	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
-		return await threadManager.removeMessageFromThread(threadId, messageId)
+		return await threadManager.removeMessageBranchFromThread(threadId, messageId)
 	})
  
 	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {

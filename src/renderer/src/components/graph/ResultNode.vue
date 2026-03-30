@@ -4,7 +4,9 @@
     
     <div class="p-3 flex items-center justify-between border-b border-white/5 bg-zinc-800/50">
       <div class="flex items-center space-x-2">
-        <div class="text-[9px] font-black uppercase tracking-widest text-green-400">Result: {{ data.type }}</div>
+        <div class="text-[9px] font-black uppercase tracking-widest" :class="data.type === 'thumbnail' ? 'text-blue-400' : 'text-green-400'">
+          Result: {{ data.type }}
+        </div>
         
         <!-- Version Badge -->
         <div v-if="data.version" class="px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-[8px] font-bold text-blue-400 uppercase leading-none">
@@ -22,9 +24,14 @@
         </div>
       </div>
 
-      <button @click="handleSave" class="p-1 hover:bg-white/10 rounded transition text-zinc-400 hover:text-white" title="Save Video">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
+      <div class="flex items-center space-x-1">
+        <button @click="handleSave" class="p-1 hover:bg-white/10 rounded transition text-zinc-400 hover:text-white" title="Save Video">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button @click="data.onDelete" class="p-1 hover:bg-red-500/20 rounded transition text-zinc-400 hover:text-red-500" title="Delete node and branches">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Summary Type -->
@@ -39,6 +46,32 @@
       <div v-for="(img, idx) in data.images" :key="idx" class="flex-1 aspect-square bg-zinc-800 rounded-lg overflow-hidden border border-white/5 shadow-inner">
         <img :src="img" class="w-full h-full object-cover hover:scale-110 transition duration-500" />
       </div>
+    </div>
+
+    <!-- Thumbnail Type -->
+    <div v-else-if="files && files.length > 0 && (data.type === 'thumbnail' || data.type === 'generate-thumbnail')" class="flex flex-col">
+       <!-- Main Thumbnail -->
+       <div class="relative aspect-video bg-zinc-900 border-b border-white/5">
+         <img :src="mediaUrl(files[0].url)" class="w-full h-full object-contain" />
+         <div class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md border border-white/10 text-[8px] font-bold text-white uppercase">
+            Final Thumbnail
+         </div>
+       </div>
+       
+       <!-- Source Materials (Reference Frames) -->
+       <div v-if="files.length > 1" class="p-2 bg-zinc-800/30">
+         <div class="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter mb-1.5">Source Materials</div>
+         <div class="flex gap-1 overflow-x-auto custom-scrollbar pb-1">
+           <div v-for="(file, idx) in files.slice(1)" :key="idx" class="flex-shrink-0 w-16 aspect-video bg-black rounded border border-white/5 overflow-hidden">
+             <img :src="mediaUrl(file.url)" class="w-full h-full object-cover opacity-60 hover:opacity-100 transition" />
+           </div>
+         </div>
+       </div>
+
+       <!-- Prompt/Description -->
+       <div class="p-3 text-[10px] text-zinc-400 italic leading-snug border-t border-white/5">
+         "{{ data.content }}"
+       </div>
     </div>
 
     <!-- Video Type (Compact Player) -->
@@ -90,15 +123,21 @@ const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const input = ref('')
 
-const videoUrl = computed(() => {
-  const file = props.data.files?.[0]
-  if (!file) return null
-  const url = file.url
+const files = computed(() => props.data.files || [])
+
+const mediaUrl = (url: string) => {
+  if (!url) return ''
   return url.startsWith('media://') ? url : `media://${url}`
+}
+
+const videoUrl = computed(() => {
+  const file = files.value.find((f: any) => f.type === 'actual' || f.type === 'preview')
+  if (!file || props.data.type === 'summary' || props.data.type === 'cover') return undefined
+  return mediaUrl(file.url)
 })
 
 const fileTypeBadge = computed(() => {
-  const file = props.data.files?.[0]
+  const file = files.value[0]
   return file ? file.type : null
 })
 
