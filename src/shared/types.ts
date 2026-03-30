@@ -125,6 +125,11 @@ export interface TimelineSegment {
 	duration: number
 }
 
+export interface EnrichedTimelineSegment extends TimelineSegment {
+	visual: string
+}
+
+
 export interface IntentResult {
 	type: 'text' | 'generate-timeline' | 'generate-thumbnail';
 	content: string; // Brief description or the text answer

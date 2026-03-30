@@ -4,7 +4,8 @@ import { threadManager } from '../../threads'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
-import { FileType, MessageRole } from '../../../shared/types'
+import { FileType, MessageRole, EnrichedTimelineSegment } from '../../../shared/types'
+
 
 export const generateThumbnail: PipelineFunction = async (data, context) => {
 	context.updateStatus('Preparing to generate thumbnail...')
@@ -52,8 +53,9 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 		let segments: any[] = []
 		if (transcriptPath && fs.existsSync(transcriptPath)) {
 			try {
-				segments = JSON.parse(fs.readFileSync(transcriptPath, 'utf-8'))
+				segments = JSON.parse(fs.readFileSync(transcriptPath, 'utf-8')) as EnrichedTimelineSegment[]
 			} catch (e) {
+
 				console.warn('Failed to parse transcript for thumbnail scene selection:', e)
 			}
 		}
@@ -67,7 +69,8 @@ Below is a list of segments from the video with their visual/text descriptions.
 Select 3-5 specific moments (timestamps) that are most visually interesting or representative of this request.
 
 Video Segments:
-${JSON.stringify(segments.slice(0, 100).map(s => ({ start: s.start, end: s.end, description: s.description || s.text })), null, 2)}
+${JSON.stringify(segments.slice(0, 100).map(s => ({ start: s.start, end: s.end, description: s.visual || s.text })), null, 2)}
+
 
 Respond with a JSON object containing a 'selectedScenes' array of objects with 'timestamp' (HH:MM:SS) and 'reason'.
 `

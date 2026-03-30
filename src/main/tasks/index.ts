@@ -123,8 +123,13 @@ class BackgroundTaskManager extends EventEmitter {
 			},
 			waitForTask: async () => { },
 			next: () => { },
-			finish: async () => { }
+			finish: async () => { },
+			fail: async (error: string) => {
+				console.error(`[BG ${taskId}] Task failed: ${error}`)
+				this.updateTask(threadId, taskId, { state: 'error', error })
+			}
 		}
+
 	}
 
 	private async runTask(threadId: string, taskId: string, name: string, fn: (context: PipelineContext) => Promise<void>) {
@@ -242,6 +247,7 @@ class BackgroundTaskManager extends EventEmitter {
 						const duration = await ffmpegAdapter.getVideoDuration(ctx.videoPath)
 
 						const enriched = enrichTranscriptWithScenes(transcript, scenes, duration)
+
 						const enrichedPath = path.join(ctx.tempDir, 'enriched_transcript.json')
 						fs.writeFileSync(enrichedPath, JSON.stringify(enriched, null, 2))
 
