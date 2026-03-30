@@ -1,7 +1,8 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
 import fs from 'fs'
-import { TranscriptItem } from 'src/main/gemini/utils'
+import { EnrichedTimelineSegment } from '../../../shared/types'
+
 
 export const waitForEnrichTranscript: PipelineFunction = async (data, context) => {
   console.log(`[GENERATION PHASE] Entering waitForEnrichTranscript`)
@@ -21,7 +22,8 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   }
 
   const transcriptJson = fs.readFileSync(transcriptPath, 'utf-8')
-  const transcript = JSON.parse(transcriptJson) as TranscriptItem[]
+  const transcript = JSON.parse(transcriptJson) as EnrichedTimelineSegment[]
+
 
   const userExpectation = context.intentResult?.content || context.context || "Create a highlight reel."
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
