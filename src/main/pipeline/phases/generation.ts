@@ -1,34 +1,27 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
-import { enrichTranscriptWithScenes, SceneDescription } from '../../timeline/enrichment'
-import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import { TranscriptItem } from 'src/main/gemini/utils'
+
+export const waitForEnrichTranscript: PipelineFunction = async (data, context) => {
+  console.log(`[GENERATION PHASE] Entering waitForEnrichTranscript`)
+  await context.updateStatus('Waiting for visual and text unification...')
+  await context.waitForTask('enrichment')
+  console.log(`[GENERATION PHASE] Leaving waitForEnrichTranscript`)
+  context.next(data)
+}
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Preparing for timeline generation...')
 
   const transcriptPath = context.preprocessing?.enrichedTranscriptPath || context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
+  
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
     throw new Error('Transcript file not found. Cannot generate timeline.')
   }
 
   const transcriptJson = fs.readFileSync(transcriptPath, 'utf-8')
-  let transcript = JSON.parse(transcriptJson) as TranscriptItem[]
-
-  // Only run enrichment if it wasn't pre-enriched
-  if (!context.preprocessing.enrichedTranscriptPath && context.preprocessing.sceneDescriptionsPath && fs.existsSync(context.preprocessing.sceneDescriptionsPath)) {
-    try {
-      const scenesJson = fs.readFileSync(context.preprocessing.sceneDescriptionsPath, 'utf-8')
-      const sceneDescriptions: SceneDescription[] = JSON.parse(scenesJson)
-      const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
-
-      transcript = enrichTranscriptWithScenes(transcript, sceneDescriptions, videoDuration)
-      context.updateStatus(`Enriched transcript with visual scene data (on-demand).`)
-    } catch (e) {
-      console.warn("Failed to enrich transcript:", e)
-    }
-  }
+  const transcript = JSON.parse(transcriptJson) as TranscriptItem[]
 
   const userExpectation = context.intentResult?.content || context.context || "Create a highlight reel."
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds

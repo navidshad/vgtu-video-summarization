@@ -153,6 +153,7 @@ app.whenReady().then(() => {
 			.register(extraction.waitForExtractCorrectedTranscript)
 			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(generation.waitForEnrichTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
