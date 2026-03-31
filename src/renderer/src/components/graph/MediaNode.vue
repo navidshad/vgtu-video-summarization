@@ -9,27 +9,70 @@
         ref="videoRef"
         :src="videoUrl" 
         class="w-full h-full object-cover opacity-60 group-hover/player:opacity-100 transition-opacity"
-        muted
-        loop
-        @mouseenter="playPreview"
-        @mouseleave="pausePreview"
+        @click="togglePlay"
       ></video>
+      <div v-if="!isPlaying && videoUrl" @click="togglePlay" class="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer hover:bg-black/20 transition z-10">
+        <div class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl group-hover/player:scale-110 transition duration-300">
+           <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+      </div>
       <div v-else class="w-full h-full flex items-center justify-center text-zinc-700">
         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
       </div>
       
       <!-- Full Screen Toggle Overlay -->
-      <button 
-        v-if="videoUrl"
-        @click="isFullScreen = true" 
-        class="absolute top-2 right-2 p-1.5 bg-black/50 backdrop-blur-md rounded-lg opacity-0 group-hover/player:opacity-100 transition-opacity hover:bg-black/80"
-      >
-        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-      </button>
+      <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/player:opacity-100 transition-opacity">
+        <button 
+          v-if="videoUrl"
+          @click="isFullScreen = true" 
+          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
+          title="Full Screen"
+        >
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+        </button>
+        <button 
+          @click="showDetails = !showDetails" 
+          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
+          :class="{'text-blue-400': showDetails}"
+          title="Toggle Metadata"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </button>
+      </div>
 
       <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
         <div class="text-xs font-bold text-white truncate">{{ data.filename || 'Original Video' }}</div>
         <div class="text-[9px] text-zinc-400 uppercase tracking-widest font-black mt-0.5">Source Media</div>
+      </div>
+    </div>
+
+    <!-- Metadata Details Section -->
+    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-2 animate-in slide-in-from-top duration-300">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Resolution</span>
+          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Duration</span>
+          <span class="text-[11px] text-zinc-200 font-mono">{{ formatDuration(metadata?.duration) }}</span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Frame Rate</span>
+          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">File Size</span>
+          <span class="text-[11px] text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Format</span>
+          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Codec</span>
+          <span class="text-[11px] text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
+        </div>
       </div>
     </div>
 
@@ -90,7 +133,11 @@ const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
 const input = ref('')
 const isFullScreen = ref(false)
+const isPlaying = ref(false)
+const showDetails = ref(false)
 const videoRef = ref<HTMLVideoElement | null>(null)
+
+const metadata = computed(() => videoStore.currentThread?.videoMetadata)
 
 const videoUrl = computed(() => {
   const path = props.data.videoPath
@@ -103,14 +150,38 @@ const activeTasks = computed(() => {
     .filter(t => t.state === 'running' || t.state === 'pending')
 })
 
-const playPreview = () => videoRef.value?.play()
-const pausePreview = () => videoRef.value?.pause()
+const togglePlay = () => {
+  if (!videoRef.value) return
+  if (videoRef.value.paused) {
+    videoRef.value.play()
+    isPlaying.value = true
+  } else {
+    videoRef.value.pause()
+    isPlaying.value = false
+  }
+}
 
 const submit = () => {
   if (input.value.trim() && props.data.onSubmit) {
     props.data.onSubmit(input.value)
     input.value = ''
   }
+}
+
+const formatDuration = (seconds?: number) => {
+  if (!seconds) return '00:00'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return '0 MB'
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`
+  return `${mb.toFixed(1)} MB`
 }
 </script>
 

@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import { FileType, Thread, Message } from '../../shared/types'
+import { FileType, Thread, Message, EnrichedTimelineSegment } from '../../shared/types'
 
 export type PipelineFunction = (data: any, context: PipelineContext) => Promise<void> | void;
 
@@ -8,7 +8,7 @@ import { threadManager } from '../threads'
 export interface PipelineContext {
 	updateStatus: (status: string) => Promise<void>;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number; shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => Promise<void>;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number; shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => Promise<void>;
 	fail: (error: string) => Promise<void>;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => Promise<void>;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => Promise<void>;
@@ -18,7 +18,7 @@ export interface PipelineContext {
 	tempDir: string;
 	preprocessing: Thread['preprocessing'];
 	messageId: string;
-	baseTimeline?: any; // The timeline to based this generation on
+	baseTimeline?: EnrichedTimelineSegment[]; // The timeline to based this generation on
 	context: string;   // Full conversation history as text
 	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
@@ -34,11 +34,11 @@ export class Pipeline {
 	private threadId: string
 	private context: string
 	private editRefId?: string
-	private baseTimeline?: any
+	private baseTimeline?: EnrichedTimelineSegment[]
 	private intentResult?: import('../../shared/types').IntentResult
 	private isFinished: boolean = false
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: any, editRefId?: string) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
@@ -147,7 +147,7 @@ export class Pipeline {
 				this.currentStepIndex++
 				this.runStep(nextData)
 			},
-			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: any, options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => {
+			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => {
 				console.log(`[PIPELINE CONTEXT] context.finish() called. Setting isFinished.`)
 				if (this.isFinished) return
 				this.isFinished = true

@@ -3,8 +3,9 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message, Thread, Usage, UsageRecord } from '@shared/types'
+import type { Message, Thread, Usage, UsageRecord, VideoMetadata } from '@shared/types'
 import { settingsManager } from '../settings'
+import { getVideoMetadata } from '../ffmpeg'
 
 // Re-export needed types for consumers (if any, though shared is better)
 export { MessageRole, FileType }
@@ -45,8 +46,16 @@ class ThreadManager {
 	}
 
 	// Create a new thread
-	createThread(videoPath: string, videoName: string): Thread {
+	async createThread(videoPath: string, videoName: string): Promise<Thread> {
 		const id = uuidv4()
+		
+		let videoMetadata: VideoMetadata | undefined
+		try {
+			videoMetadata = await getVideoMetadata(videoPath)
+		} catch (error) {
+			console.error(`Failed to extract metadata for ${videoPath}:`, error)
+		}
+
 		const thread: Thread = {
 			id,
 			title: videoName,
@@ -55,6 +64,7 @@ class ThreadManager {
 			tempDir: settingsManager.getThreadTempDir(id),
 			messages: [],
 			versionCounter: 0,
+			videoMetadata,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
