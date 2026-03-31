@@ -6,7 +6,7 @@
     <div class="relative aspect-video bg-black overflow-hidden group/player">
       <!-- Controls Overlay (Hover) -->
       <div class="absolute top-2 right-2 flex flex-col gap-2 z-20 opacity-0 group-hover/player:opacity-100 transition-opacity">
-        <button v-if="videoUrl" @click="isFullScreen = true" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Full Screen Play">
+        <button v-if="mediaContentUrl" @click="isFullScreen = true" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Full Screen View">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
         </button>
         <button @click="showDetails = !showDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}" title="Toggle Details">
@@ -63,10 +63,10 @@
       </div>
 
       <!-- Video Content -->
-      <div v-else-if="data.type === 'video'" class="w-full h-full relative">
+      <div v-else-if="isVideo" class="w-full h-full relative">
         <video 
           ref="videoRef"
-          :src="videoUrl" 
+          :src="mediaContentUrl" 
           class="w-full h-full object-contain opacity-60 group-hover/player:opacity-100 transition-opacity"
           @click="togglePlay"
         ></video>
@@ -127,8 +127,9 @@
         <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        <video v-if="videoUrl" :src="videoUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>
-        <div class="mt-6 text-xl font-bold text-white opacity-80 italic tracking-tight">Result: {{ data.type }} (V{{ data.version || 1 }})</div>
+        <video v-if="isFullScreen && isVideo" :src="mediaContentUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>
+        <img v-else-if="isFullScreen && isImage" :src="mediaContentUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20 object-contain" />
+        <div class="mt-6 text-xl font-bold text-white opacity-80 italic tracking-tight">Result: {{ props.data.type }} (V{{ props.data.version || 1 }})</div>
       </div>
     </Teleport>
 
@@ -155,11 +156,14 @@ const mediaUrl = (url: string) => {
   return url.startsWith('media://') ? url : `media://${url}`
 }
 
-const videoUrl = computed(() => {
+const mediaContentUrl = computed(() => {
   const file = files.value.find((f: any) => f.type === 'actual' || f.type === 'preview')
   if (!file || props.data.type === 'summary' || props.data.type === 'cover') return undefined
   return mediaUrl(file.url)
 })
+
+const isVideo = computed(() => props.data.type === 'video')
+const isImage = computed(() => props.data.type === 'thumbnail' || props.data.type === 'generate-thumbnail')
 
 const fileTypeBadge = computed(() => {
   const file = files.value[0]
