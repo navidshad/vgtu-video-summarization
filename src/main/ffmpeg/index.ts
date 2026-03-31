@@ -89,6 +89,41 @@ export async function getVideoDuration(filePath: string): Promise<number> {
 }
 
 /**
+ * Gets comprehensive metadata for a video file.
+ */
+export async function getVideoMetadata(filePath: string): Promise<import('../../shared/types').VideoMetadata> {
+	return new Promise((resolve, reject) => {
+		ffmpeg.ffprobe(filePath, (err, metadata) => {
+			if (err) return reject(err)
+			const videoStream = metadata.streams.find((s) => s.codec_type === 'video')
+			const audioStream = metadata.streams.find((s) => s.codec_type === 'audio')
+			
+			if (!videoStream) {
+				return reject(new Error('No video stream found'))
+			}
+
+			// Parse FPS
+			let fps = 0
+			if (videoStream.r_frame_rate) {
+				const [num, den] = videoStream.r_frame_rate.split('/').map(Number)
+				fps = num / den
+			}
+
+			resolve({
+				duration: metadata.format.duration || 0,
+				width: videoStream.width || 0,
+				height: videoStream.height || 0,
+				size: metadata.format.size || 0,
+				codec: videoStream.codec_name || 'unknown',
+				fps: Math.round(fps * 100) / 100,
+				format: metadata.format.format_name || 'unknown',
+				hasAudio: !!audioStream
+			})
+		})
+	})
+}
+
+/**
  * Returns true if the video resolution is 480p or lower.
  */
 export async function isVideoLowResolution(filePath: string): Promise<boolean> {

@@ -12,6 +12,17 @@ export enum FileType {
 
 export type BackgroundTaskState = 'pending' | 'running' | 'completed' | 'error'
 
+export interface VideoMetadata {
+	duration: number
+	width: number
+	height: number
+	size: number
+	codec: string
+	fps: number
+	format: string
+    hasAudio: boolean
+}
+
 export interface BackgroundTask {
 	id: string
 	name: string
@@ -113,6 +124,7 @@ export interface Thread {
 	backgroundTasks?: Record<string, BackgroundTask>
 	nodePositions?: Record<string, { x: number; y: number }>
 	versionCounter?: number
+	videoMetadata?: VideoMetadata
 	createdAt: number
 	updatedAt: number
 }

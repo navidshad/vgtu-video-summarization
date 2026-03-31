@@ -1,12 +1,24 @@
 <template>
   <div class="h-full w-full flex flex-col relative bg-zinc-50 dark:bg-zinc-950">
-    <div class="px-5 py-3 z-10 w-full flex items-center gap-4 bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
-      <button @click="router.push('/home')" class="flex items-center justify-center w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition text-zinc-600 dark:text-zinc-300 flex-shrink-0">
-        <svg class="w-4 h-4 ml-[-2px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
-      </button>
-      <h1 class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight">
-        {{ videoStore.currentVideoName || 'Graph Task Manager' }}
-      </h1>
+    <div class="px-5 py-3 z-10 w-full flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
+      <div class="flex items-center gap-4">
+        <button @click="router.push('/home')" class="flex items-center justify-center w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition text-zinc-600 dark:text-zinc-300 flex-shrink-0">
+          <svg class="w-4 h-4 ml-[-2px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <h1 class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight">
+          {{ videoStore.currentVideoName || 'Graph Task Manager' }}
+        </h1>
+      </div>
+
+      <div v-if="totalCost > 0" class="flex items-center px-3 py-1.5 bg-zinc-100 dark:bg-zinc-900/50 rounded-xl border border-zinc-200 dark:border-zinc-800/50 transition-all hover:border-green-500/30 group">
+        <div class="flex flex-col items-end">
+           <span class="text-[9px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-green-500 transition-colors">Project Cost</span>
+           <span class="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 italic transition-transform group-hover:scale-105">${{ totalCost.toFixed(4) }}</span>
+        </div>
+        <div class="ml-3 p-1.5 bg-green-500/10 rounded-lg">
+          <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+      </div>
     </div>
     
     <div class="flex-1 w-full relative">
@@ -41,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, computed } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -68,6 +80,10 @@ const videoStore = useVideoStore()
 const { fitView } = useVueFlow()
 const route = useRoute()
 const router = useRouter()
+
+const totalCost = computed(() => {
+  return videoStore.messages.reduce((acc, msg) => acc + (msg.cost || 0), 0)
+})
 
 const onPaneReady = () => {
   fitView()
@@ -245,6 +261,7 @@ watch(() => videoStore.messages, (messages) => {
           files: msg.files, 
           timeline: msg.timeline,
           version: msg.version,
+          cost: msg.cost,
           onDelete: async () => {
              const confirmed = await (window as any).api.showConfirmation({
                title: 'Delete Node',
