@@ -3,9 +3,6 @@
     <div
       class="h-screen w-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 transition-colors duration-700 relative selection:bg-primary/20">
       
-      <!-- Ambient Backgrounds -->
-      <div class="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-[120px] pointer-events-none transition-colors duration-700"></div>
-      <div class="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-[120px] pointer-events-none transition-colors duration-700"></div>
 
       <!-- Theme Toggle (Temporary for testing) -->
       <div class="absolute top-4 right-4 z-50 flex space-x-2">

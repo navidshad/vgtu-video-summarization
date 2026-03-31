@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-zinc-900/90 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[280px] max-w-[320px] border border-white/10 overflow-hidden flex flex-col group transition-all duration-300 hover:border-green-500/50">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Media Container with Overlays -->
@@ -25,17 +25,17 @@
         <div class="flex items-center gap-2 mb-0.5">
            <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: {{ versionedTitle }}</div>
            <!-- Version Badge -->
-           <div v-if="data.version" class="px-1 py-0 rounded bg-blue-500/30 border border-blue-500/50 text-[7px] font-black text-blue-300 uppercase leading-none mt-[-2px]">
+           <div v-if="data.version" class="px-1 py-0 rounded bg-primary/30 border border-primary/50 text-[7px] font-black text-white uppercase leading-none mt-[-2px]">
              V{{ data.version }}
            </div>
         </div>
         <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest" :class="data.type === 'thumbnail' ? 'text-blue-400' : 'text-green-400'">Result: {{ data.type }}</div>
+           <div class="text-[9px] font-black uppercase tracking-widest" :class="data.type === 'thumbnail' ? 'text-primary-light' : 'text-accent-light'">Result: {{ data.type }}</div>
             <!-- File Type Badge -->
             <div v-if="fileTypeBadge" 
                  class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border"
                  :class="[
-                   fileTypeBadge === 'actual' ? 'bg-green-500/20 border-green-500/40 text-green-400' : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                   fileTypeBadge === 'actual' ? 'bg-accent/20 border-accent/40 text-accent-light' : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
                  ]"
             >
               {{ fileTypeBadge }}
@@ -47,7 +47,7 @@
       <div 
         v-if="data.type === 'summary'" 
         v-html="renderMarkdown(data.content)"
-        class="w-full h-full p-4 pb-12 text-[10px] text-zinc-200 leading-relaxed overflow-y-auto custom-scrollbar prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-2 prose-li:my-0 opacity-60 group-hover/player:opacity-100 transition-opacity"
+        class="w-full h-full p-4 pb-12 text-[10px] text-zinc-800 dark:text-zinc-200 leading-relaxed overflow-y-auto custom-scrollbar prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-2 prose-li:my-0 opacity-80 group-hover/player:opacity-100 transition-opacity"
       ></div>
     
       <!-- Cover Images -->
@@ -92,7 +92,7 @@
         </div>
         <div v-if="props.data.version" class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Version</span>
-          <span class="text-[11px] text-blue-400 font-mono">V{{ props.data.version }}</span>
+          <span class="text-[11px] text-primary font-mono">V{{ props.data.version }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Status</span>
@@ -133,18 +133,18 @@
     </div>
     
     <!-- Branching Input -->
-    <div class="p-3 bg-black/20 mt-auto">
-      <div class="flex items-center space-x-2 bg-white/5 p-1 rounded-xl border border-white/5 focus-within:border-blue-500/50 transition-all duration-300">
+    <div class="p-3 bg-black/5 dark:bg-black/20 mt-auto border-t border-black/5 dark:border-white/5">
+      <div class="flex items-center space-x-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/5 focus-within:border-primary/50 transition-all duration-300">
         <input 
           v-model="input"
           type="text" 
           placeholder="Adjust or follow up..."
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-200 placeholder:text-zinc-500 py-1 px-1"
+          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1 px-1"
           @keyup.enter="submit"
         />
         <button 
           @click="submit"
-          class="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-30 transition-all"
+          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20"
           :disabled="!input.trim()"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>

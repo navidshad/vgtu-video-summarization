@@ -1,10 +1,10 @@
 <template>
   <div 
-    class="p-3 rounded-lg shadow-sm min-w-[200px] max-w-[300px] border"
+    class="glass-card glass-card-hover p-4 rounded-2xl min-w-[200px] max-w-[300px]"
     :class="[
       data.sender === 'user' 
-        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-100' 
-        : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-800 dark:text-zinc-200'
+        ? 'bg-primary/10 border-primary/20 text-primary-dark shadow-sm shadow-primary/5' 
+        : 'bg-white/60 dark:bg-zinc-800/60 border-zinc-200/50 dark:border-zinc-700/50 text-zinc-800 dark:text-zinc-200'
     ]"
   >
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-800" />

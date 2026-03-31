@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-zinc-900/90 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[280px] max-w-[320px] border border-white/10 overflow-hidden flex flex-col group transition-all duration-300 hover:border-blue-500/50">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300">
     <Handle v-if="data.hasInput !== false" type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Video Preview Section -->
@@ -33,7 +33,7 @@
         <button 
           @click="showDetails = !showDetails" 
           class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
-          :class="{'text-blue-400': showDetails}"
+          :class="{'text-primary-light': showDetails}"
           title="Toggle Metadata"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -83,25 +83,25 @@
           <span class="truncate pr-2 font-bold uppercase tracking-tight">{{ task.name }}</span>
           <span>{{ task.progress !== undefined ? `${task.progress}%` : '' }}</span>
         </div>
-        <div class="h-1 w-full bg-zinc-800 rounded-full overflow-hidden">
-          <div class="h-full bg-blue-500 transition-all duration-300" :style="{ width: `${task.progress}%` }"></div>
+        <div class="h-1 w-full bg-zinc-800/50 dark:bg-zinc-800 rounded-full overflow-hidden">
+          <div class="h-full bg-primary transition-all duration-300" :style="{ width: `${task.progress}%` }"></div>
         </div>
       </div>
     </div>
 
     <!-- Branching Input -->
-    <div class="p-3 bg-black/20">
-      <div class="flex items-center space-x-2 bg-white/5 p-1 rounded-xl border border-white/5 focus-within:border-blue-500/50 transition-all duration-300">
+    <div class="p-3 bg-black/5 dark:bg-black/20 border-t border-black/5 dark:border-white/5">
+      <div class="flex items-center space-x-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/5 focus-within:border-primary/50 transition-all duration-300">
         <input 
           v-model="input"
           type="text" 
           placeholder="Start a new analysis..."
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-200 placeholder:text-zinc-500 py-1 px-1"
+          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1 px-1"
           @keyup.enter="submit"
         />
         <button 
           @click="submit"
-          class="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-30 transition-all"
+          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20"
           :disabled="!input.trim()"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>

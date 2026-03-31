@@ -1,11 +1,11 @@
 <template>
-  <div class="bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-xl p-0 rounded-2xl shadow-2xl min-w-[320px] max-w-[420px] border border-white/20 dark:border-zinc-700/50 overflow-hidden flex flex-col transition-all duration-300 hover:shadow-blue-500/10 hover:border-blue-500/30">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Header with Actions -->
     <div class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+        <div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"></div>
         <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
       </div>
       <div class="flex items-center space-x-1">
@@ -39,12 +39,12 @@
         </div>
 
         <div 
-          class="px-3 py-2 rounded-2xl text-sm leading-relaxed max-w-[90%] break-words relative overflow-hidden"
+          class="px-4 py-2.5 rounded-[1.25rem] text-sm leading-relaxed max-w-[90%] break-words relative overflow-hidden transition-all duration-300"
           :class="[
             msg.role === 'user' 
-              ? 'bg-blue-600 text-white rounded-tr-none shadow-lg shadow-blue-600/20 font-medium' 
-              : 'bg-white/50 dark:bg-zinc-800/50 text-zinc-900 dark:text-zinc-100 rounded-tl-none border border-black/5 dark:border-white/5',
-            msg.isPending ? 'ring-2 ring-blue-500/20 bg-blue-50/50 dark:bg-blue-900/10 transition-all duration-1000 animate-pulse' : ''
+              ? 'bg-gradient-to-br from-primary to-primary-dark text-white rounded-tr-none shadow-lg shadow-primary/20 font-medium' 
+              : 'bg-white/60 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 rounded-tl-none border border-black/5 dark:border-white/5 backdrop-blur-sm',
+            msg.isPending ? 'ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10 transition-all duration-1000 animate-pulse' : ''
           ]"
         >
           <div 
@@ -56,7 +56,8 @@
           <div 
             v-else 
             v-html="renderMarkdown(msg.content)" 
-            class="prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+            class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"
           ></div>
           
           <!-- Files (Exclude Original) -->

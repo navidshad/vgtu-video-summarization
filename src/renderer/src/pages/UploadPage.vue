@@ -1,5 +1,8 @@
 <template>
-  <div class="h-screen flex flex-col bg-transparent transition-colors duration-300 overflow-hidden relative">
+  <div class="h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors duration-300 overflow-hidden relative">
+    <!-- Ambient Backgrounds -->
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/10 dark:bg-primary/5 rounded-full blur-[120px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-secondary/10 dark:bg-secondary/5 rounded-full blur-[120px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
 		<div class="container mx-auto px-6 py-12 max-w-7xl flex flex-col h-full z-10 relative">
 			<!-- Header -->
       <PageHeader

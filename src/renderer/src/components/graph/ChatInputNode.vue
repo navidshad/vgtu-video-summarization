@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white dark:bg-zinc-900 p-2 rounded-xl shadow-lg border border-zinc-200 dark:border-zinc-700 min-w-[280px] flex items-center space-x-2">
+  <div class="glass-card glass-card-hover p-2 rounded-xl min-w-[280px] flex items-center space-x-2">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-800" />
     
     <input 
@@ -11,10 +11,10 @@
     />
     <button 
       @click="submit"
-      class="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
+      class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark transition-all flex items-center justify-center shadow-md shadow-primary/20 hover:scale-105 active:scale-95 disabled:opacity-30"
       :disabled="!input.trim()"
     >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
     </button>
   </div>
 </template>
