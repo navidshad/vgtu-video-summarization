@@ -54,7 +54,7 @@ export interface Message {
 	content: string;
 	isPending: boolean;
 	files?: Attachment[];
-	timeline?: TimelineSegment[];
+	timeline?: EnrichedTimelineSegment[];
 	usage?: Usage;
 	cost?: number;
 	version?: number;

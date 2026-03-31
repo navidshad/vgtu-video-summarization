@@ -79,24 +79,55 @@
     </div>
 
     <!-- Details Metadata Section (Bottom placement like original) -->
-    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-2 animate-in slide-in-from-top duration-300">
-      <div class="grid grid-cols-2 gap-3">
+    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
+      <!-- Technical Summary Grid -->
+      <div class="grid grid-cols-2 gap-3 pb-2 border-b border-white/5">
         <div class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Node Cost</span>
-          <span class="text-[11px] text-green-400 font-mono italic">${{ data.cost?.toFixed(4) || '0.0000' }}</span>
+          <span class="text-[11px] text-green-400 font-mono italic">${{ props.data.cost?.toFixed(4) || '0.0000' }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Result Type</span>
-          <span class="text-[11px] text-zinc-300 capitalize">{{ data.type }}</span>
+          <span class="text-[11px] text-zinc-300 capitalize">{{ props.data.type }}</span>
         </div>
-        <div v-if="data.version" class="flex flex-col gap-0.5">
+        <div v-if="props.data.version" class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Version</span>
-          <span class="text-[11px] text-blue-400 font-mono">V{{ data.version }}</span>
+          <span class="text-[11px] text-blue-400 font-mono">V{{ props.data.version }}</span>
         </div>
-        <!-- Placeholder for potential future clip metadata -->
         <div class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Status</span>
           <span class="text-[11px] text-zinc-400 italic">Ready</span>
+        </div>
+      </div>
+
+      <!-- Reference Frames (for Images) -->
+      <div v-if="isImage && referenceFrames.length > 0" class="space-y-2">
+        <div class="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">Source Materials (Reference Frames)</div>
+        <div class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-2">
+          <div v-for="(file, idx) in referenceFrames" :key="idx" class="flex-shrink-0 w-20 aspect-video bg-black rounded border border-white/5 overflow-hidden group/frame relative shadow-lg">
+             <img :src="mediaUrl(file.url)" class="w-full h-full object-cover opacity-70 group-hover/frame:opacity-100 transition duration-300" />
+             <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/frame:opacity-100 transition-opacity"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline segments (for Videos) -->
+      <div v-if="isVideo && props.data.timeline?.length > 0" class="space-y-2">
+        <div class="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">Timeline Segments Map</div>
+        <div class="max-h-40 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
+          <div v-for="(segment, idx) in props.data.timeline" :key="idx" class="p-2 bg-black/40 rounded-lg border border-white/5 hover:border-blue-500/20 transition-all flex flex-col gap-1">
+             <div class="flex justify-between items-center">
+               <span class="text-[8px] font-black font-mono text-blue-400 opacity-80 decoration-blue-500/50 underline-offset-2 underline decoration-dashed">
+                 [{{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}]
+               </span>
+               <span class="text-[7px] text-zinc-600 font-black uppercase tracking-widest">Segment {{ Number(idx) + 1 }}</span>
+             </div>
+             <div class="text-[9px] text-zinc-300 leading-tight italic">"{{ segment.text }}"</div>
+             <div v-if="segment.visual" class="text-[8px] text-zinc-500 leading-tight mt-1 bg-white/5 p-1 rounded border border-white/5">
+                <span class="font-bold opacity-50 uppercase text-[7px] mr-1">Visual:</span>
+                {{ segment.visual }}
+             </div>
+          </div>
         </div>
       </div>
     </div>
@@ -165,6 +196,11 @@ const mediaContentUrl = computed(() => {
 const isVideo = computed(() => props.data.type === 'video')
 const isImage = computed(() => props.data.type === 'thumbnail' || props.data.type === 'generate-thumbnail')
 
+const referenceFrames = computed(() => {
+    if (!isImage.value) return []
+    return files.value.slice(1)
+})
+
 const fileTypeBadge = computed(() => {
   const file = files.value[0]
   return file ? file.type : null
@@ -200,6 +236,30 @@ const submit = () => {
     props.data.onSubmit(input.value)
     input.value = ''
   }
+}
+
+const formatTime = (val?: string | number) => {
+  if (val === undefined || val === null) return '00:00'
+  
+  if (typeof val === 'string') {
+    // If it's already a timestamp like "00:00:05,200" or "00:01:23"
+    const clean = val.trim().replace(',', '.')
+    const parts = clean.split(':')
+    if (parts.length === 3) {
+      // HH:MM:SS.mmm -> MM:SS
+      const ss = parts[2].split('.')[0]
+      return `${parts[1]}:${ss}`
+    }
+    if (parts.length === 2) {
+      // MM:SS.mmm -> MM:SS
+      return parts[0] + ':' + parts[1].split('.')[0]
+    }
+    return val.split('.')[0]
+  }
+
+  const m = Math.floor(val / 60)
+  const s = Math.floor(val % 60)
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 </script>
 

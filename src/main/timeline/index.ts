@@ -6,7 +6,7 @@ export interface GenerateTimelineOptions {
     userExpectation: string;
     allSegments: EnrichedTimelineSegment[];
     targetDuration: number;
-    baseTimeline?: TimelineSegment[];
+    baseTimeline?: EnrichedTimelineSegment[];
     modelName: string;
     mode: 'new' | 'edit';
     onUpdateStatus?: (status: string) => void;
@@ -14,7 +14,7 @@ export interface GenerateTimelineOptions {
 }
 
 
-export async function generateTimeline(options: GenerateTimelineOptions): Promise<TimelineSegment[]> {
+export async function generateTimeline(options: GenerateTimelineOptions): Promise<EnrichedTimelineSegment[]> {
     const {
         userExpectation,
         allSegments,
@@ -62,12 +62,12 @@ async function editTimeline(options: {
     allSegments: EnrichedTimelineSegment[];
     fullTranscriptText: string;
     targetDuration: number;
-    baseTimeline: TimelineSegment[];
+    baseTimeline: EnrichedTimelineSegment[];
     geminiAdapter: GeminiAdapter;
     modelName: string;
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
-}): Promise<TimelineSegment[]> {
+}): Promise<EnrichedTimelineSegment[]> {
 
     const {
         userExpectation,
@@ -136,7 +136,7 @@ Task: Provide a list of indices representing the new timeline after applying the
         onRecordUsage?.(record);
 
         const indices = parseIndicesFromResponse(responseText);
-        const newTimeline: TimelineSegment[] = [];
+        const newTimeline: EnrichedTimelineSegment[] = [];
 
         for (const idx of indices) {
             const segmentIndex = idx - 1;
@@ -148,6 +148,7 @@ Task: Provide a list of indices representing the new timeline after applying the
                     start: originalSegment.start,
                     end: originalSegment.end,
                     text: originalSegment.text,
+                    visual: originalSegment.visual,
                     duration: duration
                 });
             }
@@ -169,8 +170,8 @@ async function generateNewTimeline(options: {
     modelName: string;
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
-    baseTimeline?: TimelineSegment[];
-}): Promise<TimelineSegment[]> {
+    baseTimeline?: EnrichedTimelineSegment[];
+}): Promise<EnrichedTimelineSegment[]> {
 
     const {
         userExpectation,
@@ -184,7 +185,7 @@ async function generateNewTimeline(options: {
         baseTimeline = []
     } = options;
 
-    const currentShorterTimeline: TimelineSegment[] = [...baseTimeline];
+    const currentShorterTimeline: EnrichedTimelineSegment[] = [...baseTimeline];
     let currentDuration = calculateTotalDuration(currentShorterTimeline);
 
     let iterationCount = 0;
@@ -263,6 +264,7 @@ Task: Pick the next 3 segments to add to the timeline.
                             start: originalSegment.start,
                             end: originalSegment.end,
                             text: originalSegment.text,
+                            visual: originalSegment.visual,
                             duration: duration
                         });
                         addedCount++;

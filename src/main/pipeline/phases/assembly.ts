@@ -1,10 +1,9 @@
-import { FileType } from '../../../shared/types'
+import { FileType, EnrichedTimelineSegment } from '../../../shared/types'
 import { PipelineFunction } from '../index'
-import { TimelineSegment } from '../../../shared/types'
 import { assembleVideo } from '../../ffmpeg'
 
 export const assembleVideoFromTimeline: PipelineFunction = async (data, context) => {
-	const timeline = data.timeline as TimelineSegment[]
+	const timeline = data.timeline as EnrichedTimelineSegment[]
 	const videoPath = context.preprocessing.lowResVideoPath || context.videoPath // Use original high-res video for assembly
 
 	if (!videoPath) {
