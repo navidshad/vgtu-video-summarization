@@ -65,7 +65,12 @@ export async function getVideoFormats(url: string): Promise<string[]> {
 	})
 }
 
-export async function downloadVideo(url: string, tempFolder: string, resolution?: string): Promise<{ path: string; name: string }> {
+export async function downloadVideo(
+	url: string, 
+	tempFolder: string, 
+	resolution?: string,
+	onProgress?: (percent: number) => void
+): Promise<{ path: string; name: string }> {
 	return new Promise((resolve, reject) => {
 		// Output template: tempFolder / videoTitle.ext
 		const outputTemplate = join(tempFolder, '%(title)s.%(ext)s')
@@ -78,6 +83,8 @@ export async function downloadVideo(url: string, tempFolder: string, resolution?
 			'--no-playlist',
 			'-f', formatStr,
 			'-o', outputTemplate,
+			'--newline',
+			'--progress',
 			'--print', 'after_move:filepath',
 			url
 		])
@@ -86,10 +93,24 @@ export async function downloadVideo(url: string, tempFolder: string, resolution?
 		let errorOutput = ''
 
 		ytProcess.stdout.on('data', (data) => {
-			const str = data.toString().trim()
-			if (str && fs.existsSync(str)) {
-				// yt-dlp --print after_move:filepath will print the final filepath 
-				downloadedFilePath = str
+			const lines = data.toString().split('\n')
+			for (const line of lines) {
+				const str = line.trim()
+				if (!str) continue
+
+				// Parse progress: [download]  10.0% of 100.00MiB...
+				const progressMatch = str.match(/\[download\]\s+([\d.]+)%/)
+				if (progressMatch && onProgress) {
+					const percent = parseFloat(progressMatch[1])
+					if (!isNaN(percent)) {
+						onProgress(percent)
+					}
+				}
+
+				if (fs.existsSync(str) && (str.endsWith('.mp4') || str.endsWith('.mkv') || str.endsWith('.webm') || str.endsWith('.mov'))) {
+					// yt-dlp --print after_move:filepath will print the final filepath 
+					downloadedFilePath = str
+				}
 			}
 		})
 
@@ -103,13 +124,17 @@ export async function downloadVideo(url: string, tempFolder: string, resolution?
 				resolve({ path: downloadedFilePath, name })
 			} else {
 				// Sometimes yt-dlp's print is weird, fallback to scanning the directory
-				const files = fs.readdirSync(tempFolder)
-				if (files.length > 0) {
-					// find the most recently created or just the first media file
-					const fileStr = files[0]
-					const path = join(tempFolder, fileStr)
-					resolve({ path, name: fileStr })
-				} else {
+				try {
+					const files = fs.readdirSync(tempFolder)
+					if (files.length > 0) {
+						// find the most recently created or just the first media file
+						const fileStr = files[0]
+						const path = join(tempFolder, fileStr)
+						resolve({ path, name: fileStr })
+					} else {
+						reject(new Error(`yt-dlp failed (code ${code}): ${errorOutput}`))
+					}
+				} catch (e) {
 					reject(new Error(`yt-dlp failed (code ${code}): ${errorOutput}`))
 				}
 			}

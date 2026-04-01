@@ -114,13 +114,22 @@
             <div v-if="!fileSelected" class="w-full h-full flex-1">
               <!-- Loading State -->
               <div v-if="isDownloading" class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                <div class="relative w-24 h-24 flex items-center justify-center mb-4">
-                  <div class="absolute inset-0 rounded-full border-4 border-zinc-100 dark:border-zinc-800"></div>
-                  <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-primary absolute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                <div class="relative w-28 h-28 flex items-center justify-center mb-2">
+                  <!-- Circular progress background -->
+                  <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" class="text-zinc-100 dark:text-zinc-800" />
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="283" :stroke-dashoffset="283 - (283 * downloadProgress / 100)" class="text-primary transition-all duration-300 ease-out" />
+                  </svg>
+                  <div class="text-xl font-bold text-primary z-10">{{ Math.round(downloadProgress) }}%</div>
                 </div>
-                <div class="text-center space-y-2">
+                <div class="text-center space-y-3 w-full max-w-md px-4">
                   <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Downloading Video...</h3>
+                  
+                  <!-- Linear progress bar -->
+                  <div class="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden shadow-inner">
+                    <div class="h-full bg-primary transition-all duration-300 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" :style="{ width: `${downloadProgress}%` }"></div>
+                  </div>
+                  
                   <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">This might take a few minutes depending on the file size and your network.</p>
                 </div>
               </div>
@@ -263,6 +272,7 @@ const isAnalyzing = ref(false)
 const isDownloading = ref(false)
 const availableResolutions = ref<string[]>([])
 const selectedResolution = ref('')
+const downloadProgress = ref(0)
 
 // System requirements state
 const requirementsChecked = ref(false)
@@ -272,6 +282,13 @@ const ytDlpAvailable = ref(true)
 const isTempDirUnsafe = ref(false)
 
 onMounted(async () => {
+  // Listen for download progress
+  if ((window as any).api?.onDownloadProgress) {
+    (window as any).api.onDownloadProgress((percent: number) => {
+      downloadProgress.value = percent
+    })
+  }
+
   try {
     const result = await (window as any).api?.checkSystemRequirements()
     if (result) {
@@ -332,6 +349,7 @@ const handleLinkStep = async () => {
     // Stage 2: Download
     try {
       isDownloading.value = true
+      downloadProgress.value = 0
       const result = await (window as any).api?.downloadVideo(videoUrl.value, selectedResolution.value)
       if (result && result.path) {
         fileName.value = result.name

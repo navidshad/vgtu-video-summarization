@@ -4,6 +4,11 @@ const api = {
 	selectVideo: () => ipcRenderer.invoke('select-video'),
 	fetchVideoFormats: (url: string) => ipcRenderer.invoke('fetch-video-formats', url),
 	downloadVideo: (url: string, resolution?: string) => ipcRenderer.invoke('download-video', url, resolution),
+	onDownloadProgress: (callback: (percent: number) => void) => {
+		const listener = (_event: any, percent: number) => callback(percent)
+		ipcRenderer.on('download-progress', listener)
+		return () => ipcRenderer.removeListener('download-progress', listener)
+	},
 	checkSystemRequirements: () => ipcRenderer.invoke('check-system-requirements'),
 	startPipeline: (data: { threadId: string; userPromptMessageId: string; newAiMessageId: string; editReferenceMessageId?: string }) =>
 		ipcRenderer.invoke('start-pipeline', data),

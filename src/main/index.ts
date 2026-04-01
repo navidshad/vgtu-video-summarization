@@ -126,12 +126,14 @@ app.whenReady().then(() => {
 		return await getVideoFormats(url)
 	})
 
-	ipcMain.handle('download-video', async (_event, url: string, resolution?: string) => {
+	ipcMain.handle('download-video', async (event, url: string, resolution?: string) => {
 		const tempDir = join(settingsManager.getTempDir(), `download-${Date.now()}`)
 		if (!fs.existsSync(tempDir)) {
 			fs.mkdirSync(tempDir, { recursive: true })
 		}
-		return await downloadVideo(url, tempDir, resolution)
+		return await downloadVideo(url, tempDir, resolution, (percent) => {
+			event.sender.send('download-progress', percent)
+		})
 	})
 
 	ipcMain.handle('is-temp-dir-unsafe', () => {
