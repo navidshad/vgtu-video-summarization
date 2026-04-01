@@ -127,9 +127,9 @@ class BackgroundTaskManager extends EventEmitter {
 			fail: async (error: string) => {
 				console.error(`[BG ${taskId}] Task failed: ${error}`)
 				this.updateTask(threadId, taskId, { state: 'error', error })
-			}
+			},
+			signal: new AbortController().signal
 		}
-
 	}
 
 	private async runTask(threadId: string, taskId: string, name: string, fn: (context: PipelineContext) => Promise<void>) {
