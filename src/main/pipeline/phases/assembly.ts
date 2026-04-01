@@ -26,7 +26,8 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 			context.messageId,
 			(percent) => {
 				context.updateStatus(`Assembling video (${percent}%)...`)
-			}
+			},
+			context.signal
 		)
 
 		context.finish('Processing complete. Your video is ready.', {
@@ -34,7 +35,9 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 			type: FileType.Preview
 		}, timeline, { shouldVersion: true })
 	} catch (error) {
-		console.error('Assembly failed:', error)
+		if (!context.signal.aborted) {
+			console.error('Assembly failed:', error)
+		}
 		context.finish('Video assembly failed.')
 	}
 }

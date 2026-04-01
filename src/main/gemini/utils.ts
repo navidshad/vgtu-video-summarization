@@ -103,7 +103,8 @@ export function formatTranscript(items: TranscriptItem[]): string {
 export async function extractTranscript(
 	audioPath: string,
 	audioDuration: number = 0,
-	rawTranscriptText?: string
+	rawTranscriptText?: string,
+	signal?: AbortSignal
 ): Promise<{ items: TranscriptItem[], rawResponseText: string, record: UsageRecord }> {
 	const adapter = GeminiAdapter.create()
 	const modelSettings = settingsManager.getModelSettings()
@@ -127,7 +128,8 @@ export async function extractTranscript(
 		userPrompt,
 		[fileUri],
 		systemInstruction,
-		audioDuration
+		audioDuration,
+		signal
 	)
 
 	return {

@@ -25,7 +25,7 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const tempDir = context.tempDir
 	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, tempDir, (percent) => {
 		context.updateStatus(`Downscaling video... ${percent}%`)
-	})
+	}, context.signal)
 
 	context.savePreprocessing({ lowResVideoPath: lowResPath })
 	context.updateStatus('Video downscaled successfully.')
@@ -39,7 +39,7 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	const tempDir = context.tempDir
 	const audioPath = await ffmpegAdapter.toAudio(videoPath, tempDir, (percent) => {
 		context.updateStatus(`Converting to audio... ${percent}%`)
-	})
+	}, context.signal)
 
 	context.savePreprocessing({ audioPath })
 	context.updateStatus('Audio extracted successfully.')
@@ -56,7 +56,7 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	context.updateStatus('Extracting raw transcript...')
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
-	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, undefined, context.signal)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
@@ -87,7 +87,7 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscript = JSON.parse(transcriptJson)
 	const rawTranscriptText = formatTranscript(rawTranscript)
 
-	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText, context.signal)
 	context.recordUsage(record)
 
 	const tempDir = context.tempDir
@@ -118,9 +118,11 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	const detector = new SceneDetector()
 	let scenes: Scene[] = []
 	try {
-		scenes = await detector.detectScenes(videoPath)
+		scenes = await detector.detectScenes(videoPath, context.signal)
 	} catch (error) {
-		console.error('Scene detection failed:', error)
+		if (!context.signal.aborted) {
+			console.error('Scene detection failed:', error)
+		}
 		context.updateStatus('Scene detection failed, proceeding without scenes.')
 		context.next(data)
 		return
@@ -170,7 +172,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 			context.updateStatus(`analyzing scene ${i + 1}/${scenes.length}...`)
 
 			// 1. Extract Frame
-			const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir)
+			const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir, context.signal)
 
 			// 2. Upload Frame
 			const frameUri = await gemini.uploadFile(framePath, 'image/jpeg')
@@ -186,7 +188,8 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 			const { text, record } = await gemini.generateDescriptionFromImage(
 				modelName,
 				prompt,
-				frameUri
+				frameUri,
+				context.signal
 			)
 			context.recordUsage(record)
 
@@ -200,7 +203,9 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 			fs.unlinkSync(framePath)
 
 		} catch (error) {
-			console.error(`Failed to describe scene ${i}:`, error)
+			if (!context.signal.aborted) {
+				console.error(`Failed to describe scene ${i}:`, error)
+			}
 		}
 	}
 

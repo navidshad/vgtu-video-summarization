@@ -5,6 +5,7 @@ const api = {
 	checkSystemRequirements: () => ipcRenderer.invoke('check-system-requirements'),
 	startPipeline: (data: { threadId: string; userPromptMessageId: string; newAiMessageId: string; editReferenceMessageId?: string }) =>
 		ipcRenderer.invoke('start-pipeline', data),
+	abortPipeline: (messageId: string) => ipcRenderer.invoke('abort-pipeline', messageId),
 	onPipelineUpdate: (callback: (data: any) => void) => {
 		const listener = (_event: any, data: any) => callback(data)
 		ipcRenderer.on('pipeline-update', listener)

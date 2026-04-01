@@ -100,7 +100,8 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 				selectionModel,
 				selectionPrompt,
 				selectionSchema,
-				"You are an expert at selecting key frames for video thumbnails."
+				"You are an expert at selecting key frames for video thumbnails.",
+				context.signal
 			)
 			context.recordUsage(selectionRecord)
 			selectedTimestamps = selectionResult.selectedScenes.map(s => timeToSeconds(s.timestamp))
@@ -116,7 +117,7 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 		context.updateStatus(`Extracting ${validTimestamps.length} reference frames...`)
 		for (const ts of validTimestamps) {
 			try {
-				const framePath = await ffmpegAdapter.extractFrame(context.videoPath, ts, context.tempDir)
+				const framePath = await ffmpegAdapter.extractFrame(context.videoPath, ts, context.tempDir, context.signal)
 				extractedFrames.push(framePath)
 			} catch (e) {
 				console.warn(`Failed to extract frame at ${ts}:`, e)
@@ -156,7 +157,7 @@ Please update the previous result based on the Refinement Request while maintain
 	}
 
 	const allReferenceImages = [...previousFiles, ...extractedFrames]
-	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction)
+	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
 	context.recordUsage(record)
 
 	// Determine title/content for the final message

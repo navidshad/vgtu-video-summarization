@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message, Attachment, Thread } from '@shared/types'
+import type { Message, Thread } from '@shared/types'
 
 
 export const useVideoStore = defineStore('video', () => {
@@ -175,6 +175,12 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	const abortProcessing = async (messageId: string) => {
+		if ((window as any).api) {
+			await (window as any).api.abortPipeline(messageId)
+		}
+	}
+
 	const retryPreprocessing = async (threadId: string) => {
 		return await (window as any).api.retryPreprocessing(threadId)
 	}
@@ -263,6 +269,7 @@ export const useVideoStore = defineStore('video', () => {
 		addMessage,
 		clearMessages,
 		startProcessing,
+		abortProcessing,
 		deleteThread,
 		deleteAllThreads,
 		removeMessageBranch,

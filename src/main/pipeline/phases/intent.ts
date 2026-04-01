@@ -111,7 +111,8 @@ END OF CONVERSATION HISTORY
 			modelName,
 			userPrompt,
 			INTENT_SCHEMA,
-			INTENT_SYSTEM_INSTRUCTION
+			INTENT_SYSTEM_INSTRUCTION,
+			context.signal
 		)
 
 		context.recordUsage(record)
@@ -128,7 +129,9 @@ END OF CONVERSATION HISTORY
 			context.next(data)
 		}
 	} catch (error) {
-		console.error('Error in determineIntent:', error)
+		if (!context.signal.aborted) {
+			console.error('Error in determineIntent:', error)
+		}
 		// Fallback to timeline if intent analysis fails
 		context.intentResult = { type: 'generate-timeline', content: 'Create a video highlighting key moments.', duration: 30 }
 		context.next(data)

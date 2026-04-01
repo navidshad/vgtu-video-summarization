@@ -43,7 +43,8 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       modelName,
       mode,
       onUpdateStatus: (status) => context.updateStatus(status),
-      onRecordUsage: (record) => context.recordUsage(record)
+      onRecordUsage: (record) => context.recordUsage(record),
+      signal: context.signal
     })
 
     if (shorterTimeline.length === 0) {
@@ -54,11 +55,18 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
     // Finish Pipeline with the generated timeline
     context.updateStatus('Processing complete. Short timeline generated.')
 
+    if (context.signal.aborted) {
+      console.log(`[GENERATION PHASE] Generation aborted before next step.`)
+      return;
+    }
+
     // Ready for the assembly phase (pass timeline in data)
     context.next({ ...data, timeline: shorterTimeline })
 
   } catch (error) {
-    console.error('Error in buildShorterTimeline:', error)
+    if (!context.signal.aborted) {
+      console.error('Error in buildShorterTimeline:', error)
+    }
     // We should probably rely on pipeline error handling, but here we can add context
     throw error
   }

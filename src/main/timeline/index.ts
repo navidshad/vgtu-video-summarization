@@ -11,6 +11,7 @@ export interface GenerateTimelineOptions {
     mode: 'new' | 'edit';
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
+    signal?: AbortSignal;
 }
 
 
@@ -23,7 +24,8 @@ export async function generateTimeline(options: GenerateTimelineOptions): Promis
         onRecordUsage,
         baseTimeline = [],
         modelName,
-        mode
+        mode,
+        signal
     } = options;
 
     const fullTranscriptText = formatEnrichedTranscript(allSegments);
@@ -40,7 +42,8 @@ export async function generateTimeline(options: GenerateTimelineOptions): Promis
             geminiAdapter,
             modelName,
             onUpdateStatus,
-            onRecordUsage
+            onRecordUsage,
+            signal
         });
     } else {
         return generateNewTimeline({
@@ -52,7 +55,8 @@ export async function generateTimeline(options: GenerateTimelineOptions): Promis
             modelName,
             onUpdateStatus,
             onRecordUsage,
-            baseTimeline
+            baseTimeline,
+            signal
         });
     }
 }
@@ -67,6 +71,7 @@ async function editTimeline(options: {
     modelName: string;
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
+    signal?: AbortSignal;
 }): Promise<EnrichedTimelineSegment[]> {
 
     const {
@@ -78,7 +83,8 @@ async function editTimeline(options: {
         geminiAdapter,
         modelName,
         onUpdateStatus,
-        onRecordUsage
+        onRecordUsage,
+        signal
     } = options;
 
     onUpdateStatus?.(`Editing timeline in one-shot...`);
@@ -129,7 +135,7 @@ Task: Provide a list of indices representing the new timeline after applying the
 `;
 
     try {
-        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
+        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
         console.log(`Gemini response (Edit Mode):`, responseText);
 
         // Record usage for the edit call
@@ -171,6 +177,7 @@ async function generateNewTimeline(options: {
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
     baseTimeline?: EnrichedTimelineSegment[];
+    signal?: AbortSignal;
 }): Promise<EnrichedTimelineSegment[]> {
 
     const {
@@ -182,7 +189,8 @@ async function generateNewTimeline(options: {
         modelName,
         onUpdateStatus,
         onRecordUsage,
-        baseTimeline = []
+        baseTimeline = [],
+        signal
     } = options;
 
     const currentShorterTimeline: EnrichedTimelineSegment[] = [...baseTimeline];
@@ -213,6 +221,10 @@ Do not include any other text.
 `;
 
     while (currentDuration < targetDuration && iterationCount < MAX_ITERATIONS) {
+        if (signal?.aborted) {
+            console.log('[TIMELINE] Aborting generation loop - signal triggered.')
+            throw new Error('Timeline generation aborted by user')
+        }
         iterationCount++;
         onUpdateStatus?.(`Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
 
@@ -237,7 +249,7 @@ Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
-            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
+            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
             console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             // Record usage for each iteration
@@ -280,6 +292,7 @@ Task: Pick the next 3 segments to add to the timeline.
             currentDuration = calculateTotalDuration(currentShorterTimeline);
 
         } catch (error) {
+            if (signal?.aborted) throw new Error('Timeline generation aborted by user')
             console.error("Error in generateNewTimeline iteration:", error);
             onUpdateStatus?.(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
             break;

@@ -43,7 +43,8 @@ export class GeminiAdapter {
 	async generateText(
 		modelName: string,
 		userPrompt: string,
-		systemInstruction?: string
+		systemInstruction?: string,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const request: GenerateContentParameters = {
 			model: modelName,
@@ -56,14 +57,20 @@ export class GeminiAdapter {
 			};
 		}
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		try {
+			const response = await (this.client.models as any).generateContent(request, { signal });
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
+			return {
+				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateText failed:`, error);
+			throw error;
+		}
 	}
 
 	/**
@@ -73,7 +80,8 @@ export class GeminiAdapter {
 		modelName: string,
 		userPrompt: string,
 		schema: any,
-		systemInstruction?: string
+		systemInstruction?: string,
+		signal?: AbortSignal
 	): Promise<{ data: T, record: UsageRecord }> {
 		const request: GenerateContentParameters = {
 			model: modelName,
@@ -93,7 +101,17 @@ export class GeminiAdapter {
 		const MAX_RETRIES = 3;
 
 		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			const response = await this.client.models.generateContent(request);
+			let response;
+			try {
+				response = await (this.client.models as any).generateContent(request, { signal });
+			} catch (error) {
+				if (signal?.aborted) throw error;
+				if (attempt === MAX_RETRIES) {
+					console.error(`[GEMINI ADAPTER] generateStructuredText failed after ${MAX_RETRIES} attempts:`, error);
+					throw error;
+				}
+				continue;
+			}
 			const usage = this.extractUsage(response);
 			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
@@ -112,6 +130,7 @@ export class GeminiAdapter {
 					record: { usage: totalUsage, cost: totalCost }
 				};
 			} catch (error) {
+				if (signal?.aborted) throw error;
 				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
 				if (attempt === MAX_RETRIES) {
 					throw new Error('Invalid JSON response from Gemini after multiple attempts');
@@ -171,7 +190,8 @@ export class GeminiAdapter {
 		userPrompt: string,
 		fileUris: string[],
 		systemInstruction?: string,
-		audioDuration: number = 0
+		audioDuration: number = 0,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const contents = [
 			{
@@ -194,14 +214,20 @@ export class GeminiAdapter {
 			};
 		}
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		try {
+			const response = await (this.client.models as any).generateContent(request, { signal });
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
+			return {
+				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateTextFromFiles failed:`, error);
+			throw error;
+		}
 	}
 
 	/**
@@ -213,7 +239,8 @@ export class GeminiAdapter {
 		fileUris: string[],
 		schema: any,
 		systemInstruction?: string,
-		audioDuration: number = 0
+		audioDuration: number = 0,
+		signal?: AbortSignal
 	): Promise<{ data: T, record: UsageRecord }> {
 		const contents = [
 			{
@@ -243,7 +270,17 @@ export class GeminiAdapter {
 		const MAX_RETRIES = 3;
 
 		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			const response = await this.client.models.generateContent(request);
+			let response;
+			try {
+				response = await (this.client.models as any).generateContent(request, { signal });
+			} catch (error) {
+				if (signal?.aborted) throw error;
+				if (attempt === MAX_RETRIES) {
+					console.error(`[GEMINI ADAPTER] generateStructuredFromFiles failed after ${MAX_RETRIES} attempts:`, error);
+					throw error;
+				}
+				continue;
+			}
 			const usage = this.extractUsage(response);
 			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
 
@@ -262,6 +299,7 @@ export class GeminiAdapter {
 					record: { usage: totalUsage, cost: totalCost }
 				};
 			} catch (error) {
+				if (signal?.aborted) throw error;
 				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
 				if (attempt === MAX_RETRIES) {
 					throw new Error('Invalid JSON response from Gemini after multiple attempts');
@@ -278,7 +316,8 @@ export class GeminiAdapter {
 	async generateDescriptionFromImage(
 		modelName: string,
 		prompt: string,
-		imageUri: string
+		imageUri: string,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const contents = [
 			{
@@ -295,14 +334,20 @@ export class GeminiAdapter {
 			contents
 		};
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		try {
+			const response = await (this.client.models as any).generateContent(request, { signal });
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
+			return {
+				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateDescriptionFromImage failed:`, error);
+			throw error;
+		}
 	}
 
 	/**
@@ -314,7 +359,8 @@ export class GeminiAdapter {
 		prompt: string,
 		outputPath: string,
 		imagePaths: string[] = [],
-		systemInstruction?: string
+		systemInstruction?: string,
+		signal?: AbortSignal
 	): Promise<{ path: string, record: UsageRecord }> {
 		try {
 			// Prepare parts: Image parts FIRST, then text prompt
@@ -335,11 +381,11 @@ export class GeminiAdapter {
 			parts.push({ text: prompt })
 
 			// For gemini-3.1-flash-image-preview, we use generateContent
-			const response = await this.client.models.generateContent({
+			const response = await (this.client.models as any).generateContent({
 				model: modelName,
 				contents: [{ role: 'user', parts }],
 				config: systemInstruction ? { systemInstruction: systemInstruction } : undefined
-			});
+			}, { signal });
 
 			if (!response.candidates || response.candidates.length === 0) {
 				throw new Error('No candidates returned from the model.');
@@ -377,6 +423,7 @@ export class GeminiAdapter {
 				record: { usage, cost }
 			};
 		} catch (error: any) {
+			if (signal?.aborted) throw error;
 			console.error('Gemini image generation failed:', error);
 			// ... existing error parsing logic ...
 			let message = 'Image generation failed.';

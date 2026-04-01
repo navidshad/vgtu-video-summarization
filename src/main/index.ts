@@ -16,6 +16,8 @@ import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
+const activePipelines = new Map<string, Pipeline>()
+
 protocol.registerSchemesAsPrivileged([
 	{
 		scheme: 'media',
@@ -167,12 +169,25 @@ app.whenReady().then(() => {
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 
 		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
+		activePipelines.set(newAiMessageId, pipeline)
 		try {
 			await pipeline.start({})
 			console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
 		} catch (e) {
 			console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+		} finally {
+			activePipelines.delete(newAiMessageId)
 		}
+	})
+
+	ipcMain.handle('abort-pipeline', async (_event, messageId) => {
+		console.log(`[DEBUG IPC] abort-pipeline called for messageId=${messageId}`)
+		const pipeline = activePipelines.get(messageId)
+		if (pipeline) {
+			pipeline.abort()
+			return true
+		}
+		return false
 	})
 
 	ipcMain.handle('get-temp-dir', () => {

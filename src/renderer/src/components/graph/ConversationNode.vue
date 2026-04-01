@@ -89,7 +89,18 @@
               <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
               <span>Active Task</span>
             </div>
-            <div class="flex space-x-1 grayscale opacity-50">
+            
+            <button 
+              v-if="msg.isPending" 
+              @click="videoStore.abortProcessing(msg.id)"
+              class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40 ml-4"
+              title="Stop process"
+            >
+              <div class="w-1.5 h-1.5 bg-red-500 rounded-sm"></div>
+              <span class="text-[9px] font-bold tracking-wider uppercase leading-none">Stop</span>
+            </button>
+
+            <div class="flex space-x-1 grayscale opacity-50 ml-auto">
               <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0s]"></div>
               <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
               <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>

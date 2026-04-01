@@ -263,6 +263,9 @@ watch(() => videoStore.messages, (messages) => {
              if (confirmed === 1) {
                await videoStore.removeMessageBranch(strand.id)
              }
+          },
+          onStop: async () => {
+             await videoStore.abortProcessing(strand.id)
           }
         }
       } else {

@@ -13,6 +13,7 @@ export interface PipelineContext {
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => Promise<void>;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => Promise<void>;
 	waitForTask: (taskId: string) => Promise<void>;
+	signal: AbortSignal;
 	threadId: string;
 	videoPath: string;
 	tempDir: string;
@@ -37,6 +38,7 @@ export class Pipeline {
 	private baseTimeline?: EnrichedTimelineSegment[]
 	private intentResult?: import('../../shared/types').IntentResult
 	private isFinished: boolean = false
+	private abortController: AbortController = new AbortController()
 
 	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string) {
 		this.browserWindow = browserWindow
@@ -52,32 +54,93 @@ export class Pipeline {
 		return this;
 	}
 
+	abort(): void {
+		if (this.isFinished) {
+			console.log(`[PIPELINE CORE] abort() skipped - already finished for message ${this.messageId}`)
+			return
+		}
+		console.log(`[PIPELINE CORE] abort() TRIGGERED for message ${this.messageId}`)
+		this.abortController.abort()
+		
+		// Immediately update UI to reflect stopped state
+		this.fail('Processing stopped by user');
+	}
+
 	async start(initialData: any): Promise<void> {
 		console.log(`[PIPELINE CORE] start() called. Total steps registered: ${this.steps.length}`)
 		this.currentStepIndex = 0;
-		if (this.steps.length > 0) {
-			await this.runStep(initialData);
+		let currentData = initialData;
+
+		try {
+			while (this.currentStepIndex < this.steps.length && !this.isFinished) {
+				if (this.abortController.signal.aborted) {
+					console.log(`[PIPELINE CORE] Pipeline aborted. Breaking loop.`)
+					break
+				}
+
+				const thread = threadManager.getThread(this.threadId)
+				if (!thread) {
+					throw new Error(`Thread ${this.threadId} not found during pipeline execution`)
+				}
+
+				const step = this.steps[this.currentStepIndex];
+				
+				// Check skip condition
+				const skipContext = this.createContext(currentData, thread);
+				if (step.options?.skipIf && step.options.skipIf(skipContext)) {
+					console.log(`[PIPELINE CORE] Skipping step index ${this.currentStepIndex}: ${step.fn.name || 'anonymous'}`)
+					this.currentStepIndex++
+					continue
+				}
+
+				console.log(`[PIPELINE CORE] Executing step index ${this.currentStepIndex}: ${step.fn.name || 'anonymous'}`)
+				
+				const prevIndex = this.currentStepIndex;
+				let nextCalled = false;
+
+				const context = this.createContext(currentData, thread);
+				// Override next to capture data and advance index
+				context.next = (data: any) => {
+					currentData = data;
+					this.currentStepIndex++;
+					nextCalled = true;
+					console.log(`[PIPELINE CONTEXT] next() called. Advancing to index ${this.currentStepIndex}`)
+				};
+
+				await step.fn(currentData, context);
+
+				// If step finished without calling next, finish, or fail, it's an implicit stop or we should check state
+				if (!nextCalled && !this.isFinished) {
+					console.log(`[PIPELINE CORE] Step ${prevIndex} finished without calling next() or finish(). Stopping chain.`)
+					break;
+				}
+			}
+			console.log(`[PIPELINE CORE] Loop exited. isFinished=${this.isFinished}, aborted=${this.abortController.signal.aborted}`)
+			
+			// Final safety: if loop exited due to abort but wasn't marked finished, do it now
+			if (!this.isFinished && this.abortController.signal.aborted) {
+				await this.fail('Processing stopped by user');
+			}
+		} catch (e: any) {
+			if (this.abortController.signal.aborted) {
+				console.log(`[PIPELINE CORE] Caught expected abort error:`, e?.message)
+			} else {
+				console.error(`[PIPELINE CORE] Error in execution loop:`, e)
+				if (!this.isFinished) {
+					const window = this.browserWindow;
+					window.webContents.send('pipeline-update', {
+						id: this.messageId,
+						type: 'status',
+						content: `Error: ${e instanceof Error ? e.message : String(e)}`
+					})
+				}
+			}
 		}
 	}
 
-	private async runStep(data: any): Promise<void> {
-		console.log(`[PIPELINE CORE] runStep() called. Index=${this.currentStepIndex}, isFinished=${this.isFinished}`)
-		if (this.isFinished || this.currentStepIndex >= this.steps.length) {
-			console.log(`[PIPELINE CORE] runStep() returning early.`)
-			return;
-		}
-
-		const thread = threadManager.getThread(this.threadId)
-		if (!thread) {
-			console.error(`[PIPELINE CORE] Thread ${this.threadId} not found during pipeline execution`)
-			return
-		}
-
-		const step = this.steps[this.currentStepIndex];
-		console.log(`[PIPELINE CORE] Target step name: ${step.fn.name || 'anonymous function'}`)
-
+	private createContext(data: any, thread: Thread): PipelineContext {
 		const self = this
-		const context: PipelineContext = {
+		return {
 			threadId: this.threadId,
 			videoPath: thread.videoPath,
 			tempDir: thread.tempDir,
@@ -88,21 +151,27 @@ export class Pipeline {
 			baseTimeline: this.baseTimeline,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
+			signal: this.abortController.signal,
 			waitForTask: async (taskId: string) => {
 				console.log(`[PIPELINE CONTEXT] waitForTask('${taskId}') called.`)
-				await backgroundTaskManager.waitForTask(this.threadId, taskId);
+				await Promise.race([
+					backgroundTaskManager.waitForTask(this.threadId, taskId),
+					new Promise((_, reject) => {
+						if (this.abortController.signal.aborted) {
+							reject(new Error('Pipeline aborted'))
+						}
+						this.abortController.signal.addEventListener('abort', () => reject(new Error('Pipeline aborted')), { once: true })
+					})
+				]);
 				console.log(`[PIPELINE CONTEXT] waitForTask('${taskId}') RESOLVED.`)
 			},
 			updateStatus: async (status: string) => {
 				console.log(`[PIPELINE CONTEXT] updateStatus('${status}') called.`)
-				// Send update to UI
 				this.browserWindow.webContents.send('pipeline-update', {
 					id: this.messageId,
 					type: 'status',
 					content: status
 				})
-
-				// Persist to Thread
 				if (this.threadId) {
 					await threadManager.updateMessageInThread(this.threadId, this.messageId, {
 						content: status,
@@ -113,11 +182,8 @@ export class Pipeline {
 			recordUsage: async (record: import('../../shared/types').UsageRecord) => {
 				if (this.threadId) {
 					await threadManager.updateMessageUsage(this.threadId, this.messageId, record)
-
-					// Send update to UI for real-time cost display
 					const updatedThread = threadManager.getThread(this.threadId)
 					const updatedMessage = updatedThread?.messages.find(m => m.id === this.messageId)
-
 					if (updatedMessage) {
 						this.browserWindow.webContents.send('pipeline-update', {
 							id: this.messageId,
@@ -142,87 +208,75 @@ export class Pipeline {
 					}
 				}
 			},
-			next: (nextData?: any) => {
-				console.log(`[PIPELINE CONTEXT] context.next() called. Moving to index ${this.currentStepIndex + 1}`)
-				this.currentStepIndex++
-				this.runStep(nextData)
+			next: (_nextData?: any) => {
+				// This is a placeholder, will be overridden in the loop
 			},
 			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => {
-				console.log(`[PIPELINE CONTEXT] context.finish() called. Setting isFinished.`)
-				if (this.isFinished) return
-				this.isFinished = true
-
-				const updates: Partial<Message> = {
-					content: message,
-					files: options?.files || (video ? [{ url: video.path, type: video.type }] : []),
-					timeline: timeline || [],
-					resultType: options?.resultType,
-					isPending: false
-				}
-
-				if (options?.shouldVersion !== false) {
-					updates.version = options?.version || Date.now()
-				}
-
-				this.browserWindow.webContents.send('pipeline-update', {
-					id: this.messageId,
-					type: 'finish',
-					content: message,
-					files: updates.files,
-					timeline: updates.timeline,
-					resultType: updates.resultType,
-					version: updates.version
-				})
-
-				if (this.threadId) {
-					await threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
-				}
+				return this.finish(message, video, timeline, options);
 			},
 			fail: async (error: string) => {
-				console.log(`[PIPELINE CONTEXT] context.fail() called: ${error}`)
-				if (this.isFinished) return
-				this.isFinished = true
-
-				// Send error to UI
-				this.browserWindow.webContents.send('pipeline-update', {
-					id: this.messageId,
-					type: 'status',
-					content: `Error: ${error}`
-				})
-
-				this.browserWindow.webContents.send('pipeline-update', {
-					id: this.messageId,
-					type: 'finish',
-					content: `Error: ${error}`
-				})
-
-				// Persist to Thread
-				if (this.threadId) {
-					await threadManager.updateMessageInThread(this.threadId, this.messageId, {
-						content: `Error: ${error}`,
-						isPending: false
-					})
-				}
+				return this.fail(error);
 			}
 		}
+	}
 
-		// Check skip condition
-		if (step.options?.skipIf && step.options.skipIf(context)) {
-			console.log(`[PIPELINE CORE] Skipping step index ${this.currentStepIndex}`)
-			this.currentStepIndex++
-			this.runStep(data)
-			return
+	private async finish(message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) {
+		console.log(`[PIPELINE CORE] finish() called.`)
+		if (this.isFinished) return
+		this.isFinished = true
+
+		const updates: Partial<Message> = {
+			content: message,
+			files: options?.files || (video ? [{ url: video.path, type: video.type }] : []),
+			timeline: timeline || [],
+			resultType: options?.resultType,
+			isPending: false
 		}
 
-		// If manually finished or failed, stop chain
-		if (this.isFinished) return
+		if (options?.shouldVersion !== false) {
+			updates.version = options?.version || Date.now()
+		}
 
-		try {
-			await step.fn(data, context);
-		} catch (error) {
-			console.error('Pipeline step failed:', error);
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			await context.fail(errorMessage);
+		this.browserWindow.webContents.send('pipeline-update', {
+			id: this.messageId,
+			type: 'finish',
+			content: message,
+			files: updates.files,
+			timeline: updates.timeline,
+			resultType: updates.resultType,
+			version: updates.version
+		})
+
+		if (this.threadId) {
+			await threadManager.updateMessageInThread(this.threadId, this.messageId, updates)
+		}
+	}
+
+	private async fail(error: string) {
+		console.log(`[PIPELINE CORE] fail() called: ${error}`)
+		if (this.isFinished) return
+		this.isFinished = true
+
+		const isAborted = this.abortController.signal.aborted
+		const statusContent = isAborted ? 'Processing stopped by user' : `Error: ${error}`
+
+		this.browserWindow.webContents.send('pipeline-update', {
+			id: this.messageId,
+			type: 'status',
+			content: statusContent
+		})
+
+		this.browserWindow.webContents.send('pipeline-update', {
+			id: this.messageId,
+			type: 'finish',
+			content: statusContent
+		})
+
+		if (this.threadId) {
+			await threadManager.updateMessageInThread(this.threadId, this.messageId, {
+				content: statusContent,
+				isPending: false
+			})
 		}
 	}
 }
