@@ -14,6 +14,7 @@ import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
+import { checkYtDlpAvailability, downloadVideo } from './ytdlp'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -108,15 +109,25 @@ app.whenReady().then(() => {
 	})
 
 	ipcMain.handle('check-system-requirements', async () => {
-		const [ffmpegAvailable, scenedetectAvailable] = await Promise.all([
+		const [ffmpegAvailable, scenedetectAvailable, ytDlpAvailable] = await Promise.all([
 			checkFFmpegAvailability(),
-			checkScenedetectAvailability()
+			checkScenedetectAvailability(),
+			checkYtDlpAvailability()
 		])
 		return { 
 			ffmpegAvailable, 
 			scenedetectAvailable, 
+			ytDlpAvailable,
 			isTempDirUnsafe: settingsManager.isTempDirUnsafe() 
 		}
+	})
+
+	ipcMain.handle('download-video', async (_event, url: string) => {
+		const tempDir = join(settingsManager.getTempDir(), `download-${Date.now()}`)
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true })
+		}
+		return await downloadVideo(url, tempDir)
 	})
 
 	ipcMain.handle('is-temp-dir-unsafe', () => {

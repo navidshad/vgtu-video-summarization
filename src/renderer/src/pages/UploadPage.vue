@@ -94,23 +94,45 @@
           </div>
         </div>
 
+        <!-- Tabs -->
+        <div v-if="!fileSelected && !isDownloading" class="flex bg-zinc-100/50 dark:bg-zinc-900/50 rounded-xl p-1.5 w-full max-w-sm mx-auto mb-6 border border-zinc-200 dark:border-zinc-800 backdrop-blur-sm shadow-sm transition-all duration-300 animate-in fade-in slide-in-from-bottom-2">
+          <button @click="uploadMode = 'local'" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2" :class="uploadMode === 'local' ? 'bg-white dark:bg-zinc-800 shadow-sm text-zinc-900 dark:text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 scale-100'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+            Local File
+          </button>
+          <button @click="uploadMode = 'link'" class="flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2" :class="uploadMode === 'link' ? 'bg-white dark:bg-zinc-800 shadow-sm text-zinc-900 dark:text-white scale-[1.02]' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 scale-100'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            Video Link
+          </button>
+        </div>
+
         <!-- Main Upload Card -->
         <Card
           class="w-full max-w-2xl !rounded-lg !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 transition-all duration-500"
           :class="{ '!border-primary/50 !bg-blue-50/50 dark:!bg-blue-500/5 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)]': fileSelected }">
           <div class="p-10 flex flex-col items-center justify-center min-h-[400px]">
             <div v-if="!fileSelected" class="w-full h-full flex-1">
-              <div @click="handleNativeSelect"
-                class="w-full h-full min-h-[320px] border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg flex flex-col items-center justify-center space-y-6 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:border-primary/50 cursor-pointer transition-all duration-300 group relative overflow-hidden">
-
-                <div
-                  class="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:to-primary/5 transition-all duration-500">
+              <!-- Loading State -->
+              <div v-if="isDownloading" class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                <div class="relative w-24 h-24 flex items-center justify-center mb-4">
+                  <div class="absolute inset-0 rounded-full border-4 border-zinc-100 dark:border-zinc-800"></div>
+                  <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-primary absolute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
                 </div>
+                <div class="text-center space-y-2">
+                  <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Downloading Video...</h3>
+                  <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">This might take a few minutes depending on the file size and your network.</p>
+                </div>
+              </div>
 
-                <div
-                  class="w-24 h-24 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-400 group-hover:scale-110 group-hover:-rotate-3 group-hover:text-primary transition-all duration-500 z-10 shadow-md group-hover:shadow-xl border border-zinc-100 dark:border-zinc-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <!-- Local Upload -->
+              <div v-else-if="uploadMode === 'local'" @click="handleNativeSelect"
+                class="w-full h-full min-h-[320px] border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg flex flex-col items-center justify-center space-y-6 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:border-primary/50 cursor-pointer transition-all duration-300 group relative overflow-hidden animate-in fade-in zoom-in-95">
+
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:to-primary/5 transition-all duration-500"></div>
+
+                <div class="w-24 h-24 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-400 group-hover:scale-110 group-hover:-rotate-3 group-hover:text-primary transition-all duration-500 z-10 shadow-md group-hover:shadow-xl border border-zinc-100 dark:border-zinc-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" x2="12" y1="3" y2="15" />
@@ -119,6 +141,28 @@
                 <div class="text-center z-10 space-y-2">
                   <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Choose a video</h3>
                   <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">Click to open system picker</p>
+                </div>
+              </div>
+
+              <!-- URL Input -->
+              <div v-else-if="uploadMode === 'link'" class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 p-8 animate-in fade-in zoom-in-95">
+                
+                <!-- yt-dlp missing warning -->
+                <div v-if="!ytDlpAvailable" class="w-full max-w-md text-left flex items-start gap-3 px-4 py-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-sm mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                  <span><strong>yt-dlp is not installed.</strong> Downloading videos from links requires yt-dlp to be installed on your system. Please install it and restart the application.</span>
+                </div>
+
+                <div class="w-20 h-20 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 mb-2 shadow-inner">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </div>
+                <div class="text-center space-y-2 mb-6 w-full">
+                  <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Provide Video Link</h3>
+                  <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">Supports YouTube, Google Drive, and direct media files.</p>
+                </div>
+                <div class="w-full max-w-md space-y-4">
+                  <input v-model="videoUrl" type="url" placeholder="https://youtube.com/..." class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-600 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner" @keyup.enter="handleLinkDownload" :disabled="!ytDlpAvailable" />
+                  <Button @click="handleLinkDownload" color="primary" label="Fetch Video" class="w-full !rounded-lg !py-3 font-bold shadow-xl shadow-primary/20" :disabled="!videoUrl || !ytDlpAvailable" />
                 </div>
               </div>
             </div>
@@ -197,10 +241,15 @@ const fileName = ref('')
 const filePath = ref('')
 const prompt = ref('')
 
+const uploadMode = ref<'local'|'link'>('local')
+const videoUrl = ref('')
+const isDownloading = ref(false)
+
 // System requirements state
 const requirementsChecked = ref(false)
 const ffmpegAvailable = ref(true)
 const scenedetectAvailable = ref(true)
+const ytDlpAvailable = ref(true)
 const isTempDirUnsafe = ref(false)
 
 onMounted(async () => {
@@ -209,6 +258,7 @@ onMounted(async () => {
     if (result) {
       ffmpegAvailable.value = result.ffmpegAvailable
       scenedetectAvailable.value = result.scenedetectAvailable
+      ytDlpAvailable.value = result.ytDlpAvailable !== false // default true just in case
       isTempDirUnsafe.value = result.isTempDirUnsafe
     }
   } catch (e) {
@@ -230,10 +280,36 @@ const handleNativeSelect = async () => {
   }
 }
 
+const handleLinkDownload = async () => {
+  if (!videoUrl.value || !ytDlpAvailable.value || isDownloading.value) return
+
+  try {
+    isDownloading.value = true
+    const result = await (window as any).api?.downloadVideo(videoUrl.value)
+    if (result && result.path) {
+      fileName.value = result.name
+      filePath.value = result.path
+      fileSelected.value = true
+    }
+  } catch (e: any) {
+    console.error('Failed to download video:', e)
+    await (window as any).api?.showConfirmation({
+      title: 'Download Failed',
+      message: 'Could not download the video.',
+      detail: e?.message || 'Please check the URL and try again.',
+      type: 'error',
+      buttons: ['OK']
+    })
+  } finally {
+    isDownloading.value = false
+  }
+}
+
 const resetSelection = () => {
   fileSelected.value = false
   fileName.value = ''
   filePath.value = ''
+  videoUrl.value = ''
 }
 
 const startCreation = async () => {
