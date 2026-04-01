@@ -103,7 +103,7 @@ class BackgroundTaskManager extends EventEmitter {
 			get intentResult() { return intentResult },
 			set intentResult(val) { intentResult = val },
 			updateStatus: async (status: string) => {
-				this.updateTask(threadId, taskId, { state: 'running' })
+				this.updateTask(threadId, taskId, { state: 'running', status })
 				console.log(`[BG ${taskId}] ${status}`)
 			},
 			recordUsage: async (record) => {

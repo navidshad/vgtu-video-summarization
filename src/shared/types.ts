@@ -27,6 +27,7 @@ export interface BackgroundTask {
 	id: string
 	name: string
 	state: BackgroundTaskState
+	status?: string
 	progress?: number
 	error?: string
 }

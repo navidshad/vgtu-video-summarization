@@ -80,7 +80,7 @@
     <div v-if="activeTasks.length > 0" class="p-3 bg-white/5 border-b border-white/5 space-y-2">
       <div v-for="task in activeTasks" :key="task.id" class="text-[10px]">
         <div class="flex justify-between items-center mb-1 text-zinc-400">
-          <span class="truncate pr-2 font-bold uppercase tracking-tight">{{ task.name }}</span>
+          <span class="truncate pr-2 font-bold uppercase tracking-tight">{{ task.status || task.name }}</span>
           <span>{{ task.progress !== undefined ? `${task.progress}%` : '' }}</span>
         </div>
         <div class="h-1 w-full bg-zinc-800/50 dark:bg-zinc-800 rounded-full overflow-hidden">
