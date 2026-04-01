@@ -14,7 +14,7 @@ import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
-import { checkYtDlpAvailability, downloadVideo } from './ytdlp'
+import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -122,12 +122,16 @@ app.whenReady().then(() => {
 		}
 	})
 
-	ipcMain.handle('download-video', async (_event, url: string) => {
+	ipcMain.handle('fetch-video-formats', async (_event, url: string) => {
+		return await getVideoFormats(url)
+	})
+
+	ipcMain.handle('download-video', async (_event, url: string, resolution?: string) => {
 		const tempDir = join(settingsManager.getTempDir(), `download-${Date.now()}`)
 		if (!fs.existsSync(tempDir)) {
 			fs.mkdirSync(tempDir, { recursive: true })
 		}
-		return await downloadVideo(url, tempDir)
+		return await downloadVideo(url, tempDir, resolution)
 	})
 
 	ipcMain.handle('is-temp-dir-unsafe', () => {

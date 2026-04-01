@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
 	selectVideo: () => ipcRenderer.invoke('select-video'),
-	downloadVideo: (url: string) => ipcRenderer.invoke('download-video', url),
+	fetchVideoFormats: (url: string) => ipcRenderer.invoke('fetch-video-formats', url),
+	downloadVideo: (url: string, resolution?: string) => ipcRenderer.invoke('download-video', url, resolution),
 	checkSystemRequirements: () => ipcRenderer.invoke('check-system-requirements'),
 	startPipeline: (data: { threadId: string; userPromptMessageId: string; newAiMessageId: string; editReferenceMessageId?: string }) =>
 		ipcRenderer.invoke('start-pipeline', data),

@@ -160,9 +160,25 @@
                   <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Provide Video Link</h3>
                   <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">Supports YouTube, Google Drive, and direct media files.</p>
                 </div>
-                <div class="w-full max-w-md space-y-4">
-                  <input v-model="videoUrl" type="url" placeholder="https://youtube.com/..." class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-600 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner" @keyup.enter="handleLinkDownload" :disabled="!ytDlpAvailable" />
-                  <Button @click="handleLinkDownload" color="primary" label="Fetch Video" class="w-full !rounded-lg !py-3 font-bold shadow-xl shadow-primary/20" :disabled="!videoUrl || !ytDlpAvailable" />
+                <div class="w-full max-w-md space-y-5">
+                  <div class="relative">
+                    <input v-model="videoUrl" type="url" placeholder="https://youtube.com/..." class="w-full px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 text-zinc-900 dark:text-white border border-zinc-300 dark:border-zinc-600 rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all shadow-inner pr-12" @keyup.enter="handleLinkStep" :disabled="!ytDlpAvailable || isAnalyzing" />
+                    <div v-if="isAnalyzing" class="absolute right-4 top-1/2 -translate-y-1/2">
+                      <svg class="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </div>
+                  </div>
+
+                  <!-- Resolution selection -->
+                  <div v-if="availableResolutions.length > 0" class="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p class="text-xs font-bold text-zinc-500 uppercase tracking-wider ml-1">Select Quality</p>
+                    <div class="flex flex-wrap gap-2">
+                       <button v-for="res in availableResolutions" :key="res" @click="selectedResolution = res" class="px-3 py-1.5 rounded-lg text-sm font-bold border transition-all" :class="selectedResolution === res ? 'bg-primary border-primary text-white shadow-md' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-primary/50'">
+                        {{ res }}p
+                       </button>
+                    </div>
+                  </div>
+
+                  <Button @click="handleLinkStep" color="primary" :label="availableResolutions.length > 0 ? `Download ${selectedResolution}p Video` : 'Check Link'" class="w-full !rounded-lg !py-3 font-bold shadow-xl shadow-primary/20" :disabled="!videoUrl || !ytDlpAvailable || isAnalyzing" />
                 </div>
               </div>
             </div>
@@ -243,7 +259,10 @@ const prompt = ref('')
 
 const uploadMode = ref<'local'|'link'>('local')
 const videoUrl = ref('')
+const isAnalyzing = ref(false)
 const isDownloading = ref(false)
+const availableResolutions = ref<string[]>([])
+const selectedResolution = ref('')
 
 // System requirements state
 const requirementsChecked = ref(false)
@@ -280,28 +299,57 @@ const handleNativeSelect = async () => {
   }
 }
 
-const handleLinkDownload = async () => {
-  if (!videoUrl.value || !ytDlpAvailable.value || isDownloading.value) return
+const handleLinkStep = async () => {
+  if (!videoUrl.value || !ytDlpAvailable.value || isAnalyzing.value || isDownloading.value) return
 
-  try {
-    isDownloading.value = true
-    const result = await (window as any).api?.downloadVideo(videoUrl.value)
-    if (result && result.path) {
-      fileName.value = result.name
-      filePath.value = result.path
-      fileSelected.value = true
+  if (availableResolutions.value.length === 0) {
+    // Stage 1: Analyze link
+    try {
+      isAnalyzing.value = true
+      const res = await (window as any).api?.fetchVideoFormats(videoUrl.value)
+      if (res && res.length > 0) {
+        availableResolutions.value = res
+        // Default to "mid res" (middle of the list which is sorted descending)
+        const midIndex = Math.floor(res.length / 2)
+        selectedResolution.value = res[midIndex]
+      } else {
+         availableResolutions.value = ['Best']
+         selectedResolution.value = 'Best'
+      }
+    } catch (e: any) {
+      console.error('Failed to fetch formats:', e)
+       await (window as any).api?.showConfirmation({
+        title: 'Analysis Failed',
+        message: 'Could not analyze the link.',
+        detail: e?.message || 'Please check the URL and try again.',
+        type: 'error',
+        buttons: ['OK']
+      })
+    } finally {
+      isAnalyzing.value = false
     }
-  } catch (e: any) {
-    console.error('Failed to download video:', e)
-    await (window as any).api?.showConfirmation({
-      title: 'Download Failed',
-      message: 'Could not download the video.',
-      detail: e?.message || 'Please check the URL and try again.',
-      type: 'error',
-      buttons: ['OK']
-    })
-  } finally {
-    isDownloading.value = false
+  } else {
+    // Stage 2: Download
+    try {
+      isDownloading.value = true
+      const result = await (window as any).api?.downloadVideo(videoUrl.value, selectedResolution.value)
+      if (result && result.path) {
+        fileName.value = result.name
+        filePath.value = result.path
+        fileSelected.value = true
+      }
+    } catch (e: any) {
+      console.error('Failed to download video:', e)
+      await (window as any).api?.showConfirmation({
+        title: 'Download Failed',
+        message: 'Could not download the video.',
+        detail: e?.message || 'Please check the URL and try again.',
+        type: 'error',
+        buttons: ['OK']
+      })
+    } finally {
+      isDownloading.value = false
+    }
   }
 }
 
@@ -310,6 +358,8 @@ const resetSelection = () => {
   fileName.value = ''
   filePath.value = ''
   videoUrl.value = ''
+  availableResolutions.value = []
+  selectedResolution.value = ''
 }
 
 const startCreation = async () => {
