@@ -103,7 +103,11 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 				"You are an expert at selecting key frames for video thumbnails.",
 				context.signal
 			)
-			context.recordUsage(selectionRecord)
+			// Record usage immediately
+			await context.recordUsage(selectionRecord)
+			
+			if (context.signal.aborted) return;
+
 			selectedTimestamps = selectionResult.selectedScenes.map(s => timeToSeconds(s.timestamp))
 		} catch (e) {
 			console.warn('AI Scene selection failed, falling back to default timestamps:', e)
@@ -158,7 +162,11 @@ Please update the previous result based on the Refinement Request while maintain
 
 	const allReferenceImages = [...previousFiles, ...extractedFrames]
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
 
 	// Determine title/content for the final message
 	const messageContent = intent.content

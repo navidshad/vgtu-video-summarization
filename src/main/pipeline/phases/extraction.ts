@@ -57,7 +57,11 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, undefined, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
 
 	const tempDir = context.tempDir
 	const rawResponsePath = path.join(tempDir, `raw_transcript_response.txt`)
@@ -88,7 +92,11 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscriptText = formatTranscript(rawTranscript)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
 
 	const tempDir = context.tempDir
 	const rawResponsePath = path.join(tempDir, `corrected_transcript_response.txt`)
@@ -191,7 +199,11 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 				frameUri,
 				context.signal
 			)
-			context.recordUsage(record)
+			
+			// Record usage immediately
+			await context.recordUsage(record)
+
+			if (context.signal.aborted) return;
 
 			descriptions.push({
 				index: i,

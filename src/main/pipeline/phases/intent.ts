@@ -115,7 +115,10 @@ END OF CONVERSATION HISTORY
 			context.signal
 		)
 
-		context.recordUsage(record)
+		// Record usage immediately
+		await context.recordUsage(record)
+
+		if (context.signal.aborted) return;
 
 		context.intentResult = result
 

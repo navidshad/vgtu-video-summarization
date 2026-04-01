@@ -14,9 +14,15 @@
         </div>
       </div>
       <div class="flex items-center space-x-2">
-        <button v-if="data.onStop && data.status === 'running'" @click="data.onStop" class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all group/stop border border-red-500/20 hover:border-red-500/40" title="Stop process">
-          <div class="w-2 h-2 bg-red-500 rounded-sm"></div>
-          <span class="text-[10px] font-bold tracking-wider uppercase leading-none">Stop</span>
+        <button v-if="data.onStop && data.status === 'running'" 
+          @click="handleStop" 
+          class="flex items-center space-x-1.5 px-2 py-1 rounded-lg transition-all border group/stop"
+          :class="isConfirmingStop ? 'bg-orange-500/20 text-orange-500 border-orange-500' : 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20 hover:border-red-500/40'"
+          :title="isConfirmingStop ? 'Click again to confirm' : 'Stop process'">
+          <div class="w-2 h-2 rounded-sm" :class="isConfirmingStop ? 'bg-orange-500 animate-pulse' : 'bg-red-500'"></div>
+          <span class="text-[10px] font-bold tracking-wider uppercase leading-none">
+            {{ isConfirmingStop ? 'Confirm?' : 'Stop' }}
+          </span>
         </button>
 
         <button v-if="data.onDelete" @click="data.onDelete" class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors" title="Delete task node">
@@ -54,7 +60,30 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onBeforeUnmount } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 
-defineProps<{ data: any }>()
+const props = defineProps<{ data: any }>()
+
+const isConfirmingStop = ref(false)
+let stopTimeout: NodeJS.Timeout | null = null
+
+const handleStop = () => {
+  if (!isConfirmingStop.value) {
+    isConfirmingStop.value = true
+    stopTimeout = setTimeout(() => {
+      isConfirmingStop.value = false
+    }, 3000)
+    return
+  }
+
+  // Actual stop
+  if (stopTimeout) clearTimeout(stopTimeout)
+  isConfirmingStop.value = false
+  props.data.onStop?.()
+}
+
+onBeforeUnmount(() => {
+  if (stopTimeout) clearTimeout(stopTimeout)
+})
 </script>
