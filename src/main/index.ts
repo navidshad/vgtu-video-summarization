@@ -12,7 +12,7 @@ import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
 import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
-import { checkFFmpegAvailability } from './ffmpeg'
+import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
@@ -114,10 +114,15 @@ app.whenReady().then(() => {
 		])
 		return { 
 			ffmpegAvailable, 
-			scenedetectAvailable, 
-			isTempDirUnsafe: settingsManager.isTempDirUnsafe() 
+			isTempDirUnsafe: settingsManager.isTempDirUnsafe(), 
+			scenedetectAvailable 
 		}
 	})
+
+	ipcMain.handle('get-video-metadata', async (_event, filePath: string) => {
+		return await getVideoMetadata(filePath)
+	})
+
 
 	ipcMain.handle('is-temp-dir-unsafe', () => {
 		return settingsManager.isTempDirUnsafe()

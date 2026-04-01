@@ -45,7 +45,8 @@ const api = {
 	showConfirmation: (options: { title: string, message: string, detail?: string, type?: string, buttons?: string[], defaultId?: number, cancelId?: number }) =>
 		ipcRenderer.invoke('show-confirmation', options),
 	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),
-	openThreadDir: (threadId: string) => ipcRenderer.invoke('open-thread-dir', threadId)
+	openThreadDir: (threadId: string) => ipcRenderer.invoke('open-thread-dir', threadId),
+	getVideoMetadata: (filePath: string) => ipcRenderer.invoke('get-video-metadata', filePath)
 }
 
 if (process.contextIsolated) {

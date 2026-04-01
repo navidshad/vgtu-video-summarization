@@ -81,55 +81,68 @@
     <!-- Details Metadata Section (Bottom placement like original) -->
     <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
       <!-- Technical Summary Grid -->
-      <div class="grid grid-cols-2 gap-3 pb-2 border-b border-white/5">
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Node Cost</span>
-          <span class="text-[11px] text-green-400 font-mono italic">${{ props.data.cost?.toFixed(4) || '0.0000' }}</span>
+      <!-- Technical Summary Grid -->
+      <div v-if="(isVideo || isImage) && (metadata || isMetadataLoading)" class="grid grid-cols-2 gap-3 pb-4 border-b border-white/5">
+        <div v-if="isMetadataLoading" class="col-span-2 py-4 flex items-center justify-center space-x-2">
+           <div class="w-3 h-3 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
+           <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Loading Media Info...</span>
         </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Result Type</span>
-          <span class="text-[11px] text-zinc-300 capitalize">{{ props.data.type }}</span>
-        </div>
-        <div v-if="props.data.version" class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Version</span>
-          <span class="text-[11px] text-primary font-mono">V{{ props.data.version }}</span>
-        </div>
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Status</span>
-          <span class="text-[11px] text-zinc-400 italic">Ready</span>
-        </div>
-      </div>
-
-      <!-- Reference Frames (for Images) -->
-      <div v-if="isImage && referenceFrames.length > 0" class="space-y-2">
-        <div class="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">Source Materials (Reference Frames)</div>
-        <div class="flex gap-1.5 overflow-x-auto custom-scrollbar pb-2">
-          <div v-for="(file, idx) in referenceFrames" :key="idx" class="flex-shrink-0 w-20 aspect-video bg-black rounded border border-white/5 overflow-hidden group/frame relative shadow-lg">
-             <img :src="mediaUrl(file.url)" class="w-full h-full object-cover opacity-70 group-hover/frame:opacity-100 transition duration-300" />
-             <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/frame:opacity-100 transition-opacity"></div>
+        <template v-else-if="metadata">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
           </div>
-        </div>
+          <div v-if="isVideo" class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Duration</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatDurationSeconds(metadata?.duration) }}</span>
+          </div>
+          <div v-if="isVideo" class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Frame Rate</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">File Size</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Format</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
+          </div>
+          <div v-if="isVideo || (metadata?.codec && metadata.codec !== 'unknown')" class="flex flex-col gap-0.5">
+            <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Codec</span>
+            <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
+          </div>
+        </template>
       </div>
 
       <!-- Timeline segments (for Videos) -->
-      <div v-if="isVideo && props.data.timeline?.length > 0" class="space-y-2">
-        <div class="text-[8px] font-bold text-zinc-500 uppercase tracking-tighter">Timeline Segments Map</div>
-        <div class="max-h-40 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
-          <div v-for="(segment, idx) in props.data.timeline" :key="idx" class="p-2 bg-black/40 rounded-lg border border-white/5 hover:border-blue-500/20 transition-all flex flex-col gap-1">
+      <div v-if="isVideo && props.data.timeline?.length > 0" class="space-y-3 pt-2">
+        <div class="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+           <div class="h-px flex-1 bg-black/5 dark:bg-white/5"></div>
+           Timeline Segments Map
+           <div class="h-px flex-1 bg-black/5 dark:bg-white/5"></div>
+        </div>
+        <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+          <div v-for="(segment, idx) in props.data.timeline" :key="idx" 
+               class="p-3 bg-black/[0.03] dark:bg-black/40 rounded-2xl border border-black/5 dark:border-white/5 hover:border-primary/30 transition-all flex flex-col gap-2 group/segment shadow-sm hover:shadow-md">
              <div class="flex justify-between items-center">
-               <span class="text-[8px] font-black font-mono text-blue-400 opacity-80 decoration-blue-500/50 underline-offset-2 underline decoration-dashed">
+               <span class="text-[9px] font-black font-mono text-primary dark:text-blue-400 bg-primary/10 dark:bg-blue-400/10 px-1.5 py-0.5 rounded">
                  [{{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}]
                </span>
-               <span class="text-[7px] text-zinc-600 font-black uppercase tracking-widest">Segment {{ Number(idx) + 1 }}</span>
+               <span class="text-[8px] text-zinc-400 dark:text-zinc-600 font-black uppercase tracking-widest">Segment {{ Number(idx) + 1 }}</span>
              </div>
-             <div class="text-[9px] text-zinc-300 leading-tight italic">"{{ segment.text }}"</div>
-             <div v-if="segment.visual" class="text-[8px] text-zinc-500 leading-tight mt-1 bg-white/5 p-1 rounded border border-white/5">
-                <span class="font-bold opacity-50 uppercase text-[7px] mr-1">Visual:</span>
+             <div class="text-[11px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium italic">"{{ segment.text }}"</div>
+             <div v-if="segment.visual" class="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed mt-1 bg-white/50 dark:bg-white/5 p-2 rounded-xl border border-black/5 dark:border-white/5">
+                <div class="font-black opacity-40 uppercase text-[7px] tracking-widest mb-1 flex items-center gap-1">
+                   <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                   Visual Scene context
+                </div>
                 {{ segment.visual }}
              </div>
           </div>
         </div>
       </div>
+
     </div>
     
     <!-- Branching Input -->
@@ -169,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { renderMarkdown } from '../../utils/markdown'
 
@@ -179,6 +192,9 @@ const isPlaying = ref(false)
 const isFullScreen = ref(false)
 const showDetails = ref(false)
 const input = ref('')
+const metadata = ref<any>(null)
+const isMetadataLoading = ref(false)
+
 
 const files = computed(() => props.data.files || [])
 
@@ -224,6 +240,25 @@ const togglePlay = () => {
   }
 }
 
+const fetchMetadata = async () => {
+  if (!(isVideo.value || isImage.value) || !mediaContentUrl.value || metadata.value || isMetadataLoading.value) return
+  
+  isMetadataLoading.value = true
+  try {
+    const rawPath = mediaContentUrl.value.replace('media://', '')
+    metadata.value = await (window as any).api.getVideoMetadata(rawPath)
+  } catch (e) {
+    console.error('Failed to fetch video metadata:', e)
+  } finally {
+    isMetadataLoading.value = false
+  }
+}
+
+watch(showDetails, (newVal) => {
+  if (newVal) fetchMetadata()
+}, { immediate: true })
+
+
 const handleSave = async () => {
   const file = props.data.files?.[0]
   if (file && (window as any).api) {
@@ -236,6 +271,22 @@ const submit = () => {
     props.data.onSubmit(input.value)
     input.value = ''
   }
+}
+
+const formatDurationSeconds = (seconds?: number) => {
+  if (!seconds) return '00:00'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+const formatFileSize = (bytes?: number) => {
+  if (!bytes) return '0 MB'
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`
+  return `${mb.toFixed(1)} MB`
 }
 
 const formatTime = (val?: string | number) => {
