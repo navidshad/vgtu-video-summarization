@@ -37,6 +37,14 @@
     @apply hover:shadow-premium-hover hover:border-primary/30 transition-all duration-500;
   }
 
+  .input-focus-ring {
+    @apply border-zinc-200 dark:border-zinc-700/50 transition-all duration-300;
+  }
+  
+  .input-focus-ring:focus-within {
+    @apply border-primary/50 ring-4 ring-primary/20 shadow-[0_0_20px_rgba(var(--primary),0.15)] dark:shadow-[0_0_25px_rgba(var(--primary),0.25)];
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;

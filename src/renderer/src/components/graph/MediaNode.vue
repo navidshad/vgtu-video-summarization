@@ -91,17 +91,19 @@
 
     <!-- Branching Input -->
     <div class="p-3 bg-black/5 dark:bg-black/20 border-t border-black/5 dark:border-white/5">
-      <div class="flex items-center space-x-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/5 focus-within:border-primary/50 transition-all duration-300">
-        <input 
+      <div class="flex items-end space-x-2 bg-white/50 dark:bg-white/5 p-1.5 rounded-xl border border-black/5 dark:border-white/5 input-focus-ring transition-all duration-300">
+        <textarea 
           v-model="input"
-          type="text" 
+          ref="textareaRef"
           placeholder="Start a new analysis..."
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1 px-1"
-          @keyup.enter="submit"
-        />
+          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1.5 px-1 resize-none max-h-[150px] overflow-y-auto custom-scrollbar leading-relaxed"
+          rows="1"
+          @input="adjustTextarea"
+          @keydown.enter="handleEnter"
+        ></textarea>
         <button 
           @click="submit"
-          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20"
+          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20 mb-0.5"
           :disabled="!input.trim()"
         >
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
@@ -125,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 
@@ -136,6 +138,7 @@ const isFullScreen = ref(false)
 const isPlaying = ref(false)
 const showDetails = ref(false)
 const videoRef = ref<HTMLVideoElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
 const metadata = computed(() => videoStore.currentThread?.videoMetadata)
 
@@ -161,10 +164,25 @@ const togglePlay = () => {
   }
 }
 
+const adjustTextarea = () => {
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto'
+    textareaRef.value.style.height = textareaRef.value.scrollHeight + 'px'
+  }
+}
+
+const handleEnter = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && input.value.trim()) {
+    e.preventDefault()
+    submit()
+  }
+}
+
 const submit = () => {
   if (input.value.trim() && props.data.onSubmit) {
     props.data.onSubmit(input.value)
     input.value = ''
+    setTimeout(adjustTextarea, 0)
   }
 }
 
@@ -183,5 +201,9 @@ const formatFileSize = (bytes?: number) => {
   if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`
   return `${mb.toFixed(1)} MB`
 }
+
+onMounted(() => {
+  adjustTextarea()
+})
 </script>
 

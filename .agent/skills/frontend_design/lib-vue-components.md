@@ -1,40 +1,86 @@
-# Lib Vue Components Documentation
+# PilotUI - LLM Documentation
 
-Generated on: 2025-11-16T14:05:12.514Z
+> Generated on: 3/4/2026, 4:13:37 PM
+
+## 🤖 LLM Instructions
+This document is optimized for Large Language Models. It contains the complete documentation for **PilotUI**, a Vue 3 component library.
+
+### How to use this doc:
+- **Component Search**: Use the Table of Contents below to find specific components.
+- **Code Examples**: All component examples are provided in fenced code blocks with language identifiers.
+- **Prop Tables**: Component properties, events, and slots are documented in Markdown tables.
+- **Implementation**: When asked to implement a UI, refer to the available components and their usage patterns described here.
 
 ---
 
+## 📋 Table of Contents
+
+### Getting Started
+- [Installation](#getting-started-installation)
+
+### Getting Started How To
+- [Use](#getting-started-how-to-use)
+
+### Getting Started Global
+- [Configuration](#getting-started-global-configuration)
+
+### Shell
+- [Approot](#shell-approot)
+- [Dashboardshell](#shell-dashboardshell)
+- [Horizontalmenu](#shell-horizontalmenu)
+- [Sidebarmenu](#shell-sidebarmenu)
+
+### Icons Alternative Icon
+- [Packs](#icons-alternative-icon-packs)
+
+### Icons Icon
+- [Gallery](#icons-icon-gallery)
+
+### Utilities
+- [Toast](#utilities-toast)
+
+### Complex
+- [Modal](#complex-modal)
+- [Pagination](#complex-pagination)
+
+### Elements
+- [Avatar](#elements-avatar)
+- [Avatargroup](#elements-avatargroup)
+- [Button](#elements-button)
+- [Card](#elements-card)
+- [Dropdown](#elements-dropdown)
+- [Iconbutton](#elements-iconbutton)
+- [Progress](#elements-progress)
+- [Tabs](#elements-tabs)
+- [Tooltip](#elements-tooltip)
+
+### Form
+- [Checkboxinput](#form-checkboxinput)
+- [Fileinputbutton](#form-fileinputbutton)
+- [Fileinputcombo](#form-fileinputcombo)
+- [Input](#form-input)
+- [Inputgroup](#form-inputgroup)
+- [Select](#form-select)
+- [Switchball](#form-switchball)
+- [Textarea](#form-textarea)
+
+---
+
+<a id="getting-started-installation"></a>
 ## Getting Started / Installation
+
+**Source URL**: http://localhost:6006/?path=/docs/getting-started-installation--docs
 
 ### Installation Guide
 
 #### Prerequisites
 
 -   A working Vue 3 or Nuxt 3 project
--   GitHub account with package access
 -   Node.js and npm/yarn installed
 
 #### Setup Steps
 
-##### 1\. GitHub Authentication
-
-1.  Create a GitHub personal access token:
-    
-    -   Go to GitHub Settings → Developer Settings → Personal Access Tokens
-    -   Generate a new token with `read:packages` permission
-    -   Copy the generated token
-    -   For detailed instructions, watch this guide
-2.  Create an `.npmrc` file in your project root:
-    
-    ```
-    @codebridger:registry=https://npm.pkg.github.com
-    //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-    ```
-    
-    Replace `YOUR_GITHUB_TOKEN` with the token you created.
-    
-
-##### 2\. Package Installation
+##### 1\. Package Installation
 
 Install the package using npm or yarn:
 
@@ -138,7 +184,10 @@ After installation, you can start using the components in your application. Chec
 
 ---
 
+<a id="getting-started-how-to-use"></a>
 ## Getting Started How To / Use
+
+**Source URL**: http://localhost:6006/?path=/docs/getting-started-how-to-use--docs
 
 ### Component library
 
@@ -204,7 +253,10 @@ appStore.setTheme("dark");
 
 ---
 
+<a id="getting-started-global-configuration"></a>
 ## Getting Started Global / Configuration
+
+**Source URL**: http://localhost:6006/?path=/docs/getting-started-global-configuration--docs
 
 #### Using `useAppStore`
 
@@ -323,7 +375,10 @@ function toggleSidebar() {
 
 ---
 
+<a id="shell-approot"></a>
 ## Shell / Approot
+
+**Source URL**: http://localhost:6006/?path=/docs/shell-approot--docs
 
 ### AppRoot
 
@@ -355,7 +410,10 @@ Use as the root wrapper for app pages/stories. Combine with DashboardShell for f
 
 ---
 
+<a id="shell-dashboardshell"></a>
 ## Shell / Dashboardshell
+
+**Source URL**: http://localhost:6006/?path=/docs/shell-dashboardshell--docs
 
 ### DashboardShell
 
@@ -425,7 +483,10 @@ Wrap application pages to provide consistent navigation and scaffolding. Fill sl
 
 ---
 
+<a id="shell-horizontalmenu"></a>
 ## Shell / Horizontalmenu
+
+**Source URL**: http://localhost:6006/?path=/docs/shell-horizontalmenu--docs
 
 ### HorizontalMenu
 
@@ -974,7 +1035,10 @@ const items = [
 
 ---
 
+<a id="shell-sidebarmenu"></a>
 ## Shell / Sidebarmenu
+
+**Source URL**: http://localhost:6006/?path=/docs/shell-sidebarmenu--docs
 
 ### SidebarMenu
 
@@ -1579,7 +1643,10 @@ const items = [
 
 ---
 
+<a id="icons-alternative-icon-packs"></a>
 ## Icons Alternative Icon / Packs
+
+**Source URL**: http://localhost:6006/?path=/docs/icons-alternative-icon-packs--docs
 
 ### Alternative Icon Packs
 
@@ -1641,7 +1708,10 @@ For more details on using Iconify with Tailwind (and other setup options like ad
 
 ---
 
+<a id="icons-icon-gallery"></a>
 ## Icons Icon / Gallery
+
+**Source URL**: http://localhost:6006/?path=/docs/icons-icon-gallery--docs
 
 ### Icon Gallery
 
@@ -1999,7 +2069,10 @@ IconStar
 
 ---
 
+<a id="utilities-toast"></a>
 ## Utilities / Toast
+
+**Source URL**: http://localhost:6006/?path=/docs/utilities-toast--docs
 
 ### Toast Utility Functions
 
@@ -2057,7 +2130,10 @@ toastInfo('This is an info toast message');
 
 ---
 
+<a id="complex-modal"></a>
 ## Complex / Modal
+
+**Source URL**: http://localhost:6006/?path=/docs/complex-modal--docs
 
 ### Modal
 
@@ -2100,8 +2176,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This is a basic modal with default settings. You can customize the content, size, and behavior.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Confirm</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Confirm</Button>
             </div>
           </div>
         </template>
@@ -2158,8 +2234,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This is a basic modal with default settings. You can customize the content, size, and behavior.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Confirm</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Confirm</Button>
             </div>
           </div>
         </template>
@@ -2186,7 +2262,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
     template: `
       <Modal v-bind="args">
         <template #trigger="{ toggleModal }">
-          <Button color="primary" size="lg" @click="toggleModal(true)">
+          <Button variant="primary" size="lg" @click="toggleModal(true)">
             🚀 Launch Modal
           </Button>
         </template>
@@ -2197,7 +2273,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
             <p class="text-gray-600 dark:text-gray-400 mb-6">
               This modal uses a custom trigger button instead of the default one.
             </p>
-            <Button color="primary" @click="toggleModal(false)">Close</Button>
+            <Button variant="primary" @click="toggleModal(false)">Close</Button>
           </div>
         </template>
       </Modal>
@@ -2231,8 +2307,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal has a custom title in the header area.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Save Changes</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Save Changes</Button>
             </div>
           </div>
         </template>
@@ -2275,8 +2351,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal demonstrates the title slot functionality. You can add custom content, icons, and styling to the title area.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Save</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Save</Button>
             </div>
           </div>
         </template>
@@ -2313,8 +2389,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               You must use the action buttons to close it.
             </p>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Dismiss</Button>
-              <Button color="primary" @click="toggleModal(false)">Acknowledge</Button>
+              <Button variant="outline" @click="toggleModal(false)">Dismiss</Button>
+              <Button variant="primary" @click="toggleModal(false)">Acknowledge</Button>
             </div>
           </div>
         </template>
@@ -2370,8 +2446,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               <textarea class="form-textarea w-full" rows="4" placeholder="Enter your message"></textarea>
             </div>
             <div class="flex justify-end space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Submit</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Submit</Button>
             </div>
           </div>
         </template>
@@ -2408,7 +2484,7 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
             <p class="text-gray-600 dark:text-gray-400 mb-6">
               This modal uses a zoom-in animation effect. Try opening it again to see the animation.
             </p>
-            <Button color="primary" @click="toggleModal(false)">Awesome!</Button>
+            <Button variant="primary" @click="toggleModal(false)">Awesome!</Button>
           </div>
         </template>
       </Modal>
@@ -2457,10 +2533,10 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
         
         <template #footer="{ toggleModal }">
           <div class="flex justify-between">
-            <Button outline @click="toggleModal(false)">Cancel</Button>
+            <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
             <div class="space-x-2 flex">
-              <Button outline>Save Draft</Button>
-              <Button color="primary" @click="toggleModal(false)">Submit</Button>
+              <Button variant="outline">Save Draft</Button>
+              <Button variant="primary" @click="toggleModal(false)">Submit</Button>
             </div>
           </div>
         </template>
@@ -2496,8 +2572,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               This modal has the close button hidden. You must use the action buttons to close it.
             </p>
             <div class="flex justify-center space-x-2">
-              <Button outline @click="toggleModal(false)">Cancel</Button>
-              <Button color="primary" @click="toggleModal(false)">Proceed</Button>
+              <Button variant="outline" @click="toggleModal(false)">Cancel</Button>
+              <Button variant="primary" @click="toggleModal(false)">Proceed</Button>
             </div>
           </div>
         </template>
@@ -2535,8 +2611,8 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
               Are you sure you want to proceed?
             </p>
             <div class="flex justify-center space-x-2">
-              <Button outline size="sm" @click="toggleModal(false)">No</Button>
-              <Button color="danger" size="sm" @click="toggleModal(false)">Yes, Delete</Button>
+              <Button variant="outline" size="sm" @click="toggleModal(false)">No</Button>
+              <Button variant="danger" size="sm" @click="toggleModal(false)">Yes, Delete</Button>
             </div>
           </div>
         </template>
@@ -2552,7 +2628,10 @@ Use for tasks that require focused attention. Keep content concise; avoid nestin
 
 ---
 
+<a id="complex-pagination"></a>
 ## Complex / Pagination
+
+**Source URL**: http://localhost:6006/?path=/docs/complex-pagination--docs
 
 ### Pagination
 
@@ -2645,7 +2724,10 @@ Current Page: 1
 
 ---
 
+<a id="elements-avatar"></a>
 ## Elements / Avatar
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-avatar--docs
 
 ### Avatar
 
@@ -2843,7 +2925,10 @@ Use in lists, headers, and cards. Combine with AvatarGroup to show multiple part
 
 ---
 
+<a id="elements-avatargroup"></a>
 ## Elements / Avatargroup
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-avatargroup--docs
 
 ### AvatarGroup
 
@@ -3195,7 +3280,10 @@ Avatar group with RTL (Right-to-Left) layout support enabled.
 
 ---
 
+<a id="elements-button"></a>
 ## Elements / Button
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-button--docs
 
 ### Button
 
@@ -3561,7 +3649,10 @@ Chip clicks: 0
 
 ---
 
+<a id="elements-card"></a>
 ## Elements / Card
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-card--docs
 
 ### Card
 
@@ -3997,7 +4088,10 @@ Option 1Option 2
 
 ---
 
+<a id="elements-dropdown"></a>
 ## Elements / Dropdown
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-dropdown--docs
 
 ### Dropdown
 
@@ -4631,7 +4725,10 @@ Use for menus, quick filters, and small forms. Keep actions concise and avoid de
 
 ---
 
+<a id="elements-iconbutton"></a>
 ## Elements / Iconbutton
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-iconbutton--docs
 
 ### IconButton
 
@@ -4990,7 +5087,10 @@ Badge mode with labels in different colors - perfect for status indicators and t
 
 ---
 
+<a id="elements-progress"></a>
 ## Elements / Progress
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-progress--docs
 
 ### Progress
 
@@ -5286,7 +5386,10 @@ The component includes several interactive features:
 
 ---
 
+<a id="elements-tabs"></a>
 ## Elements / Tabs
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-tabs--docs
 
 ### Tabs
 
@@ -5959,7 +6062,10 @@ This content won't be accessible because the tab is disabled.
 
 ---
 
+<a id="elements-tooltip"></a>
 ## Elements / Tooltip
+
+**Source URL**: http://localhost:6006/?path=/docs/elements-tooltip--docs
 
 ### Tooltip
 
@@ -6057,7 +6163,10 @@ This is a much longer tooltip message that demonstrates how the tooltip handles 
 
 ---
 
+<a id="form-checkboxinput"></a>
 ## Form / Checkboxinput
+
+**Source URL**: http://localhost:6006/?path=/docs/form-checkboxinput--docs
 
 ### CheckboxInput
 
@@ -6699,7 +6808,10 @@ Selected: None
 
 ---
 
+<a id="form-fileinputbutton"></a>
 ## Form / Fileinputbutton
+
+**Source URL**: http://localhost:6006/?path=/docs/form-fileinputbutton--docs
 
 ### FileInputButton
 
@@ -6747,7 +6859,7 @@ Upload File
 | errorMessage | Error message to displaystring | "" |  |
 | id | string | "" |  |
 | capture | Capture method for file input (e.g., "user" or "environment")"user""environment"boolean | - |  |
-| size | Size attribute for the file inputnumber | 0 |  |
+| size | Size attribute for the file inputnumber | - |  |
 | events |  |
 | blur | Emitted when the input loses focusFocusEvent | - | - |
 | focus | Emitted when the input gains focusFocusEvent | - | - |
@@ -6849,7 +6961,10 @@ Take Photo
 
 ---
 
+<a id="form-fileinputcombo"></a>
 ## Form / Fileinputcombo
+
+**Source URL**: http://localhost:6006/?path=/docs/form-fileinputcombo--docs
 
 ### FileInputCombo
 
@@ -7441,7 +7556,10 @@ Demonstrates error toast notifications
 
 ---
 
+<a id="form-input"></a>
 ## Form / Input
+
+**Source URL**: http://localhost:6006/?path=/docs/form-input--docs
 
 ### Input
 
@@ -7858,7 +7976,10 @@ Icon Positioning Demo
 
 ---
 
+<a id="form-inputgroup"></a>
 ## Form / Inputgroup
+
+**Source URL**: http://localhost:6006/?path=/docs/form-inputgroup--docs
 
 ### InputGroup
 
@@ -8128,7 +8249,10 @@ Username
 
 ---
 
+<a id="form-select"></a>
 ## Form / Select
+
+**Source URL**: http://localhost:6006/?path=/docs/form-select--docs
 
 ### Select
 
@@ -9227,7 +9351,10 @@ const options = ["Red","Green","Blue","Yellow","Purple","Orange"];
 
 ---
 
+<a id="form-switchball"></a>
 ## Form / Switchball
+
+**Source URL**: http://localhost:6006/?path=/docs/form-switchball--docs
 
 ### SwitchBall
 
@@ -9433,7 +9560,10 @@ Custom Icon Switch
 
 ---
 
+<a id="form-textarea"></a>
 ## Form / Textarea
+
+**Source URL**: http://localhost:6006/?path=/docs/form-textarea--docs
 
 ### TextArea
 
@@ -9765,4 +9895,3 @@ Icon Positioning Demo
 ```
 
 ---
-
