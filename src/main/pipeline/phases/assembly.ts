@@ -1,6 +1,8 @@
 import { FileType, EnrichedTimelineSegment } from '../../../shared/types'
 import { PipelineFunction } from '../index'
 import { assembleVideo } from '../../ffmpeg'
+import fs from 'fs'
+import path from 'path'
 
 export const assembleVideoFromTimeline: PipelineFunction = async (data, context) => {
 	const timeline = data.timeline as EnrichedTimelineSegment[]
@@ -19,10 +21,13 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 	context.updateStatus('Assembling video from timeline...')
 
 	try {
+		const resultsDir = path.join(context.tempDir, 'generated-videos')
+		if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true })
+
 		const outputPath = await assembleVideo(
 			videoPath,
 			timeline,
-			context.tempDir,
+			resultsDir,
 			context.messageId,
 			(percent) => {
 				context.updateStatus(`Assembling video (${percent}%)...`)

@@ -22,8 +22,10 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	}
 
 	context.updateStatus('Downscaling video to 480p for faster processing...')
-	const tempDir = context.tempDir
-	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, tempDir, (percent) => {
+	const videoDir = path.join(context.tempDir, 'video')
+	if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
+	
+	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, videoDir, (percent) => {
 		context.updateStatus(`Downscaling video... ${percent}%`)
 	}, context.signal)
 
@@ -36,8 +38,10 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	const videoPath = context.preprocessing.lowResVideoPath! || context.videoPath;
 	context.updateStatus('Converting video to audio...')
 
-	const tempDir = context.tempDir
-	const audioPath = await ffmpegAdapter.toAudio(videoPath, tempDir, (percent) => {
+	const audioDir = path.join(context.tempDir, 'audio')
+	if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true })
+	
+	const audioPath = await ffmpegAdapter.toAudio(videoPath, audioDir, (percent) => {
 		context.updateStatus(`Converting to audio... ${percent}%`)
 	}, context.signal)
 
@@ -57,13 +61,19 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, undefined, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
 
-	const tempDir = context.tempDir
-	const rawResponsePath = path.join(tempDir, `raw_transcript_response.txt`)
+	if (context.signal.aborted) return;
+
+	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
+
+	const rawResponsePath = path.join(transcriptsDir, `raw_transcript_response.txt`)
 	fs.writeFileSync(rawResponsePath, rawResponseText)
 
-	const rawTranscriptPath = path.join(tempDir, `raw_transcript.json`)
+	const rawTranscriptPath = path.join(transcriptsDir, `raw_transcript.json`)
 	fs.writeFileSync(rawTranscriptPath, JSON.stringify(transcript, null, 2))
 
 	context.savePreprocessing({ rawTranscriptPath, transcriptPath: rawTranscriptPath })
@@ -88,13 +98,19 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscriptText = formatTranscript(rawTranscript)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
 
-	const tempDir = context.tempDir
-	const rawResponsePath = path.join(tempDir, `corrected_transcript_response.txt`)
+	if (context.signal.aborted) return;
+
+	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
+
+	const rawResponsePath = path.join(transcriptsDir, `corrected_transcript_response.txt`)
 	fs.writeFileSync(rawResponsePath, rawResponseText)
 
-	const correctedTranscriptPath = path.join(tempDir, `corrected_transcript.json`)
+	const correctedTranscriptPath = path.join(transcriptsDir, `corrected_transcript.json`)
 	fs.writeFileSync(correctedTranscriptPath, JSON.stringify(transcript, null, 2))
 
 	context.savePreprocessing({ correctedTranscriptPath, transcriptPath: correctedTranscriptPath })
@@ -128,8 +144,10 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 		return
 	}
 
-	const tempDir = context.tempDir
-	const sceneTimesPath = path.join(tempDir, `scenes.json`)
+	const analysisDir = path.join(context.tempDir, 'analysis')
+	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
+
+	const sceneTimesPath = path.join(analysisDir, `scenes.json`)
 	fs.writeFileSync(sceneTimesPath, JSON.stringify(scenes, null, 2))
 
 	context.savePreprocessing({ sceneTimesPath })
@@ -191,7 +209,11 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 				frameUri,
 				context.signal
 			)
-			context.recordUsage(record)
+			
+			// Record usage immediately
+			await context.recordUsage(record)
+
+			if (context.signal.aborted) return;
 
 			descriptions.push({
 				index: i,
@@ -209,7 +231,10 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 		}
 	}
 
-	const sceneDescriptionsPath = path.join(tempDir, `scene_descriptions.json`)
+	const analysisDir = path.join(tempDir, 'analysis')
+	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
+
+	const sceneDescriptionsPath = path.join(analysisDir, `scene_descriptions.json`)
 	fs.writeFileSync(sceneDescriptionsPath, JSON.stringify(descriptions, null, 2))
 
 	context.savePreprocessing({ sceneDescriptionsPath })

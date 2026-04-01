@@ -250,10 +250,11 @@ Task: Pick the next 3 segments to add to the timeline.
 
         try {
             const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
-            console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
-
-            // Record usage for each iteration
+            
+            // Record usage IMMEDIATELY after call finishes, before any abort checks
             onRecordUsage?.(record);
+
+            console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             const indices = parseIndicesFromResponse(responseText);
 

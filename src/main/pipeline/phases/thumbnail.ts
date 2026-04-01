@@ -103,7 +103,11 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 				"You are an expert at selecting key frames for video thumbnails.",
 				context.signal
 			)
-			context.recordUsage(selectionRecord)
+			// Record usage immediately
+			await context.recordUsage(selectionRecord)
+			
+			if (context.signal.aborted) return;
+
 			selectedTimestamps = selectionResult.selectedScenes.map(s => timeToSeconds(s.timestamp))
 		} catch (e) {
 			console.warn('AI Scene selection failed, falling back to default timestamps:', e)
@@ -111,26 +115,30 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 			selectedTimestamps = [videoDuration * 0.1, videoDuration * 0.5, videoDuration * 0.9]
 		}
 
-		// 3. Extract Chosen Frames
-		const validTimestamps = selectedTimestamps.filter(ts => !isNaN(ts) && ts >= 0)
-		
-		context.updateStatus(`Extracting ${validTimestamps.length} reference frames...`)
-		for (const ts of validTimestamps) {
-			try {
-				const framePath = await ffmpegAdapter.extractFrame(context.videoPath, ts, context.tempDir, context.signal)
-				extractedFrames.push(framePath)
-			} catch (e) {
-				console.warn(`Failed to extract frame at ${ts}:`, e)
-			}
+	// 3. Extract Chosen Frames
+	const validTimestamps = selectedTimestamps.filter(ts => !isNaN(ts) && ts >= 0)
+	
+	const imagesDir = path.join(context.tempDir, 'generated-images')
+	if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true })
+
+	context.updateStatus(`Extracting ${validTimestamps.length} reference frames...`)
+	for (const ts of validTimestamps) {
+		try {
+			const framePath = await ffmpegAdapter.extractFrame(context.videoPath, ts, imagesDir, context.signal)
+			extractedFrames.push(framePath)
+		} catch (e) {
+			console.warn(`Failed to extract frame at ${ts}:`, e)
 		}
 	}
+}
 
-	// 2. Generate the Thumbnail Asset
-	context.updateStatus('Generating thumbnail image with Gemini...')
-	const modelName = modelSettings.selection['thumbnail']
+// 2. Generate the Thumbnail Asset
+context.updateStatus('Generating thumbnail image with Gemini...')
+const currentModelSettings = (await import('../../settings')).settingsManager.getModelSettings()
+const modelName = currentModelSettings.selection['thumbnail']
 
-	const resultPath = path.join(context.tempDir, `thumbnail_${context.messageId}.png`)
-	context.updateStatus(`Generating thumbnail image with Gemini...`)
+const resultPath = path.join(context.tempDir, 'generated-images', `thumbnail_${context.messageId}.png`)
+context.updateStatus(`Generating thumbnail image with Gemini...`)
 	
 	const systemInstruction = `You are a professional video thumbnail designer.
 Your goal is to create a high-impact, cinematic thumbnail for a video based on a user's request and provided reference frames.
@@ -158,7 +166,11 @@ Please update the previous result based on the Refinement Request while maintain
 
 	const allReferenceImages = [...previousFiles, ...extractedFrames]
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
-	context.recordUsage(record)
+	
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
 
 	// Determine title/content for the final message
 	const messageContent = intent.content
