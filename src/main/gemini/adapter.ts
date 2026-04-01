@@ -313,7 +313,8 @@ export class GeminiAdapter {
 		modelName: string,
 		prompt: string,
 		outputPath: string,
-		imagePaths: string[] = []
+		imagePaths: string[] = [],
+		systemInstruction?: string
 	): Promise<{ path: string, record: UsageRecord }> {
 		try {
 			// Prepare parts: Image parts FIRST, then text prompt
@@ -336,7 +337,8 @@ export class GeminiAdapter {
 			// For gemini-3.1-flash-image-preview, we use generateContent
 			const response = await this.client.models.generateContent({
 				model: modelName,
-				contents: [{ role: 'user', parts }]
+				contents: [{ role: 'user', parts }],
+				config: systemInstruction ? { systemInstruction: systemInstruction } : undefined
 			});
 
 			if (!response.candidates || response.candidates.length === 0) {

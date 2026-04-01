@@ -24,8 +24,9 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 		
 		// If the immediate parent is a User message, the files are in its parent (the previous AI result)
 		if (refMsg && refMsg.role === MessageRole.User && refMsg.editRefId) {
-			console.log(`[THUMBNAIL] Current ref node ${context.editRefId} is a User message. Jumping to grandparent ${refMsg.editRefId}`)
-			refMsg = thread?.messages.find(m => m.id === refMsg.editRefId)
+			const grandParentId = refMsg.editRefId
+			console.log(`[THUMBNAIL] Current ref node ${context.editRefId} is a User message. Jumping to grandparent ${grandParentId}`)
+			refMsg = thread?.messages.find(m => m.id === grandParentId)
 		}
 
 		if (refMsg && refMsg.files && refMsg.files.length > 0) {
@@ -130,15 +131,32 @@ Respond with a JSON object containing a 'selectedScenes' array of objects with '
 	const resultPath = path.join(context.tempDir, `thumbnail_${context.messageId}.png`)
 	context.updateStatus(`Generating thumbnail image with Gemini...`)
 	
-	let multimodalPrompt = `${intent.content}\n\nReference materials from the source video are provided above.`
+	const systemInstruction = `You are a professional video thumbnail designer.
+Your goal is to create a high-impact, cinematic thumbnail for a video based on a user's request and provided reference frames.
+
+CRITICAL RULES:
+1. VISUAL FIDELITY: You must maintain the identity of the people, objects, and locations shown in the reference frames. Do not generate generic characters if specific people are visible in the source images.
+2. SOURCE MATERIAL: Treat the provided images as your primary palette. Your output should look like it was created by professionally editing and combining elements from the video, not like a standalone AI image.
+3. COMPOSITION: Use principles of good graphic design (Rule of Thirds, leading lines, high contrast) to make the thumbnail "pop".
+4. NO HALLUCINATIONS: Do not add major elements unless explicitly requested by the user.
+
+When provided with a "previous result" and "original reference frames":
+- PRIORITIZE CONSISTENCY with the previous result unless the user request explicitly asks for a change.
+- Refer back to "original reference frames" to ensure you haven't drifted away from the actual video content.`
+
+	let multimodalPrompt = `User Request: "${intent.content}"\n\nPlease generate a thumbnail that fulfills this request using the provided reference frames from the video.`
 	if (isIteration) {
-		multimodalPrompt = `The user wants to refine the previously generated thumbnail. 
-Request: "${intent.content}"
-Based on the previous result and original reference frames (provided above), please generate a NEW refined thumbnail.`
+		multimodalPrompt = `Refinement Request: "${intent.content}"
+		
+The provided images include:
+1. The PREVIOUS thumbnail result (first image).
+2. ORIGINAL reference frames from the video.
+
+Please update the previous result based on the Refinement Request while maintaining strict visual consistency with the original video content.`
 	}
 
 	const allReferenceImages = [...previousFiles, ...extractedFrames]
-	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages)
+	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction)
 	context.recordUsage(record)
 
 	// Determine title/content for the final message
