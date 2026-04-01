@@ -34,8 +34,16 @@
 
             <div class="space-y-6">
               <div
-                class="p-5 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800 font-mono text-sm text-zinc-600 dark:text-zinc-400 break-all">
+                class="p-5 bg-zinc-50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800 font-mono text-sm text-zinc-600 dark:text-zinc-400 break-all relative group">
                 {{ tempDir || 'Loading...' }}
+                
+                <div v-if="isTempDirUnsafe" class="mt-4 flex items-start gap-3 p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 font-sans animate-in fade-in slide-in-from-top-2 duration-300">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <div class="text-xs">
+                    <p class="font-bold mb-0.5">Unstable Storage Location</p>
+                    <p class="opacity-80 leading-relaxed">This folder may be cleared by the OS. Use a persistent directory to keep your project artifacts safe.</p>
+                  </div>
+                </div>
               </div>
 
               <div class="flex gap-4 justify-between">
@@ -246,6 +254,7 @@ const NEW_OP = 'thumbnail'
 const router = useRouter()
 const videoStore = useVideoStore()
 const tempDir = ref('')
+const isTempDirUnsafe = ref(false)
 const apiKey = ref('')
 const initialApiKey = ref('')
 
@@ -269,6 +278,7 @@ const availableModels = computed(() => Object.keys(modelSettings.value.pricing))
 
 const fetchSettings = async () => {
   tempDir.value = await (window as any).api.getTempDir()
+  isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
   const key = await (window as any).api.getGeminiApiKey()
   if (key) {
     apiKey.value = key
@@ -298,6 +308,7 @@ const handleChange = async () => {
   const result = await (window as any).api.setTempDir()
   if (result) {
     tempDir.value = result
+    isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
   }
 }
 
@@ -309,6 +320,7 @@ const handleReset = async () => {
   const result = await (window as any).api.resetTempDir()
   if (result) {
     tempDir.value = result
+    isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
   }
 }
 

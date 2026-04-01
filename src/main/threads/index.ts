@@ -80,9 +80,19 @@ class ThreadManager {
 		const threads: Thread[] = []
 
 		for (const file of files) {
+			const filePath = path.join(this.threadsDir, file)
 			try {
-				const content = fs.readFileSync(path.join(this.threadsDir, file), 'utf-8')
-				const thread = JSON.parse(content)
+				const content = fs.readFileSync(filePath, 'utf-8')
+				const thread = JSON.parse(content) as Thread
+				
+				// Cleanup: if tempDir is gone, the project artifacts are gone.
+				// We remove it from the list.
+				if (thread.tempDir && !fs.existsSync(thread.tempDir)) {
+					console.warn(`Thread ${thread.id} artifact directory is missing. Cleaning up metadata...`)
+					fs.unlinkSync(filePath)
+					continue
+				}
+
 				threads.push(thread)
 			} catch (error) {
 				console.error(`Failed to parse thread file ${file}:`, error)
