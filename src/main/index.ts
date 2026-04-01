@@ -110,7 +110,15 @@ app.whenReady().then(() => {
 			checkFFmpegAvailability(),
 			checkScenedetectAvailability()
 		])
-		return { ffmpegAvailable, scenedetectAvailable }
+		return { 
+			ffmpegAvailable, 
+			scenedetectAvailable, 
+			isTempDirUnsafe: settingsManager.isTempDirUnsafe() 
+		}
+	})
+
+	ipcMain.handle('is-temp-dir-unsafe', () => {
+		return settingsManager.isTempDirUnsafe()
 	})
 
 	ipcMain.handle('debug-log', (_event, ...args: any[]) => {
@@ -216,7 +224,7 @@ app.whenReady().then(() => {
 
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
-		const newThread = threadManager.createThread(videoPath, videoName)
+		const newThread = await threadManager.createThread(videoPath, videoName)
 		backgroundTaskManager.startPreprocessing(newThread.id)
 		return newThread
 	})

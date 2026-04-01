@@ -23,6 +23,7 @@ const api = {
 	resetTempDir: () => ipcRenderer.invoke('reset-temp-dir'),
 	openTempDir: () => ipcRenderer.invoke('open-temp-dir'),
 	getGeminiApiKey: () => ipcRenderer.invoke('get-gemini-api-key'),
+	isTempDirUnsafe: () => ipcRenderer.invoke('is-temp-dir-unsafe'),
 	setGeminiApiKey: (key: string) => ipcRenderer.invoke('set-gemini-api-key', key),
 	getModelSettings: () => ipcRenderer.invoke('get-model-settings'),
 	setModelSettings: (settings: any) => ipcRenderer.invoke('set-model-settings', settings),
