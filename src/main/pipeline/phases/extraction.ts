@@ -24,7 +24,7 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	context.updateStatus('Downscaling video to 480p for faster processing...')
 	const videoDir = path.join(context.tempDir, 'video')
 	if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
-	
+
 	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, videoDir, (percent) => {
 		context.updateStatus(`Downscaling video... ${percent}%`)
 	}, context.signal)
@@ -40,7 +40,7 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 
 	const audioDir = path.join(context.tempDir, 'audio')
 	if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true })
-	
+
 	const audioPath = await ffmpegAdapter.toAudio(videoPath, audioDir, (percent) => {
 		context.updateStatus(`Converting to audio... ${percent}%`)
 	}, context.signal)
@@ -61,7 +61,7 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, undefined, context.signal)
-	
+
 	// Record usage immediately
 	await context.recordUsage(record)
 
@@ -98,7 +98,7 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 	const rawTranscriptText = formatTranscript(rawTranscript)
 
 	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText, context.signal)
-	
+
 	// Record usage immediately
 	await context.recordUsage(record)
 
@@ -209,7 +209,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 				frameUri,
 				context.signal
 			)
-			
+
 			// Record usage immediately
 			await context.recordUsage(record)
 
