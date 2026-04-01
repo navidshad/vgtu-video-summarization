@@ -83,15 +83,14 @@
       </div>
     </div>
 
-    <!-- Integrated Input -->
     <div v-if="data.hasInputInitially || showInput" class="p-3 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/5 animate-in slide-in-from-top-1 duration-200">
-      <div class="flex items-end space-x-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-inner focus-within:border-blue-500/50 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
+      <div class="flex items-end space-x-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-inner input-focus-ring transition-all duration-300">
         <textarea 
           v-model="input"
           :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'"
-          class="flex-1 bg-transparent border-none text-sm focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden"
+          class="flex-1 bg-transparent border-none text-sm focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden leading-relaxed"
           rows="1"
-          @keydown.enter.prevent="submit"
+          @keydown.enter="handleEnter"
           @input="adjustTextarea"
           ref="textareaRef"
         ></textarea>
@@ -125,6 +124,13 @@ const adjustTextarea = () => {
   if (textareaRef.value) {
     textareaRef.value.style.height = 'auto'
     textareaRef.value.style.height = textareaRef.value.scrollHeight + 'px'
+  }
+}
+
+const handleEnter = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && input.value.trim()) {
+    e.preventDefault()
+    submit()
   }
 }
 
