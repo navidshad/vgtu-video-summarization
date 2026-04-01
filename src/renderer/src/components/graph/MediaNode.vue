@@ -8,10 +8,10 @@
         v-if="videoUrl"
         ref="videoRef"
         :src="videoUrl" 
-        class="w-full h-full object-cover opacity-60 group-hover/player:opacity-100 transition-opacity"
+        class="w-full h-full object-cover transition-opacity"
         @click="togglePlay"
       ></video>
-      <div v-if="!isPlaying && videoUrl" @click="togglePlay" class="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer hover:bg-black/20 transition z-10">
+      <div v-if="!isPlaying && videoUrl" @click="togglePlay" class="absolute inset-0 flex items-center justify-center bg-transparent cursor-pointer transition z-10">
         <div class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl group-hover/player:scale-110 transition duration-300">
            <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </div>
@@ -21,7 +21,7 @@
       </div>
       
       <!-- Full Screen Toggle Overlay -->
-      <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/player:opacity-100 transition-opacity">
+      <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/player:opacity-100 transition-opacity z-20">
         <button 
           v-if="videoUrl"
           @click="isFullScreen = true" 
@@ -32,8 +32,8 @@
         </button>
         <button 
           @click="showDetails = !showDetails" 
-          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
-          :class="{'text-primary-light': showDetails}"
+          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all"
+          :class="showDetails ? 'text-primary-light' : 'text-white'"
           title="Toggle Metadata"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -114,7 +114,7 @@
     <!-- Full Screen Modal (Teleport to body) -->
     <Teleport to="body">
       <div v-if="isFullScreen" class="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-8 backdrop-blur-3xl animate-in fade-in duration-300">
-        <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90">
+        <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <video v-if="videoUrl" :src="videoUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>

@@ -51,14 +51,14 @@
       ></div>
     
       <!-- Cover Images -->
-      <div v-else-if="data.type === 'cover'" class="w-full h-full p-2 flex gap-1 opacity-60 group-hover/player:opacity-100 transition-opacity">
+      <div v-else-if="data.type === 'cover'" class="w-full h-full p-2 flex gap-1 transition-opacity">
         <div v-for="(img, idx) in data.images" :key="idx" class="flex-1 aspect-square bg-zinc-800 rounded-lg overflow-hidden border border-white/5 shadow-inner">
           <img :src="img" class="w-full h-full object-cover hover:scale-110 transition duration-500" />
         </div>
       </div>
 
       <!-- Thumbnail Sections -->
-      <div v-else-if="files && files.length > 0 && (data.type === 'thumbnail' || data.type === 'generate-thumbnail')" class="w-full h-full flex flex-col group/thumbnail opacity-60 group-hover/player:opacity-100 transition-opacity">
+      <div v-else-if="files && files.length > 0 && (data.type === 'thumbnail' || data.type === 'generate-thumbnail')" class="w-full h-full flex flex-col group/thumbnail transition-opacity">
          <img :src="mediaUrl(files[0].url)" class="w-full h-full object-contain" />
       </div>
 
@@ -67,10 +67,10 @@
         <video 
           ref="videoRef"
           :src="mediaContentUrl" 
-          class="w-full h-full object-contain opacity-60 group-hover/player:opacity-100 transition-opacity"
+          class="w-full h-full object-contain transition-opacity"
           @click="togglePlay"
         ></video>
-        <div v-if="!isPlaying" @click="togglePlay" class="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer hover:bg-black/20 transition">
+        <div v-if="!isPlaying" @click="togglePlay" class="absolute inset-0 flex items-center justify-center bg-transparent cursor-pointer transition">
           <div class="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-xl group-hover/player:scale-110 transition duration-300">
              <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </div>
@@ -155,7 +155,7 @@
     <!-- Full Screen Modal (Teleport to body) -->
     <Teleport to="body">
       <div v-if="isFullScreen" class="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-8 backdrop-blur-3xl animate-in fade-in duration-300">
-        <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90">
+        <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
         <video v-if="isFullScreen && isVideo" :src="mediaContentUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>
