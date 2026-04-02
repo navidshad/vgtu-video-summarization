@@ -185,16 +185,21 @@ app.whenReady().then(() => {
 			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 
-		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
+		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start() in background...`)
 		activePipelines.set(newAiMessageId, pipeline)
-		try {
-			await pipeline.start({})
-			console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
-		} catch (e) {
-			console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
-		} finally {
-			activePipelines.delete(newAiMessageId)
-		}
+		
+		pipeline.start({})
+			.then(() => {
+				console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
+			})
+			.catch((e) => {
+				console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+			})
+			.finally(() => {
+				activePipelines.delete(newAiMessageId)
+			})
+
+		return true
 	})
 
 	ipcMain.handle('abort-pipeline', async (_event, messageId) => {

@@ -231,6 +231,7 @@
               <!-- Tooltip wrapper for disabled state -->
               <div class="relative group/btn pt-2">
                 <Button @click="startCreation" color="primary" :disabled="!canSubmit" label="Create Summary" size="lg"
+                  :is-loading="isCreating"
                   class="w-full !rounded-lg !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]" />
 
                 <!-- Tooltip shown when ffmpeg is missing -->
@@ -270,6 +271,7 @@ const uploadMode = ref<'local'|'link'>('local')
 const videoUrl = ref('')
 const isAnalyzing = ref(false)
 const isDownloading = ref(false)
+const isCreating = ref(false)
 const availableResolutions = ref<string[]>([])
 const selectedResolution = ref('')
 const downloadProgress = ref(0)
@@ -305,7 +307,7 @@ onMounted(async () => {
 })
 
 // Can only submit if ffmpeg is available and a file + prompt are ready
-const canSubmit = computed(() => ffmpegAvailable.value && !!prompt.value.trim())
+const canSubmit = computed(() => ffmpegAvailable.value && !!prompt.value.trim() && !isCreating.value)
 
 const handleNativeSelect = async () => {
   const result = await (window as any).api?.selectVideo()
@@ -382,18 +384,31 @@ const resetSelection = () => {
 
 const startCreation = async () => {
   if (fileSelected.value && prompt.value.trim() && ffmpegAvailable.value) {
-    // 1. Create a new thread
-    const threadId = await videoStore.createThread(filePath.value, fileName.value)
+    try {
+      isCreating.value = true
 
-    // 2. Add the user message
-    const userMsgId = await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
+      // 1. Create a new thread
+      const threadId = await videoStore.createThread(filePath.value, fileName.value)
 
-    // 3. Navigate to chat with thread ID
-    router.push(`/chat/${threadId}`)
+      // 2. Add the user message
+      const userMsgId = await videoStore.addMessage(prompt.value.trim(), MessageRole.User)
 
-    // 4. Start the AI processing pipeline
-    // Pass userMsgId so the AI response is correctly linked to it in the graph
-    await videoStore.startProcessing(threadId, userMsgId)
+      // 3. Start the AI processing pipeline (asynchronous in main process)
+      await videoStore.startProcessing(threadId, userMsgId)
+
+      // 4. Navigate to chat with thread ID
+      router.push(`/chat/${threadId}`)
+    } catch (error: any) {
+      console.error('Failed to start creation:', error)
+      isCreating.value = false
+      await (window as any).api?.showConfirmation({
+        title: 'Creation Failed',
+        message: 'Could not initialize the summary process.',
+        detail: error?.message || 'Please try again.',
+        type: 'error',
+        buttons: ['OK']
+      })
+    }
   }
 }
 </script>
