@@ -1,68 +1,49 @@
-import { spawn } from 'child_process'
 import { join } from 'path'
-import { v4 as uuidv4 } from 'uuid'
+import { YtDlp } from 'ytdlp-nodejs'
 import fs from 'fs'
 
+const ytdlp = new YtDlp()
+
 export async function checkYtDlpAvailability(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const process = spawn('yt-dlp', ['--version'])
-
-		process.on('close', (code) => {
-			resolve(code === 0)
-		})
-
-		process.on('error', () => {
-			resolve(false)
-		})
-	})
+	try {
+		const isInstalled = await ytdlp.checkInstallationAsync()
+		if (!isInstalled) {
+			// Try to update/download if not present
+			await ytdlp.updateYtDlpAsync()
+			return await ytdlp.checkInstallationAsync()
+		}
+		return true
+	} catch (error) {
+		console.error('Failed to check or install yt-dlp:', error)
+		return false
+	}
 }
 
 export async function getVideoFormats(url: string): Promise<string[]> {
-	return new Promise((resolve, reject) => {
-		const ytProcess = spawn('yt-dlp', [
-			'--no-playlist',
-			'-J',
-			url
-		])
+	try {
+		const info = await ytdlp.getInfoAsync(url)
+		if (info._type !== 'video') {
+			throw new Error('URL is not a single video (possible playlist or channel)')
+		}
+		const formats = info.formats || []
+		const heights = new Set<number>()
 
-		let output = ''
-		let errorOutput = ''
-
-		ytProcess.stdout.on('data', (data) => {
-			output += data.toString()
-		})
-
-		ytProcess.stderr.on('data', (data) => {
-			errorOutput += data.toString()
-		})
-
-		ytProcess.on('close', (code) => {
-			if (code === 0) {
-				try {
-					const data = JSON.parse(output)
-					const formats = data.formats || []
-					const heights = new Set<number>()
-
-					formats.forEach((f: any) => {
-						if (f.height && f.height >= 144) {
-							heights.add(f.height)
-						}
-					})
-
-					// Sort descending: 1080, 720, 480...
-					const sortedHeights = Array.from(heights)
-						.sort((a, b) => b - a)
-						.map(h => h.toString())
-
-					resolve(sortedHeights.length > 0 ? sortedHeights : ['Best'])
-				} catch (e) {
-					reject(new Error('Failed to parse yt-dlp output'))
-				}
-			} else {
-				reject(new Error(`yt-dlp failed to fetch formats: ${errorOutput}`))
+		formats.forEach((f: any) => {
+			if (f.height && f.height >= 144) {
+				heights.add(f.height)
 			}
 		})
-	})
+
+		// Sort descending: 1080, 720, 480...
+		const sortedHeights = Array.from(heights)
+			.sort((a, b) => b - a)
+			.map(h => h.toString())
+
+		return sortedHeights.length > 0 ? sortedHeights : ['Best']
+	} catch (e) {
+		console.error('Failed to fetch formats:', e)
+		throw new Error('Failed to fetch video formats')
+	}
 }
 
 export async function downloadVideo(
@@ -71,77 +52,54 @@ export async function downloadVideo(
 	resolution?: string,
 	onProgress?: (percent: number) => void
 ): Promise<{ path: string; name: string }> {
-	return new Promise((resolve, reject) => {
-		// Output template: tempFolder / videoTitle.ext
-		const outputTemplate = join(tempFolder, '%(title)s.%(ext)s')
+	// Output template: tempFolder / videoTitle.ext
+	const outputTemplate = join(tempFolder, '%(title)s.%(ext)s')
+	
+	const builder = ytdlp.download(url)
+		.output(outputTemplate)
+		.addArgs('--no-playlist')
+
+	if (resolution && resolution !== 'Best') {
+		// Use the same format logic as before if needed, or use quality()
+		// The previous logic was: bestvideo[height<=RES][ext=mp4]+bestaudio[ext=m4a]/best[height<=RES][ext=mp4]/best
+		// ytdlp-nodejs has quality() but it's simpler. Let's keep the more specific format string for better control
+		const formatStr = `bestvideo[height<=${resolution}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${resolution}][ext=mp4]/best`
+		builder.addArgs('-f', formatStr)
+	} else {
+		const formatStr = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+		builder.addArgs('-f', formatStr)
+	}
+
+	if (onProgress) {
+		builder.on('progress', (p) => {
+			if (p.percentage !== undefined) {
+				onProgress(p.percentage)
+			}
+		})
+	}
+
+	try {
+		const result = await builder.run()
 		
-		const formatStr = resolution && resolution !== 'Best' 
-			? `bestvideo[height<=${resolution}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${resolution}][ext=mp4]/best`
-			: 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+		const downloadedFilePath = result.filePaths?.[0]
+		
+		if (downloadedFilePath && fs.existsSync(downloadedFilePath)) {
+			const name = downloadedFilePath.split(/[/\\]/).pop() || 'Downloaded Video.mp4'
+			return { path: downloadedFilePath, name }
+		}
 
-		const ytProcess = spawn('yt-dlp', [
-			'--no-playlist',
-			'-f', formatStr,
-			'-o', outputTemplate,
-			'--newline',
-			'--progress',
-			'--print', 'after_move:filepath',
-			url
-		])
+		// Fallback: scan the temp directory
+		const files = fs.readdirSync(tempFolder)
+		if (files.length > 0) {
+			const fileStr = files[0]
+			const path = join(tempFolder, fileStr)
+			return { path, name: fileStr }
+		}
 
-		let downloadedFilePath = ''
-		let errorOutput = ''
-
-		ytProcess.stdout.on('data', (data) => {
-			const lines = data.toString().split('\n')
-			for (const line of lines) {
-				const str = line.trim()
-				if (!str) continue
-
-				// Parse progress: [download]  10.0% of 100.00MiB...
-				const progressMatch = str.match(/\[download\]\s+([\d.]+)%/)
-				if (progressMatch && onProgress) {
-					const percent = parseFloat(progressMatch[1])
-					if (!isNaN(percent)) {
-						onProgress(percent)
-					}
-				}
-
-				if (fs.existsSync(str) && (str.endsWith('.mp4') || str.endsWith('.mkv') || str.endsWith('.webm') || str.endsWith('.mov'))) {
-					// yt-dlp --print after_move:filepath will print the final filepath 
-					downloadedFilePath = str
-				}
-			}
-		})
-
-		ytProcess.stderr.on('data', (data) => {
-			errorOutput += data.toString()
-		})
-
-		ytProcess.on('close', (code) => {
-			if (code === 0 && downloadedFilePath && fs.existsSync(downloadedFilePath)) {
-				const name = downloadedFilePath.split(/[/\\]/).pop() || 'Downloaded Video.mp4'
-				resolve({ path: downloadedFilePath, name })
-			} else {
-				// Sometimes yt-dlp's print is weird, fallback to scanning the directory
-				try {
-					const files = fs.readdirSync(tempFolder)
-					if (files.length > 0) {
-						// find the most recently created or just the first media file
-						const fileStr = files[0]
-						const path = join(tempFolder, fileStr)
-						resolve({ path, name: fileStr })
-					} else {
-						reject(new Error(`yt-dlp failed (code ${code}): ${errorOutput}`))
-					}
-				} catch (e) {
-					reject(new Error(`yt-dlp failed (code ${code}): ${errorOutput}`))
-				}
-			}
-		})
-
-		ytProcess.on('error', (err) => {
-			reject(new Error(`Failed to start yt-dlp: ${err.message}`))
-		})
-	})
+		throw new Error('No files found in temp folder after download')
+	} catch (error: any) {
+		console.error('Download failed:', error)
+		throw new Error(`yt-dlp download failed: ${error.message}`)
+	}
 }
+
