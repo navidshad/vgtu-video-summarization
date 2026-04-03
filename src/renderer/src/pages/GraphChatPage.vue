@@ -53,8 +53,14 @@
         <template #node-task="props">
           <TaskProgressNode v-bind="props" />
         </template>
-        <template #node-result="props">
-          <ResultNode v-bind="props" />
+        <template #node-video="props">
+          <VideoNode v-bind="props" />
+        </template>
+        <template #node-thumbnail="props">
+          <ThumbnailNode v-bind="props" />
+        </template>
+        <template #node-summary="props">
+          <SummaryNode v-bind="props" />
         </template>
         <template #node-input="props">
           <ChatInputNode v-bind="props" />
@@ -80,7 +86,9 @@ import { useVideoStore } from '../stores/videoStore'
 import ConversationNode from '../components/graph/ConversationNode.vue'
 import MediaNode from '../components/graph/MediaNode.vue'
 import TaskProgressNode from '../components/graph/TaskProgressNode.vue'
-import ResultNode from '../components/graph/ResultNode.vue'
+import VideoNode from '../components/graph/VideoNode.vue'
+import ThumbnailNode from '../components/graph/ThumbnailNode.vue'
+import SummaryNode from '../components/graph/SummaryNode.vue'
 import ChatInputNode from '../components/graph/ChatInputNode.vue'
 
 import { useRoute, useRouter } from 'vue-router'
@@ -269,9 +277,15 @@ watch(() => videoStore.messages, (messages) => {
           }
         }
       } else {
-        nodeType = 'result'
+        const type = msg.resultType || ((msg.files && msg.files.length > 0) ? 'video' : 'summary')
+        // Normalize nodeType to specialized components
+        if (type === 'video') nodeType = 'video'
+        else if (type === 'thumbnail' || type === 'generate-thumbnail') nodeType = 'thumbnail'
+        else if (type === 'summary' || type === 'cover') nodeType = 'summary'
+        else nodeType = 'summary' // Default fallback
+
         data = { 
-          type: msg.resultType || ((msg.files && msg.files.length > 0) ? 'video' : 'summary'), 
+          type, 
           content: msg.content, 
           files: msg.files, 
           timeline: msg.timeline,

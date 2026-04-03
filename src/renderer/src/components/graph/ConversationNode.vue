@@ -76,11 +76,27 @@
             :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"
           ></div>
           
-          <!-- Files (Exclude Original) -->
-          <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0" class="mt-2 space-y-2">
-             <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url" class="p-2 bg-black/5 dark:bg-white/5 rounded-lg border border-black/5">
-                <div class="text-[10px] font-bold uppercase opacity-50">{{ file.type }}</div>
-                <div class="text-[10px] truncate max-w-full">{{ file.url }}</div>
+          <!-- Files (Images and Previews) -->
+          <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0" class="mt-3 space-y-2">
+             <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url" 
+                  class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden"
+             >
+                <!-- Image Preview for thumbnails/previews -->
+                <div v-if="file.url.match(/\.(jpg|jpeg|png|webp)$/i) || file.type === 'preview' || file.type === 'actual'" 
+                     class="mb-2 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 aspect-video bg-black/20"
+                >
+                   <img :src="mediaUrl(file.url)" class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" />
+                </div>
+
+                <div class="flex items-center justify-between gap-2">
+                   <div class="flex flex-col min-w-0">
+                      <span class="text-[8px] font-black uppercase tracking-widest text-primary/70">{{ file.type }}</span>
+                      <span class="text-[9px] truncate text-zinc-500 font-mono">{{ file.url.split('/').pop() }}</span>
+                   </div>
+                   <button @click.stop="handleSave(file.url)" class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0" title="Save">
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                   </button>
+                </div>
              </div>
           </div>
 
@@ -177,6 +193,19 @@ const submit = () => {
     input.value = ''
     showInput.value = false
     setTimeout(() => adjustTextarea(), 0)
+  }
+}
+
+const mediaUrl = (url: string) => {
+  if (!url) return ''
+  return url.startsWith('media://') ? url : `media://${url}`
+}
+
+const handleSave = async (url: string) => {
+  if (url && (window as any).api) {
+    // If it's a media:// URL, strip it before sending to the save API
+    const cleanPath = url.replace('media://', '')
+    await (window as any).api.saveVideo(cleanPath)
   }
 }
 </script>

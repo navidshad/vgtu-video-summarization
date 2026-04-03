@@ -23,47 +23,21 @@
       <!-- Text Overlay (Bottom Left) -->
       <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
         <div class="flex items-center gap-2 mb-0.5">
-           <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: {{ versionedTitle }}</div>
-           <!-- Version Badge -->
+           <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: Synthesized Clip</div>
            <div v-if="data.version" class="px-1 py-0 rounded bg-primary/30 border border-primary/50 text-[7px] font-black text-white uppercase leading-none mt-[-2px]">
              V{{ data.version }}
            </div>
         </div>
         <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest" :class="data.type === 'thumbnail' ? 'text-primary-light' : 'text-accent-light'">Result: {{ data.type }}</div>
-            <!-- File Type Badge -->
-            <div v-if="fileTypeBadge" 
-                 class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border"
-                 :class="[
-                   fileTypeBadge === 'actual' ? 'bg-accent/20 border-accent/40 text-accent-light' : 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                 ]"
-            >
-              {{ fileTypeBadge }}
-            </div>
+           <div class="text-[9px] font-black uppercase tracking-widest text-accent-light">Result: Video</div>
+           <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
+             Actual
+           </div>
         </div>
-      </div>
-
-      <!-- Summary Content -->
-      <div 
-        v-if="data.type === 'summary'" 
-        v-html="renderMarkdown(data.content)"
-        class="w-full h-full p-4 pb-12 text-[10px] text-zinc-800 dark:text-zinc-200 leading-relaxed overflow-y-auto custom-scrollbar prose prose-sm dark:prose-invert prose-p:my-1 prose-ul:my-2 prose-li:my-0 opacity-80 group-hover/player:opacity-100 transition-opacity"
-      ></div>
-    
-      <!-- Cover Images -->
-      <div v-else-if="data.type === 'cover'" class="w-full h-full p-2 flex gap-1 transition-opacity">
-        <div v-for="(img, idx) in data.images" :key="idx" class="flex-1 aspect-square bg-zinc-800 rounded-lg overflow-hidden border border-white/5 shadow-inner">
-          <img :src="img" class="w-full h-full object-cover hover:scale-110 transition duration-500" />
-        </div>
-      </div>
-
-      <!-- Thumbnail Sections -->
-      <div v-else-if="files && files.length > 0 && (data.type === 'thumbnail' || data.type === 'generate-thumbnail')" class="w-full h-full flex flex-col group/thumbnail transition-opacity">
-         <img :src="mediaUrl(files[0].url)" class="w-full h-full object-contain" />
       </div>
 
       <!-- Video Content -->
-      <div v-else-if="isVideo" class="w-full h-full relative">
+      <div class="w-full h-full relative">
         <video 
           ref="videoRef"
           :src="mediaContentUrl" 
@@ -78,11 +52,9 @@
       </div>
     </div>
 
-    <!-- Details Metadata Section (Bottom placement like original) -->
+    <!-- Details Metadata Section -->
     <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
-      <!-- Technical Summary Grid -->
-      <!-- Technical Summary Grid -->
-      <div v-if="(isVideo || isImage) && (metadata || isMetadataLoading)" class="grid grid-cols-2 gap-3 pb-4 border-b border-white/5">
+      <div v-if="metadata || isMetadataLoading" class="grid grid-cols-2 gap-3 pb-4 border-b border-white/5">
         <div v-if="isMetadataLoading" class="col-span-2 py-4 flex items-center justify-center space-x-2">
            <div class="w-3 h-3 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Loading Media Info...</span>
@@ -92,11 +64,11 @@
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
           </div>
-          <div v-if="isVideo" class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Duration</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatDurationSeconds(metadata?.duration) }}</span>
           </div>
-          <div v-if="isVideo" class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Frame Rate</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
           </div>
@@ -108,15 +80,15 @@
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Format</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
           </div>
-          <div v-if="isVideo || (metadata?.codec && metadata.codec !== 'unknown')" class="flex flex-col gap-0.5">
+          <div v-if="metadata?.codec && metadata.codec !== 'unknown'" class="flex flex-col gap-0.5">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Codec</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
           </div>
         </template>
       </div>
 
-      <!-- Timeline segments (for Videos) -->
-      <div v-if="isVideo && props.data.timeline?.length > 0" class="space-y-3 pt-2">
+      <!-- Timeline segments -->
+      <div v-if="props.data.timeline?.length > 0" class="space-y-3 pt-2">
         <div class="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest flex items-center gap-2">
            <div class="h-px flex-1 bg-black/5 dark:bg-white/5"></div>
            Timeline Segments Map
@@ -142,7 +114,6 @@
           </div>
         </div>
       </div>
-
     </div>
     
     <!-- Branching Input -->
@@ -165,15 +136,14 @@
       </div>
     </div>
 
-    <!-- Full Screen Modal (Teleport to body) -->
+    <!-- Full Screen Modal -->
     <Teleport to="body">
       <div v-if="isFullScreen" class="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-8 backdrop-blur-3xl animate-in fade-in duration-300">
         <button @click="isFullScreen = false" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
           <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-        <video v-if="isFullScreen && isVideo" :src="mediaContentUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>
-        <img v-else-if="isFullScreen && isImage" :src="mediaContentUrl" class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20 object-contain" />
-        <div class="mt-6 text-xl font-bold text-white opacity-80 italic tracking-tight">Result: {{ props.data.type }} (V{{ props.data.version || 1 }})</div>
+        <video :src="mediaContentUrl" controls autoplay class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20"></video>
+        <div class="mt-6 text-xl font-bold text-white opacity-80 italic tracking-tight">Result: Video (V{{ props.data.version || 1 }})</div>
       </div>
     </Teleport>
 
@@ -184,7 +154,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
-import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps<{ data: any }>()
 const videoRef = ref<HTMLVideoElement | null>(null)
@@ -195,38 +164,15 @@ const input = ref('')
 const metadata = ref<any>(null)
 const isMetadataLoading = ref(false)
 
-
-const files = computed(() => props.data.files || [])
-
 const mediaUrl = (url: string) => {
   if (!url) return ''
   return url.startsWith('media://') ? url : `media://${url}`
 }
 
 const mediaContentUrl = computed(() => {
-  const file = files.value.find((f: any) => f.type === 'actual' || f.type === 'preview')
-  if (!file || props.data.type === 'summary' || props.data.type === 'cover') return undefined
+  const file = props.data.files?.find((f: any) => f.type === 'actual' || f.type === 'preview')
+  if (!file) return undefined
   return mediaUrl(file.url)
-})
-
-const isVideo = computed(() => props.data.type === 'video')
-const isImage = computed(() => props.data.type === 'thumbnail' || props.data.type === 'generate-thumbnail')
-
-const referenceFrames = computed(() => {
-    if (!isImage.value) return []
-    return files.value.slice(1)
-})
-
-const fileTypeBadge = computed(() => {
-  const file = files.value[0]
-  return file ? file.type : null
-})
-
-const versionedTitle = computed(() => {
-  if (props.data.type === 'video') return 'Synthesized Clip'
-  if (props.data.type === 'thumbnail') return 'AI Generated Thumbnail'
-  if (props.data.type === 'summary') return 'Interactive Summary'
-  return 'AI Generated Output'
 })
 
 const togglePlay = () => {
@@ -241,8 +187,7 @@ const togglePlay = () => {
 }
 
 const fetchMetadata = async () => {
-  if (!(isVideo.value || isImage.value) || !mediaContentUrl.value || metadata.value || isMetadataLoading.value) return
-  
+  if (!mediaContentUrl.value || metadata.value || isMetadataLoading.value) return
   isMetadataLoading.value = true
   try {
     const rawPath = mediaContentUrl.value.replace('media://', '')
@@ -257,7 +202,6 @@ const fetchMetadata = async () => {
 watch(showDetails, (newVal) => {
   if (newVal) fetchMetadata()
 }, { immediate: true })
-
 
 const handleSave = async () => {
   const file = props.data.files?.[0]
@@ -291,23 +235,18 @@ const formatFileSize = (bytes?: number) => {
 
 const formatTime = (val?: string | number) => {
   if (val === undefined || val === null) return '00:00'
-  
   if (typeof val === 'string') {
-    // If it's already a timestamp like "00:00:05,200" or "00:01:23"
     const clean = val.trim().replace(',', '.')
     const parts = clean.split(':')
     if (parts.length === 3) {
-      // HH:MM:SS.mmm -> MM:SS
       const ss = parts[2].split('.')[0]
       return `${parts[1]}:${ss}`
     }
     if (parts.length === 2) {
-      // MM:SS.mmm -> MM:SS
       return parts[0] + ':' + parts[1].split('.')[0]
     }
     return val.split('.')[0]
   }
-
   const m = Math.floor(val / 60)
   const s = Math.floor(val % 60)
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
@@ -326,5 +265,3 @@ const formatTime = (val?: string | number) => {
   border-radius: 10px;
 }
 </style>
-
-
