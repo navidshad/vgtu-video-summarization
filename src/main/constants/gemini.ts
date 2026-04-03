@@ -66,6 +66,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 		'intent': GEMINI_MODEL_2_5_FLASH,
 		'timeline-new': GEMINI_MODEL_3_FLASH_PREVIEW,
 		'timeline-edit': GEMINI_MODEL_2_5_FLASH,
-		'thumbnail': GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW
+		'thumbnail': GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW,
+		'scene-description': GEMINI_MODEL_2_5_FLASH_LITE
 	}
 }

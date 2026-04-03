@@ -7,8 +7,8 @@ import { SceneDetector, checkScenedetectAvailability } from '../../scenedetect'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
 import { GEMINI_MODEL_2_5_FLASH_LITE } from '../../constants/gemini'
+import { settingsManager } from '../../settings'
 
-const BASE_SCENE_PROMPT = `Describe the visual action, setting, and atmosphere of this image in one concise sentence. Focus on what is happening.`
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -155,6 +155,8 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	context.next({ ...data, scenes })
 }
 
+const BATCH_SIZE = 50
+
 export const generateSceneDescription: PipelineFunction = async (data, context) => {
 	const sceneTimesPath = context.preprocessing.sceneTimesPath
 	if (!sceneTimesPath) {
@@ -169,8 +171,9 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	context.updateStatus(`Generating descriptions for ${scenes.length} scenes...`)
 
 	const gemini = GeminiAdapter.create()
-	// Use a cheap model for description
-	const modelName = GEMINI_MODEL_2_5_FLASH_LITE
+	// Read model from settings
+	const modelSettings = settingsManager.getModelSettings()
+	const modelName = modelSettings.selection['scene-description'] || GEMINI_MODEL_2_5_FLASH_LITE
 
 	const descriptions: { index: number, startTime: number, description: string }[] = []
 	const framesDir = path.join(tempDir, 'frames')
@@ -178,35 +181,71 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 		fs.mkdirSync(framesDir)
 	}
 
-	// Process in batches to avoid overwhelming (though sequential is safer for FFmpeg)
-	for (let i = 0; i < scenes.length; i++) {
-		const scene = scenes[i]
-		const midpoint = scene.startTime + (scene.duration / 2)
+	// Process in batches to reduce API overhead and improve speed
+	for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
+		const batchScenes = scenes.slice(i, i + BATCH_SIZE)
+		const batchFramePaths: string[] = []
+		const validBatchInfo: { scene: Scene, index: number }[] = []
 
-		// Skip very short scenes?
-		if (scene.duration < 1.0) continue;
+		context.updateStatus(`Analyzing scenes ${i + 1} to ${Math.min(i + BATCH_SIZE, scenes.length)} / ${scenes.length}...`)
+
+		// 1. Extract Frames for the batch (sequential extraction is safer for FFmpeg resources)
+		for (let j = 0; j < batchScenes.length; j++) {
+			const scene = batchScenes[j]
+			const originalIndex = i + j
+
+			// Skip very short scenes?
+			if (scene.duration < 1.0) continue;
+
+			try {
+				const midpoint = scene.startTime + (scene.duration / 2)
+				const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir, context.signal)
+				batchFramePaths.push(framePath)
+				validBatchInfo.push({ scene, index: originalIndex })
+			} catch (error) {
+				if (!context.signal.aborted) {
+					console.error(`Failed to extract frame for scene ${originalIndex}:`, error)
+				}
+			}
+		}
+
+		if (validBatchInfo.length === 0) continue;
 
 		try {
-			context.updateStatus(`analyzing scene ${i + 1}/${scenes.length}...`)
+			// 2. Upload Frames in parallel
+			const uploadPromises = batchFramePaths.map(fpath => gemini.uploadFile(fpath, 'image/jpeg'))
+			const frameUris = await Promise.all(uploadPromises)
 
-			// 1. Extract Frame
-			const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir, context.signal)
+			// 3. Describe Frames in batch
+			// Add context from previous batches to maintain continuity
+			let prompt = `I am providing you with ${validBatchInfo.length} chronological frames from a video. 
+For EACH frame, provide a concise one-sentence description focusing on visual action, setting, and atmosphere. 
+Maintain consistency in identifying people, objects, and settings across the frames.
 
-			// 2. Upload Frame
-			const frameUri = await gemini.uploadFile(framePath, 'image/jpeg')
+Return the descriptions as an array of strings in the exact same order as the images provided.`
 
-			// 3. Describe Frame
-			// Add context from previous scenes to maintain continuity
-			let prompt = BASE_SCENE_PROMPT
 			if (descriptions.length > 0) {
 				const recentContext = descriptions.slice(-3).map(d => d.description).join('\n- ')
 				prompt += `\n\nContext from previous scenes (use this to identify recurring people/settings if applicable):\n- ${recentContext}`
 			}
 
-			const { text, record } = await gemini.generateDescriptionFromImage(
+			const schema = {
+				type: 'object',
+				properties: {
+					descriptions: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'One sentence description for each frame, in order.'
+					}
+				},
+				required: ['descriptions']
+			}
+
+			const { data: result, record } = await gemini.generateStructuredFromImages<{ descriptions: string[] }>(
 				modelName,
 				prompt,
-				frameUri,
+				frameUris,
+				schema,
 				context.signal
 			)
 
@@ -215,18 +254,26 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 
 			if (context.signal.aborted) return;
 
-			descriptions.push({
-				index: i,
-				startTime: scene.startTime,
-				description: text.trim()
+			// 4. Map results back to scenes
+			result.descriptions.forEach((text, index) => {
+				const info = validBatchInfo[index]
+				if (info) {
+					descriptions.push({
+						index: info.index,
+						startTime: info.scene.startTime,
+						description: text.trim()
+					})
+				}
 			})
 
-			// Cleanup frame to save space
-			fs.unlinkSync(framePath)
+			// 5. Cleanup frames for this batch
+			batchFramePaths.forEach(fpath => {
+				try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath) } catch (e) { }
+			})
 
 		} catch (error) {
 			if (!context.signal.aborted) {
-				console.error(`Failed to describe scene ${i}:`, error)
+				console.error(`Failed to describe batch starting at index ${i}:`, error)
 			}
 		}
 	}

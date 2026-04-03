@@ -37,6 +37,62 @@ export class GeminiAdapter {
 		};
 	}
 
+	private async withRetry<T>(
+		operation: () => Promise<T>,
+		signal?: AbortSignal,
+		maxRetries: number = 3
+	): Promise<T> {
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				return await operation();
+			} catch (error: any) {
+				if (signal?.aborted) throw error;
+
+				const isTransient = this.isTransientError(error);
+				if (!isTransient || attempt === maxRetries) {
+					throw error;
+				}
+
+				const delay = Math.pow(2, attempt) * 1000;
+				console.warn(`[GEMINI ADAPTER] Attempt ${attempt} failed. Retrying in ${delay}ms... Status: ${error.status || 'Unknown'}. Message: ${error.message}`);
+				
+				await new Promise(resolve => {
+					const timer = setTimeout(resolve, delay);
+					if (signal) {
+						signal.addEventListener('abort', () => {
+							clearTimeout(timer);
+							resolve(null);
+						}, { once: true });
+					}
+				});
+
+				if (signal?.aborted) throw new Error('Operation aborted during retry backoff');
+			}
+		}
+		throw new Error('Unexpected fallback in withRetry');
+	}
+
+	private isTransientError(error: any): boolean {
+		const message = (error.message || '').toLowerCase();
+		const status = (error.status || (error.error && error.error.code) || '').toString();
+
+		const transientStatuses = ['503', '429', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'DEADLINE_EXCEEDED'];
+		if (transientStatuses.includes(status)) return true;
+
+		if (
+			message.includes('503') ||
+			message.includes('429') ||
+			message.includes('high demand') ||
+			message.includes('too many requests') ||
+			message.includes('service unavailable') ||
+			message.includes('deadline exceeded')
+		) {
+			return true;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Generates a non-structured result from Gemini.
 	 */
@@ -58,7 +114,10 @@ export class GeminiAdapter {
 		}
 
 		try {
-			const response = await (this.client.models as any).generateContent(request, { signal });
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
 			const usage = this.extractUsage(response);
 			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
@@ -96,47 +155,23 @@ export class GeminiAdapter {
 			request.config!.systemInstruction = systemInstruction;
 		}
 
-		const totalUsage: Usage = { promptTokens: 0, candidatesTokens: 0, thinkingTokens: 0, totalTokens: 0 };
-		let totalCost = 0;
-		const MAX_RETRIES = 3;
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
 
-		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			let response;
-			try {
-				response = await (this.client.models as any).generateContent(request, { signal });
-			} catch (error) {
-				if (signal?.aborted) throw error;
-				if (attempt === MAX_RETRIES) {
-					console.error(`[GEMINI ADAPTER] generateStructuredText failed after ${MAX_RETRIES} attempts:`, error);
-					throw error;
-				}
-				continue;
-			}
-			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage);
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-			// Accumulate usage and cost
-			totalUsage.promptTokens += usage.promptTokens;
-			totalUsage.candidatesTokens += usage.candidatesTokens;
-			totalUsage.thinkingTokens = (totalUsage.thinkingTokens || 0) + (usage.thinkingTokens || 0);
-			totalUsage.totalTokens += usage.totalTokens;
-			totalCost += cost;
-
-			const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-			try {
-				return {
-					data: JSON.parse(text) as T,
-					record: { usage: totalUsage, cost: totalCost }
-				};
-			} catch (error) {
-				if (signal?.aborted) throw error;
-				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
-				if (attempt === MAX_RETRIES) {
-					throw new Error('Invalid JSON response from Gemini after multiple attempts');
-				}
-				// Optional: add a small delay or log the retry
-			}
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
 		}
 
 		throw new Error('Unexpected fallthrough in generateStructuredText');
@@ -166,13 +201,16 @@ export class GeminiAdapter {
 		const sanitizedName = sanitizeFilename(rawName);
 
 		try {
-			const response = await this.client.files.upload({
-				file: uploadPath,
-				config: {
-					mimeType,
-					displayName: sanitizedName
-				}
-			});
+			const response = await this.withRetry(
+				() => this.client.files.upload({
+					file: uploadPath,
+					config: {
+						mimeType,
+						displayName: sanitizedName
+					}
+				}),
+				undefined // upload doesn't support signal directly in our usage context here, but we could add it if needed
+			);
 			return response.uri || '';
 		} finally {
 			if (isTemp && fs.existsSync(uploadPath)) {
@@ -215,7 +253,10 @@ export class GeminiAdapter {
 		}
 
 		try {
-			const response = await (this.client.models as any).generateContent(request, { signal });
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
 			const usage = this.extractUsage(response);
 			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
 
@@ -265,46 +306,23 @@ export class GeminiAdapter {
 			request.config!.systemInstruction = systemInstruction;
 		}
 
-		const totalUsage: Usage = { promptTokens: 0, candidatesTokens: 0, thinkingTokens: 0, totalTokens: 0 };
-		let totalCost = 0;
-		const MAX_RETRIES = 3;
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
 
-		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			let response;
-			try {
-				response = await (this.client.models as any).generateContent(request, { signal });
-			} catch (error) {
-				if (signal?.aborted) throw error;
-				if (attempt === MAX_RETRIES) {
-					console.error(`[GEMINI ADAPTER] generateStructuredFromFiles failed after ${MAX_RETRIES} attempts:`, error);
-					throw error;
-				}
-				continue;
-			}
-			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-			// Accumulate usage and cost
-			totalUsage.promptTokens += usage.promptTokens;
-			totalUsage.candidatesTokens += usage.candidatesTokens;
-			totalUsage.thinkingTokens = (totalUsage.thinkingTokens || 0) + (usage.thinkingTokens || 0);
-			totalUsage.totalTokens += usage.totalTokens;
-			totalCost += cost;
-
-			const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-			try {
-				return {
-					data: JSON.parse(text) as T,
-					record: { usage: totalUsage, cost: totalCost }
-				};
-			} catch (error) {
-				if (signal?.aborted) throw error;
-				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
-				if (attempt === MAX_RETRIES) {
-					throw new Error('Invalid JSON response from Gemini after multiple attempts');
-				}
-			}
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
 		}
 
 		throw new Error('Unexpected fallthrough in generateStructuredFromFiles');
@@ -335,9 +353,12 @@ export class GeminiAdapter {
 		};
 
 		try {
-			const response = await (this.client.models as any).generateContent(request, { signal });
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
 			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, 1);
 
 			return {
 				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
@@ -348,6 +369,54 @@ export class GeminiAdapter {
 			console.error(`[GEMINI ADAPTER] generateDescriptionFromImage failed:`, error);
 			throw error;
 		}
+	}
+
+	/**
+	 * Generates a structured result (JSON) from Gemini based on multiple images and a prompt.
+	 */
+	async generateStructuredFromImages<T>(
+		modelName: string,
+		userPrompt: string,
+		imageUris: string[],
+		schema: any,
+		signal?: AbortSignal
+	): Promise<{ data: T, record: UsageRecord }> {
+		const parts: any[] = imageUris.map(uri => ({
+			fileData: { fileUri: uri, mimeType: 'image/jpeg' }
+		}));
+		parts.push({ text: userPrompt });
+
+		const contents = [{ role: 'user', parts }];
+
+		const request: GenerateContentParameters = {
+			model: modelName,
+			contents,
+			config: {
+				responseMimeType: 'application/json',
+				responseSchema: schema
+			}
+		};
+
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
+
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, imageUris.length);
+		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
+		}
+
+		throw new Error('Unexpected fallthrough in generateStructuredFromImages');
 	}
 
 	/**
@@ -381,11 +450,14 @@ export class GeminiAdapter {
 			parts.push({ text: prompt })
 
 			// For gemini-3.1-flash-image-preview, we use generateContent
-			const response = await (this.client.models as any).generateContent({
-				model: modelName,
-				contents: [{ role: 'user', parts }],
-				config: systemInstruction ? { systemInstruction: systemInstruction } : undefined
-			}, { signal });
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent({
+					model: modelName,
+					contents: [{ role: 'user', parts }],
+					config: systemInstruction ? { systemInstruction: systemInstruction } : undefined
+				}, { signal }) as Promise<any>,
+				signal
+			);
 
 			if (!response.candidates || response.candidates.length === 0) {
 				throw new Error('No candidates returned from the model.');
@@ -454,8 +526,9 @@ export class GeminiAdapter {
 	/**
 	 * Calculates the cost of a request based on usage and model.
 	 * @param audioDuration Duration of audio in seconds if multimodal call.
+	 * @param imageCount Number of images if multimodal call.
 	 */
-	static calculateCost(model: string, usage: Usage, audioDuration: number = 0): number {
+	static calculateCost(model: string, usage: Usage, audioDuration: number = 0, imageCount: number = 0): number {
 		const modelSettings = settingsManager.getModelSettings();
 		const pricing = modelSettings.pricing[model];
 		if (!pricing) return 0;
@@ -495,7 +568,7 @@ export class GeminiAdapter {
 
 			// Handle per-image cost if applicable
 			if (pricing.output.image) {
-				outputCost += pricing.output.image; // Assuming 1 image per call for now
+				outputCost += pricing.output.image * Math.max(1, imageCount);
 			}
 		}
 
