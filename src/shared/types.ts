@@ -165,7 +165,7 @@ export interface ModelPricing {
 	}
 }
 
-export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail'
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description'
 
 export interface ModelSelection {
 	[key: string]: string // operation -> model name
