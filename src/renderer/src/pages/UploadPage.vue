@@ -109,37 +109,14 @@
         <!-- Main Upload Card -->
         <Card
           class="w-full max-w-2xl !rounded-lg !bg-white/90 dark:!bg-zinc-900/90 backdrop-blur-xl border !border-zinc-200 dark:!border-zinc-700 p-1 flex flex-col shadow-2xl shadow-zinc-200/50 dark:shadow-black/50 transition-all duration-500"
-          :class="{ '!border-primary/50 !bg-blue-50/50 dark:!bg-blue-500/5 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)]': fileSelected }">
+          :class="{ '!border-primary/50 !bg-blue-50/50 dark:!bg-blue-500/5 shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)]': fileSelected || isDownloading }">
           <div class="p-10 flex flex-col items-center justify-center min-h-[400px]">
-            <div v-if="!fileSelected" class="w-full h-full flex-1">
-              <!-- Loading State -->
-              <div v-if="isDownloading" class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                <div class="relative w-28 h-28 flex items-center justify-center mb-2">
-                  <!-- Circular progress background -->
-                  <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" class="text-zinc-100 dark:text-zinc-800" />
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="6" stroke-dasharray="283" :stroke-dashoffset="283 - (283 * downloadProgress / 100)" class="text-primary transition-all duration-300 ease-out" />
-                  </svg>
-                  <div class="text-xl font-bold text-primary z-10">{{ Math.round(downloadProgress) }}%</div>
-                </div>
-                <div class="text-center space-y-3 w-full max-w-md px-4">
-                  <h3 class="font-heading font-bold text-2xl text-zinc-900 dark:text-white">Downloading Video...</h3>
-                  
-                  <!-- Linear progress bar -->
-                  <div class="w-full h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden shadow-inner">
-                    <div class="h-full bg-primary transition-all duration-300 ease-out shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]" :style="{ width: `${downloadProgress}%` }"></div>
-                  </div>
-                  
-                  <p class="text-base text-zinc-600 dark:text-zinc-400 font-medium">This might take a few minutes depending on the file size and your network.</p>
-                </div>
-              </div>
-
+            <!-- Initial State: Choose or Link -->
+            <div v-if="!fileSelected && !isDownloading" class="w-full h-full flex-1">
               <!-- Local Upload -->
-              <div v-else-if="uploadMode === 'local'" @click="handleNativeSelect"
+              <div v-if="uploadMode === 'local'" @click="handleNativeSelect"
                 class="w-full h-full min-h-[320px] border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg flex flex-col items-center justify-center space-y-6 bg-zinc-50/50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:border-primary/50 cursor-pointer transition-all duration-300 group relative overflow-hidden animate-in fade-in zoom-in-95">
-
                 <div class="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:to-primary/5 transition-all duration-500"></div>
-
                 <div class="w-24 h-24 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-400 group-hover:scale-110 group-hover:-rotate-3 group-hover:text-primary transition-all duration-500 z-10 shadow-md group-hover:shadow-xl border border-zinc-100 dark:border-zinc-600">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -155,8 +132,6 @@
 
               <!-- URL Input -->
               <div v-else-if="uploadMode === 'link'" class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 p-8 animate-in fade-in zoom-in-95">
-                
-                <!-- yt-dlp missing warning -->
                 <div v-if="!ytDlpAvailable" class="w-full max-w-md text-left flex items-start gap-3 px-4 py-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-sm mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
                   <span><strong>yt-dlp is not installed.</strong> Downloading videos from links requires yt-dlp to be installed on your system. Please install it and restart the application.</span>
@@ -192,33 +167,43 @@
               </div>
             </div>
 
+            <!-- Active State: Downloading or Ready -->
             <div v-else class="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <!-- Top Header: File Info or Download Progress -->
               <div
-                class="flex items-center justify-between p-5 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-inner">
-                <div class="flex items-center space-x-5">
+                class="flex items-center justify-between p-5 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 shadow-inner overflow-hidden relative">
+                
+                <!-- Background Progress Fill (when downloading) -->
+                <div v-if="isDownloading" class="absolute inset-0 bg-blue-500/5 transition-all duration-300" :style="{ width: `${downloadProgress}%` }"></div>
+
+                <div class="flex items-center space-x-5 z-10 flex-1">
                   <div
-                    class="w-16 h-16 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" fill="none"
+                    class="w-16 h-16 rounded-lg bg-white dark:bg-zinc-700 flex items-center justify-center text-zinc-500 dark:text-zinc-400 shadow-sm border border-zinc-100 dark:border-zinc-600 shrink-0">
+                    <svg v-if="!isDownloading" xmlns="http://www.w3.org/2000/svg" class="w-8 h-8" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="m22 8-6 4 6 4V8Z" />
                       <rect width="14" height="12" x="2" y="6" rx="2" ry="2" />
                     </svg>
+                    <!-- Loading Spinner for download -->
+                    <svg v-else class="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                   </div>
-                  <div>
-                    <p class="font-bold text-zinc-900 dark:text-white truncate max-w-[200px] text-xl mb-1">{{ fileName
-                      }}</p>
+                  <div class="min-w-0">
+                    <p class="font-bold text-zinc-900 dark:text-white truncate text-xl mb-1">
+                      {{ isDownloading ? `Downloading: ${Math.round(downloadProgress)}%` : fileName }}
+                    </p>
                     <div class="flex items-center gap-2">
-                      <span class="w-2 h-2 rounded-lg bg-green-500 animate-pulse"></span>
-                      <p class="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Ready to
-                        upload
+                      <span class="w-2 h-2 rounded-lg bg-green-500" :class="{ 'animate-pulse': !isDownloading }"></span>
+                      <p class="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
+                        {{ isDownloading ? 'Please wait while we fetch your video' : 'Ready to process' }}
                       </p>
                     </div>
                   </div>
                 </div>
-                <Button size="sm" @click="resetSelection" label="Change" outline
-                  class="!rounded-lg !bg-white dark:!bg-zinc-700 !border-zinc-200 dark:!border-zinc-600" />
+                <Button v-if="!isDownloading" size="sm" @click="resetSelection" label="Change" outline
+                  class="!rounded-lg !bg-white dark:!bg-zinc-700 !border-zinc-200 dark:!border-zinc-600 z-10" />
               </div>
 
+              <!-- Main Interaction Area: Prompt Input -->
               <div class="space-y-3">
                 <label class="text-sm font-bold text-zinc-900 dark:text-zinc-100 ml-1">Instruction Prompt</label>
                 <TextArea v-model="prompt"
@@ -227,17 +212,18 @@
                   class="!bg-zinc-50 dark:!bg-zinc-800/50 !text-zinc-900 dark:!text-white !border-zinc-300 dark:!border-zinc-600 placeholder:text-zinc-400 !rounded-lg transition-all focus:!border-primary/50 focus:!ring-4 focus:!ring-primary/10 resize-none shadow-sm" />
               </div>
 
-
-              <!-- Tooltip wrapper for disabled state -->
+              <!-- Action Button -->
               <div class="relative group/btn pt-2">
-                <Button @click="startCreation" color="primary" :disabled="!canSubmit" label="Create Summary" size="lg"
+                <Button @click="startCreation" color="primary" :disabled="!canSubmit" 
+                  :label="isDownloading ? `Wait for download (${Math.round(downloadProgress)}%)` : 'Create Summary'" 
+                  size="lg"
                   :is-loading="isCreating"
                   class="w-full !rounded-lg !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]" />
 
-                <!-- Tooltip shown when ffmpeg is missing -->
-                <div v-if="!ffmpegAvailable"
+                <!-- Tooltips -->
+                <div v-if="!ffmpegAvailable || (isDownloading && prompt.trim())"
                   class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-700 text-white text-xs whitespace-nowrap opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none shadow-lg z-50">
-                  FFmpeg is required to process video
+                  {{ !ffmpegAvailable ? 'FFmpeg is required to process video' : 'Summary will be ready once download finishes' }}
                   <div
                     class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-700">
                   </div>
@@ -246,6 +232,7 @@
             </div>
           </div>
         </Card>
+
       </div>
     </div>
   </div>
@@ -306,8 +293,8 @@ onMounted(async () => {
   }
 })
 
-// Can only submit if ffmpeg is available and a file + prompt are ready
-const canSubmit = computed(() => ffmpegAvailable.value && !!prompt.value.trim() && !isCreating.value)
+// Can only submit if ffmpeg is available, a file + prompt are ready, and download is finished
+const canSubmit = computed(() => !isDownloading.value && ffmpegAvailable.value && !!prompt.value.trim() && !isCreating.value)
 
 const handleNativeSelect = async () => {
   const result = await (window as any).api?.selectVideo()
@@ -337,10 +324,18 @@ const handleLinkStep = async () => {
       }
     } catch (e: any) {
       console.error('Failed to fetch formats:', e)
-       await (window as any).api?.showConfirmation({
-        title: 'Analysis Failed',
-        message: 'Could not analyze the link.',
-        detail: e?.message || 'Please check the URL and try again.',
+      availableResolutions.value = []
+      
+      // Extract a cleaner error message if it's an Electron IPC error
+      let displayMessage = e?.message || 'Please check the URL and try again.'
+      if (displayMessage.includes('Error invoking remote method')) {
+        displayMessage = displayMessage.split('Error:').pop()?.trim() || displayMessage
+      }
+
+      await (window as any).api?.showConfirmation({
+        title: 'Link Analysis Failed',
+        message: 'Could not analyze the provided link.',
+        detail: displayMessage,
         type: 'error',
         buttons: ['OK']
       })
@@ -360,10 +355,16 @@ const handleLinkStep = async () => {
       }
     } catch (e: any) {
       console.error('Failed to download video:', e)
+      
+      let displayMessage = e?.message || 'Please check the connection and try again.'
+      if (displayMessage.includes('Error invoking remote method')) {
+        displayMessage = displayMessage.split('Error:').pop()?.trim() || displayMessage
+      }
+
       await (window as any).api?.showConfirmation({
         title: 'Download Failed',
         message: 'Could not download the video.',
-        detail: e?.message || 'Please check the URL and try again.',
+        detail: displayMessage,
         type: 'error',
         buttons: ['OK']
       })
