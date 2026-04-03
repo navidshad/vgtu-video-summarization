@@ -9,10 +9,17 @@ const IS_MAC = process.platform === 'darwin'
 
 
 
-// Set path to ffmpeg and ffprobe binaries
-if (ffmpegPath) {
+/**
+ * Returns the absolute path to the unpacked ffmpeg binary.
+ */
+export function getFFmpegBinaryPath(): string {
 	const p = typeof ffmpegPath === 'string' ? ffmpegPath : (ffmpegPath as any).path
-	ffmpeg.setFfmpegPath(p.replace('app.asar', 'app.asar.unpacked'))
+	return p.replace('app.asar', 'app.asar.unpacked')
+}
+
+// Initializing ffmpeg and ffprobe paths
+if (ffmpegPath) {
+	ffmpeg.setFfmpegPath(getFFmpegBinaryPath())
 }
 if (ffprobePath) {
 	const p = typeof ffprobePath === 'string' ? ffprobePath : (ffprobePath as any).path

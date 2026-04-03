@@ -14,6 +14,7 @@ import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
+import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -108,14 +109,16 @@ app.whenReady().then(() => {
 	})
 
 	ipcMain.handle('check-system-requirements', async () => {
-		const [ffmpegAvailable, scenedetectAvailable] = await Promise.all([
+		const [ffmpegAvailable, scenedetectAvailable, ytDlpAvailable] = await Promise.all([
 			checkFFmpegAvailability(),
-			checkScenedetectAvailability()
+			checkScenedetectAvailability(),
+			checkYtDlpAvailability()
 		])
 		return { 
 			ffmpegAvailable, 
-			isTempDirUnsafe: settingsManager.isTempDirUnsafe(), 
-			scenedetectAvailable 
+			scenedetectAvailable, 
+			ytDlpAvailable,
+			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
 		}
 	})
 
@@ -123,6 +126,19 @@ app.whenReady().then(() => {
 		return await getVideoMetadata(filePath)
 	})
 
+	ipcMain.handle('fetch-video-formats', async (_event, url: string) => {
+		return await getVideoFormats(url)
+	})
+
+	ipcMain.handle('download-video', async (event, url: string, resolution?: string) => {
+		const tempDir = join(settingsManager.getTempDir(), `download-${Date.now()}`)
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true })
+		}
+		return await downloadVideo(url, tempDir, resolution, (percent) => {
+			event.sender.send('download-progress', percent)
+		})
+	})
 
 	ipcMain.handle('is-temp-dir-unsafe', () => {
 		return settingsManager.isTempDirUnsafe()
@@ -173,16 +189,21 @@ app.whenReady().then(() => {
 			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
 			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 
-		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start()...`)
+		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start() in background...`)
 		activePipelines.set(newAiMessageId, pipeline)
-		try {
-			await pipeline.start({})
-			console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
-		} catch (e) {
-			console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
-		} finally {
-			activePipelines.delete(newAiMessageId)
-		}
+		
+		pipeline.start({})
+			.then(() => {
+				console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
+			})
+			.catch((e) => {
+				console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+			})
+			.finally(() => {
+				activePipelines.delete(newAiMessageId)
+			})
+
+		return true
 	})
 
 	ipcMain.handle('abort-pipeline', async (_event, messageId) => {

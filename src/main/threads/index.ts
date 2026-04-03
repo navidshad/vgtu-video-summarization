@@ -48,20 +48,54 @@ class ThreadManager {
 	// Create a new thread
 	async createThread(videoPath: string, videoName: string): Promise<Thread> {
 		const id = uuidv4()
+		const tempDir = settingsManager.getThreadTempDir(id)
 		
+		// If the video is in a temporary download folder, move it to the thread's artifact folder
+		let finalVideoPath = videoPath
+		const systemTempDir = settingsManager.getTempDir()
+		
+		// Strict check: No directories allowed as video source
+		if (fs.existsSync(videoPath) && fs.statSync(videoPath).isDirectory()) {
+			throw new Error(`Invalid video source: "${videoPath}" is a directory. Please provide a valid video file.`)
+		}
+
+		if (videoPath.startsWith(systemTempDir)) {
+			try {
+				const videoDir = path.join(tempDir, 'video')
+				if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
+				
+				// Sanitize the name for the filesystem
+				const sanitizedName = videoName.replace(/[^\x00-\x7F]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_').trim()
+				const targetPath = path.join(videoDir, sanitizedName)
+				
+				fs.renameSync(videoPath, targetPath)
+				finalVideoPath = targetPath
+				
+				// Cleanup empty source download folder
+				const sourceDir = path.dirname(videoPath)
+				if (sourceDir !== systemTempDir && fs.existsSync(sourceDir) && fs.readdirSync(sourceDir).length === 0) {
+					fs.rmdirSync(sourceDir)
+				}
+			} catch (error) {
+				console.error(`Failed to move video to thread directory:`, error)
+				// Fallback to original path if move fails
+			}
+		}
+
+
 		let videoMetadata: VideoMetadata | undefined
 		try {
-			videoMetadata = await getVideoMetadata(videoPath)
+			videoMetadata = await getVideoMetadata(finalVideoPath)
 		} catch (error) {
-			console.error(`Failed to extract metadata for ${videoPath}:`, error)
+			console.error(`Failed to extract metadata for ${finalVideoPath}:`, error)
 		}
 
 		const thread: Thread = {
 			id,
 			title: videoName,
-			videoPath,
+			videoPath: finalVideoPath,
 			preprocessing: {},
-			tempDir: settingsManager.getThreadTempDir(id),
+			tempDir,
 			messages: [],
 			versionCounter: 0,
 			videoMetadata,
@@ -72,6 +106,7 @@ class ThreadManager {
 		this.saveThread(thread)
 		return thread
 	}
+
 
 	// Get all threads (for the list view)
 	getAllThreads(): Thread[] {
