@@ -265,12 +265,13 @@ const modelSettings = ref<ModelSettings>({
 
 const orderedOperations = computed(() => {
   const allOps = Object.keys(modelSettings.value.selection)
-  const priority = ['raw-transcript', 'corrected-transcript', 'intent', 'timeline-new', 'timeline-edit', 'thumbnail']
+  const priority = ['raw-transcript', 'corrected-transcript', 'intent', 'timeline-new', 'timeline-edit', 'thumbnail', 'scene-description']
   return priority.filter(p => allOps.includes(p))
 })
 
 const getOpLabel = (op: string) => {
   if (op === 'thumbnail') return 'Thumbnail Generation'
+  if (op === 'scene-description') return 'Scene Description'
   return String(op).replace('-', ' ')
 }
 
@@ -294,9 +295,12 @@ const fetchSettings = async () => {
         output: { standard: 3.00, image: 0.0672 }
       }
     }
-    // Failsafe: Ensure new operation is in selection
+    // Failsafe: Ensure new operations are in selection
     if (!mSettings.selection[NEW_OP]) {
        mSettings.selection[NEW_OP] = NEW_MODEL
+    }
+    if (!mSettings.selection['scene-description']) {
+       mSettings.selection['scene-description'] = 'gemini-2.5-flash-lite'
     }
     
     // Apply to ref
