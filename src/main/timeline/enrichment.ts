@@ -8,6 +8,7 @@ export interface SceneDescription {
 }
 
 const MIN_GAP_DURATION = 0.5 // Minimum gap to insert a dedicated visual-only segment
+const MAX_GAP_CHUNK_DURATION = 15.0 // Maximum duration for a single silence segment
 
 /**
  * Enriches the transcript by merging visual scene descriptions into every segment.
@@ -35,6 +36,25 @@ export function enrichTranscriptWithScenes(
 		return bestScene ? bestScene.description : "No visual description available."
 	}
 
+	// Helper to add split gap segments
+	const addGapSegments = (gapStart: number, gapEnd: number) => {
+		let currentStart = gapStart
+		while (currentStart < gapEnd) {
+			const currentEnd = Math.min(currentStart + MAX_GAP_CHUNK_DURATION, gapEnd)
+			const midPoint = currentStart + (currentEnd - currentStart) / 2
+			
+			enrichedItems.push({
+				index: currentIndex++,
+				start: secondsToTime(currentStart),
+				end: secondsToTime(currentEnd),
+				duration: currentEnd - currentStart,
+				text: "[Silence]",
+				visual: getSceneForTime(midPoint)
+			})
+			currentStart = currentEnd
+		}
+	}
+
 	// 3. Iterate transcript and merge with scenes
 	let previousEnd = 0.0
 	let currentIndex = 1
@@ -45,18 +65,7 @@ export function enrichTranscriptWithScenes(
 
 		// Check for significant gap before this transcript item
 		if (start - previousEnd > MIN_GAP_DURATION) {
-			const gapStart = previousEnd
-			const gapEnd = start
-			const midPoint = gapStart + (gapEnd - gapStart) / 2
-			
-			enrichedItems.push({
-				index: currentIndex++,
-				start: secondsToTime(gapStart),
-				end: secondsToTime(gapEnd),
-				duration: gapEnd - gapStart,
-				text: "[Silence]",
-				visual: getSceneForTime(midPoint)
-			})
+			addGapSegments(previousEnd, start)
 		}
 
 		// Process the transcript item
@@ -75,18 +84,7 @@ export function enrichTranscriptWithScenes(
 
 	// 4. Check for trailing gap
 	if (totalDuration - previousEnd > MIN_GAP_DURATION) {
-		const gapStart = previousEnd
-		const gapEnd = totalDuration
-		const midPoint = gapStart + (gapEnd - gapStart) / 2
-
-		enrichedItems.push({
-			index: currentIndex++,
-			start: secondsToTime(gapStart),
-			end: secondsToTime(gapEnd),
-			duration: gapEnd - gapStart,
-			text: "[Silence]",
-			visual: getSceneForTime(midPoint)
-		})
+		addGapSegments(previousEnd, totalDuration)
 	}
 
 	return enrichedItems

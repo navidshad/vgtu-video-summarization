@@ -12,7 +12,7 @@ import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
 import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
-import { checkFFmpegAvailability } from './ffmpeg'
+import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -118,8 +118,12 @@ app.whenReady().then(() => {
 			ffmpegAvailable, 
 			scenedetectAvailable, 
 			ytDlpAvailable,
-			isTempDirUnsafe: settingsManager.isTempDirUnsafe() 
+			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
 		}
+	})
+
+	ipcMain.handle('get-video-metadata', async (_event, filePath: string) => {
+		return await getVideoMetadata(filePath)
 	})
 
 	ipcMain.handle('fetch-video-formats', async (_event, url: string) => {

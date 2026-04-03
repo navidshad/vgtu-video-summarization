@@ -111,6 +111,7 @@ Strict Rules for Editing:
 4. ONE-SHOT RESULT: Return the COMPLETE list of indices for the NEW version of the timeline.
 5. RESPECT DURATION: The total duration of the NEW timeline must be close to the Target Duration if specified.
 6. VISUAL CONTEXT: Use the "Visual" part to understand the scene content even if the "Audio" is [Silence].
+7. AVOID HUGE SEGMENTS: If a single segment is longer than 30s and doesn't contain essential audio, avoid picking it unless necessary.
 
 Return ONLY a JSON array of indices (integers) of the segments that should make up the NEW timeline, e.g. [1, 5, 8].
 Indices refer to the line numbers (starting at 1) of the FULL transcript.
@@ -213,6 +214,7 @@ IMPORTANT: Selection Logic
 1. CHRONOLOGICAL ORDER: Unless the user explicitly asks for a non-linear narrative (e.g. "start with the ending", "flashback"), you MUST select segments that appear later in the timeline than the previous ones.
 2. GRADUAL PROGRESSION: The story line should be kept based on timing, and do not mix times. Ideally select the next best segment that continues the flow naturally.
 3. VISUAL CONTEXT: Use the "Visual" part to understand the scene content even if the "Audio" is [Silence]. Use these segments to bridge gaps or set the scene.
+4. AVOID HUGE SEGMENTS: Do NOT pick a single segment that is longer than the Target Duration or consumes most of it (e.g. >30s) unless strictly required by the user's request.
 
 Return ONLY a JSON array of indices (integers) of the selected segments, e.g. [1, 5, 8].
 Indices refer to the line numbers (starting at 1) of the FULL transcript.
@@ -330,7 +332,8 @@ function calculateTotalDuration(segments: TimelineSegment[]): number {
 
 function formatEnrichedTranscript(items: EnrichedTimelineSegment[]): string {
     return items.map((item) => {
-        return `${item.index}: [${item.start} - ${item.end}] | Visual: ${item.visual} | Audio: ${item.text}`
+        const duration = item.duration.toFixed(1);
+        return `${item.index}: [${item.start} - ${item.end}] (${duration}s) | Visual: ${item.visual} | Audio: ${item.text}`
     }).join('\n')
 }
 
