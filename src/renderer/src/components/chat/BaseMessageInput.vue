@@ -6,9 +6,14 @@
         class="relative rounded-xl overflow-hidden group shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all hover:scale-105"
         :class="compact ? 'w-10 h-10' : 'w-16 h-16'">
         <img :src="normalizeUrl(img)" class="w-full h-full object-cover" />
-        <button @click="removeAttachment(idx)"
-          class="absolute top-1 right-1 p-0.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-          <span class="icon-[tabler--x] w-3 h-3"></span>
+        <button 
+          @click.stop="removeAttachment(idx)"
+          class="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-lg"
+          title="Remove attachment"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
         </button>
       </div>
     </div>
