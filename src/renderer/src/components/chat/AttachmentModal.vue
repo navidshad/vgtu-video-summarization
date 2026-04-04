@@ -1,96 +1,81 @@
 <template>
-  <Teleport to="body">
-    <div v-if="modelValue" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 backdrop-blur-sm">
-      <!-- Backdrop -->
-      <div class="absolute inset-0 bg-zinc-950/40" @click="$emit('update:modelValue', false)"></div>
-      
-      <!-- Modal Content -->
-      <div class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <h3 class="text-lg font-bold text-zinc-900 dark:text-white">Add Attachments</h3>
-          <button @click="$emit('update:modelValue', false)" class="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors">
-            <IconClose class="w-5 h-5 text-zinc-500" />
-          </button>
-        </div>
+  <Modal :modelValue="modelValue" @update:modelValue="$emit('update:modelValue', $event)" size="lg"
+    title="Choose Attachments">
+    <!-- Suppress default trigger as we use custom triggers in parents -->
+    <template #trigger><span class="hidden"></span></template>
 
-        <!-- Tabs -->
-        <div class="flex border-b border-zinc-100 dark:border-zinc-800">
-          <button 
-            @click="activeTab = 'upload'"
-            class="flex-1 py-3 text-sm font-medium transition-colors border-b-2"
-            :class="activeTab === 'upload' ? 'border-primary text-primary' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'"
-          >
-            Upload from Computer
-          </button>
-          <button 
-            v-if="hasReferenceFrames"
-            @click="activeTab = 'library'"
-            class="flex-1 py-3 text-sm font-medium transition-colors border-b-2"
-            :class="activeTab === 'library' ? 'border-primary text-primary' : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'"
-          >
-            Project Frames
-          </button>
-        </div>
-
-        <!-- Tab Content -->
-        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-          <!-- Upload Tab -->
-          <div v-if="activeTab === 'upload'" class="h-full flex flex-col items-center justify-center space-y-4 py-8">
-            <div @click="triggerFileUpload" class="w-full border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl p-12 flex flex-col items-center justify-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
-              <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <IconUpload class="w-6 h-6 text-zinc-500 group-hover:text-primary" />
-              </div>
-              <p class="text-sm font-bold text-zinc-900 dark:text-white">Click to select images</p>
-              <p class="text-xs text-zinc-500 mt-1">Supports JPG, PNG, WEBP (Up to 200 images)</p>
-            </div>
+    <template #default="{ toggleModal }">
+      <div class="flex flex-col h-[60vh]">
+        <!-- Action Header: Upload -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="text-sm text-zinc-500">
+            <span class="font-bold text-zinc-900 dark:text-white">{{ allProjectImages.length }}</span> images available
+            in this project
           </div>
+          <Button @click="triggerFileUpload" variant="primary" size="sm">
+            <template #left-icon>
+              <span class="icon-[tabler--upload] w-4 h-4"></span>
+            </template>
+            Upload New
+          </Button>
+        </div>
 
-          <!-- Library Tab -->
-          <div v-else-if="activeTab === 'library'" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div 
-              v-for="(frame, index) in referenceFrames" 
-              :key="index"
-              class="relative aspect-video rounded-xl overflow-hidden border-2 cursor-pointer transition-all"
-              :class="isSelected(frame) ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-zinc-300 dark:hover:border-zinc-700'"
-              @click="toggleSelection(frame)"
-            >
-              <img :src="normalizeUrl(frame)" class="w-full h-full object-cover" />
-              <div v-if="isSelected(frame)" class="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                <div class="bg-primary text-white p-1 rounded-full shadow-lg">
-                  <IconCheck class="w-4 h-4" />
+        <!-- Library Grid -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
+          <div v-if="allProjectImages.length > 0" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            <div v-for="(img, index) in allProjectImages" :key="index"
+              class="group relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
+              :class="isSelected(img) ? 'border-primary ring-2 ring-primary/20' : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'"
+              @click="toggleSelection(img)">
+              <img :src="normalizeUrl(img)" class="w-full h-full object-cover" />
+
+              <!-- Selection Overlay -->
+              <div v-if="isSelected(img)"
+                class="absolute inset-0 bg-primary/20 flex items-center justify-center animate-in fade-in zoom-in-75 duration-200">
+                <div class="bg-primary text-white p-1.5 rounded-full shadow-lg scale-110">
+                  <span class="icon-[tabler--check] w-4 h-4 font-bold"></span>
                 </div>
               </div>
+
+              <!-- Hover Status -->
+              <div v-else class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors"></div>
             </div>
+          </div>
+
+          <!-- Empty State -->
+          <div v-else class="h-full flex flex-col items-center justify-center text-center opacity-50 py-12">
+            <span class="icon-[tabler--photo-off] w-12 h-12 mb-4"></span>
+            <p class="text-sm font-medium">No images found in this project</p>
+            <p class="text-xs">Upload new images to get started</p>
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="px-6 py-4 bg-zinc-50 dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-          <div class="text-xs text-zinc-500">
-            {{ selectedCount }} items selected
+        <!-- Footer Actions -->
+        <div class="mt-6 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800 pt-6">
+          <div class="flex items-center space-x-2">
+            <div v-if="selectedCount > 0"
+              class="px-2.5 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-wider">
+              {{ selectedCount }} selected
+            </div>
           </div>
           <div class="flex space-x-3">
-            <button @click="$emit('update:modelValue', false)" class="px-4 py-2 text-sm font-bold text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white transition-colors">
-              Cancel
-            </button>
-            <button 
-              @click="confirmSelection" 
-              class="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold disabled:opacity-50 hover:bg-primary-dark transition-all shadow-lg shadow-primary/25"
-              :disabled="selectedCount === 0"
-            >
-              Add Samples
-            </button>
+            <Button variant="outline" size="md" @click="toggleModal(false)">Cancel</Button>
+            <Button variant="primary" size="md" @click="confirmSelection" :disabled="selectedCount === 0"
+              class="min-w-[120px]">
+              Add to Prompt
+            </Button>
           </div>
         </div>
       </div>
-    </div>
-  </Teleport>
+    </template>
+  </Modal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useVideoStore } from '../../stores/videoStore'
+import { Modal } from 'pilotui/complex'
+import { Button } from 'pilotui/elements'
 
 const props = defineProps<{
   modelValue: boolean
@@ -99,15 +84,24 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue', 'select'])
 
 const videoStore = useVideoStore()
-const activeTab = ref<'upload' | 'library'>('upload')
 const tempSelected = ref<string[]>([])
 
-const referenceFrames = computed(() => videoStore.currentThread?.preprocessing?.['reference-frames'] || [])
-const hasReferenceFrames = computed(() => referenceFrames.value.length > 0)
+const allProjectImages = computed(() => {
+  const thread = videoStore.currentThread;
+  if (!thread) return [];
+
+  // Combine source images and extracted reference frames
+  const sourceImages = thread.preprocessing?.sourceImages || [];
+  const referenceFrames = thread.preprocessing?.['reference-frames'] || [];
+
+  // De-duplicate if necessary and return
+  return [...new Set([...sourceImages, ...referenceFrames])];
+})
 
 const selectedCount = computed(() => tempSelected.value.length)
 
 const normalizeUrl = (url: string) => {
+  if (!url) return ''
   return url.startsWith('media://') ? url : `media://${url}`
 }
 
@@ -123,7 +117,6 @@ const toggleSelection = (url: string) => {
 }
 
 const triggerFileUpload = async () => {
-  // Use Electron's native file picker via IPC
   const result = await (window as any).api.showOpenDialog({
     properties: ['openFile', 'multiSelections'],
     filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }]
@@ -141,9 +134,4 @@ const confirmSelection = () => {
   emit('update:modelValue', false)
   tempSelected.value = []
 }
-
-// Icons (Inlined for simplicity or you can import from existing icon set if available)
-const IconClose = { template: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' }
-const IconUpload = { template: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>' }
-const IconCheck = { template: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>' }
 </script>

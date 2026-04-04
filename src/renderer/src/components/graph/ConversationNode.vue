@@ -1,103 +1,111 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
-    <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
-    
+  <div
+    class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
+    <Handle type="target" :position="Position.Top"
+      class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
+
     <!-- Header with Actions -->
-    <div class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+    <div
+      class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"></div>
-        <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
+        <span
+          class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
       </div>
       <div class="flex items-center space-x-1">
-        <button 
-          v-if="!showInput && !data.hasInputInitially" 
-          @click="showInput = true" 
+        <button v-if="!showInput && !data.hasInputInitially" @click="showInput = true"
           class="p-1 hover:bg-blue-500/10 rounded-md text-zinc-400 hover:text-blue-500 transition-colors"
-          title="Branch from this node"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          title="Branch from this node">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
         </button>
-        <button 
-          @click="data.onDelete" 
+        <button @click="data.onDelete"
           class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors"
-          title="Delete node and branches"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          title="Delete node and branches">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+            </path>
+          </svg>
         </button>
       </div>
     </div>
 
-    <!-- Messages List (Self-expanding height, Draggable) -->
+    <!-- Messages List -->
     <div class="p-4 space-y-4 nowheel">
-      <div v-for="msg in data.messages" :key="msg.id" 
-           class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
-           :class="msg.role === 'user' ? 'items-end' : 'items-start'">
-        
+      <div v-for="msg in data.messages" :key="msg.id"
+        class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        :class="msg.role === 'user' ? 'items-end' : 'items-start'">
+
         <div class="flex items-center space-x-2 px-1">
-          <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role }}</span>
-          <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)" class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer opacity-0 group-hover:opacity-100 uppercase">Retry</div>
+          <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role
+          }}</span>
+          <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
+            class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer opacity-0 group-hover:opacity-100 uppercase">
+            Retry</div>
         </div>
 
-        <div 
+        <div
           class="px-4 py-2.5 rounded-[1.25rem] text-sm leading-relaxed max-w-[90%] break-words relative overflow-hidden transition-all duration-300 group/msg"
           :class="[
-            msg.role === 'user' 
-              ? 'bg-gradient-to-br from-primary to-primary-dark text-white rounded-tr-none shadow-lg shadow-primary/20 font-medium' 
+            msg.role === 'user'
+              ? 'bg-gradient-to-br from-primary to-primary-dark text-white rounded-tr-none shadow-lg shadow-primary/20 font-medium'
               : 'bg-white/60 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 rounded-tl-none border border-black/5 dark:border-white/5 backdrop-blur-sm',
             msg.isPending ? 'ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10 transition-all duration-1000 animate-pulse' : ''
-          ]"
-        >
-          <!-- Copy Button -->
-          <button 
-            v-if="msg.content && !msg.isPending"
-            @click="copyMessage(msg.id, msg.content)"
+          ]">
+
+          <button v-if="msg.content && !msg.isPending" @click="copyMessage(msg.id, msg.content)"
             class="absolute top-1 right-1 p-1.5 rounded-lg opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-10"
             :class="[
-              msg.role === 'user' 
-                ? 'hover:bg-white/10 text-white/70 hover:text-white' 
+              msg.role === 'user'
+                ? 'hover:bg-white/10 text-white/70 hover:text-white'
                 : 'hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
-            ]"
-            title="Copy message"
-          >
-            <svg v-if="copiedId !== msg.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            <svg v-else class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            ]" title="Copy message">
+            <svg v-if="copiedId !== msg.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+              </path>
+            </svg>
+            <svg v-else class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+            </svg>
           </button>
 
-          <div 
-            v-if="msg.isPending && !msg.content" 
-            class="text-zinc-400 italic font-medium flex items-center space-x-2"
-          >
-             <span>AI is thinking...</span>
+          <div v-if="msg.isPending && !msg.content"
+            class="text-zinc-400 italic font-medium flex items-center space-x-2">
+            <span>AI is thinking...</span>
           </div>
-          <div 
-            v-else 
-            v-html="renderMarkdown(msg.content)" 
+          <div v-else v-html="renderMarkdown(msg.content)"
             class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
-            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"
-          ></div>
-          
-          <!-- Files (Images and Previews) -->
-          <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0" class="mt-3 space-y-2">
-             <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url" 
-                  class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden"
-             >
-                <!-- Image Preview for thumbnails/previews -->
-                <div v-if="file.url.match(/\.(jpg|jpeg|png|webp)$/i) || file.type === 'preview' || file.type === 'actual'" 
-                     class="mb-2 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 aspect-video bg-black/20"
-                >
-                   <img :src="mediaUrl(file.url)" class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" />
-                </div>
+            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
 
-                <div class="flex items-center justify-between gap-2">
-                   <div class="flex flex-col min-w-0">
-                      <span class="text-[8px] font-black uppercase tracking-widest text-primary/70">{{ file.type }}</span>
-                      <span class="text-[9px] truncate text-zinc-500 font-mono">{{ file.url.split('/').pop() }}</span>
-                   </div>
-                   <button @click.stop="handleSave(file.url)" class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0" title="Save">
-                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                   </button>
+          <!-- Files -->
+          <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
+            class="mt-3 space-y-2">
+            <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url"
+              class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden">
+              <div v-if="file.url.match(/\.(jpg|jpeg|png|webp)$/i) || file.type === 'preview' || file.type === 'actual'"
+                class="mb-2 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 aspect-video bg-black/20">
+                <img :src="mediaUrl(file.url)"
+                  class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" />
+              </div>
+
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col min-w-0">
+                  <span class="text-[8px] font-black uppercase tracking-widest text-primary/70">{{ file.type }}</span>
+                  <span class="text-[9px] truncate text-zinc-500 font-mono">{{ file.url.split('/').pop() }}</span>
                 </div>
-             </div>
+                <button @click.stop="handleSave(file.url)"
+                  class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0"
+                  title="Save">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div v-if="msg.isPending" class="mt-3 pt-2 border-t border-blue-500/10 flex items-center justify-between">
@@ -105,13 +113,10 @@
               <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
               <span>Active Task</span>
             </div>
-            
-            <button 
-              v-if="msg.isPending" 
-              @click="videoStore.abortProcessing(msg.id)"
+
+            <button v-if="msg.isPending" @click="videoStore.abortProcessing(msg.id)"
               class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40 ml-4"
-              title="Stop process"
-            >
+              title="Stop process">
               <div class="w-1.5 h-1.5 bg-red-500 rounded-sm"></div>
               <span class="text-[9px] font-bold tracking-wider uppercase leading-none">Stop</span>
             </button>
@@ -126,60 +131,13 @@
       </div>
     </div>
 
-    <div v-if="data.hasInputInitially || showInput" class="p-3 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/5 animate-in slide-in-from-top-1 duration-200">
-      <!-- Attached Images Preview -->
-      <div v-if="attachedImages.length > 0" class="flex flex-wrap gap-1.5 px-1 pb-2">
-        <div 
-          v-for="(img, idx) in attachedImages" 
-          :key="idx" 
-          class="relative w-10 h-10 rounded-lg overflow-hidden group border border-zinc-200 dark:border-zinc-800"
-        >
-          <img :src="mediaUrl(img)" class="w-full h-full object-cover" />
-          <button 
-            @click="removeAttachment(idx)"
-            class="absolute top-0.5 right-0.5 p-0.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
-        </div>
-      </div>
+    <!-- Input Section -->
+    <BaseMessageInput v-if="data.hasInputInitially || showInput" v-model="input" v-model:attachedImages="attachedImages"
+      :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]" @send="submit" />
 
-      <div class="flex items-end space-x-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-inner input-focus-ring transition-all duration-300">
-        <!-- Attachment Toggle -->
-        <button 
-          @click="showAttachmentModal = true"
-          class="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-400 hover:text-primary transition-all mb-0.5"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14m-7-7v14"/>
-          </svg>
-        </button>
-
-        <textarea 
-          v-model="input"
-          :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'"
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1.5 px-1 resize-none overflow-hidden leading-relaxed"
-          rows="1"
-          @keydown.enter="handleEnter"
-          @input="adjustTextarea"
-          ref="textareaRef"
-        ></textarea>
-        <button 
-          @click="submit"
-          class="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-600/20 mb-0.5"
-          :disabled="!input.trim() && attachedImages.length === 0"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-        </button>
-      </div>
-    </div>
-
-    <AttachmentModal 
-      v-model="showAttachmentModal"
-      @select="handleImagesSelected"
-    />
-
-    <Handle type="source" :position="Position.Bottom" class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
+    <Handle type="source" :position="Position.Bottom"
+      class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
   </div>
 </template>
 
@@ -188,15 +146,13 @@ import { ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import { renderMarkdown } from '../../utils/markdown'
-import AttachmentModal from '../chat/AttachmentModal.vue'
+import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
 const input = ref('')
 const showInput = ref(false)
 const copiedId = ref<string | null>(null)
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const showAttachmentModal = ref(false)
 const attachedImages = ref<string[]>([])
 
 const copyMessage = (id: string, content: string) => {
@@ -208,35 +164,12 @@ const copyMessage = (id: string, content: string) => {
   })
 }
 
-const adjustTextarea = () => {
-  if (textareaRef.value) {
-    textareaRef.value.style.height = 'auto'
-    textareaRef.value.style.height = textareaRef.value.scrollHeight + 'px'
-  }
-}
-
-const handleEnter = (e: KeyboardEvent) => {
-  if ((e.metaKey || e.ctrlKey) && (input.value.trim() || attachedImages.value.length > 0)) {
-    e.preventDefault()
-    submit()
-  }
-}
-
-const handleImagesSelected = (images: string[]) => {
-  attachedImages.value = [...attachedImages.value, ...images]
-}
-
-const removeAttachment = (index: number) => {
-  attachedImages.value.splice(index, 1)
-}
-
-const submit = () => {
-  if ((input.value.trim() || attachedImages.value.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(input.value, attachedImages.value)
+const submit = (text: string, images: string[]) => {
+  if ((text.trim() || images.length > 0) && props.data.onSubmit) {
+    props.data.onSubmit(text, images)
     input.value = ''
     attachedImages.value = []
     showInput.value = false
-    setTimeout(() => adjustTextarea(), 0)
   }
 }
 
@@ -247,7 +180,6 @@ const mediaUrl = (url: string) => {
 
 const handleSave = async (url: string) => {
   if (url && (window as any).api) {
-    // If it's a media:// URL, strip it before sending to the save API
     const cleanPath = url.replace('media://', '')
     await (window as any).api.saveVideo(cleanPath)
   }
@@ -258,13 +190,16 @@ const handleSave = async (url: string) => {
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: rgba(128, 128, 128, 0.2);
   border-radius: 10px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(128, 128, 128, 0.3);
 }
