@@ -29,7 +29,7 @@
            </div>
         </div>
         <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest text-primary-light">Result: Thumbnail</div>
+           <div class="text-[9px] font-black uppercase tracking-widest text-primary-light">Result: {{ displayType }}</div>
            <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
              {{ activeFileType }}
            </div>
@@ -47,7 +47,7 @@
     <!-- Reference Frames Gallery (Visible by default if present) -->
     <div v-if="referenceFrames.length > 0" class="px-3 py-2 bg-black/10 dark:bg-black/40 border-b border-black/5 dark:border-white/5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">Reference Frames</span>
+            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">{{ displayReferenceLabel }}</span>
             <span class="text-[8px] font-bold text-zinc-400">{{ referenceFrames.length }} detected</span>
         </div>
         <div class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar scroll-smooth">
@@ -168,7 +168,21 @@ const activeFileType = computed(() => {
     return actualFile.value ? 'Actual' : 'Preview'
 })
 
+const displayType = computed(() => {
+    const type = props.data.type || 'thumbnail'
+    if (type === 'image' || type === 'result-image') return 'Image Result'
+    return 'Thumbnail'
+})
+
+const displayReferenceLabel = computed(() => {
+    const type = props.data.type || 'thumbnail'
+    if (type === 'image' || type === 'result-image') return 'Reference Images'
+    return 'Reference Frames'
+})
+
 const versionedTitle = computed(() => {
+  const type = props.data.type || 'thumbnail'
+  if (type === 'image' || type === 'result-image') return 'AI Generated Image'
   return 'AI Generated Thumbnail'
 })
 

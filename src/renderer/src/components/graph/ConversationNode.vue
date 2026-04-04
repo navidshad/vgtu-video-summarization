@@ -127,11 +127,38 @@
     </div>
 
     <div v-if="data.hasInputInitially || showInput" class="p-3 bg-black/5 dark:bg-white/5 border-t border-black/5 dark:border-white/5 animate-in slide-in-from-top-1 duration-200">
+      <!-- Attached Images Preview -->
+      <div v-if="attachedImages.length > 0" class="flex flex-wrap gap-1.5 px-1 pb-2">
+        <div 
+          v-for="(img, idx) in attachedImages" 
+          :key="idx" 
+          class="relative w-10 h-10 rounded-lg overflow-hidden group border border-zinc-200 dark:border-zinc-800"
+        >
+          <img :src="mediaUrl(img)" class="w-full h-full object-cover" />
+          <button 
+            @click="removeAttachment(idx)"
+            class="absolute top-0.5 right-0.5 p-0.5 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
       <div class="flex items-end space-x-2 bg-white dark:bg-zinc-800 p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-inner input-focus-ring transition-all duration-300">
+        <!-- Attachment Toggle -->
+        <button 
+          @click="showAttachmentModal = true"
+          class="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-400 hover:text-primary transition-all mb-0.5"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14m-7-7v14"/>
+          </svg>
+        </button>
+
         <textarea 
           v-model="input"
           :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'"
-          class="flex-1 bg-transparent border-none text-sm focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1 px-1 resize-none overflow-hidden leading-relaxed"
+          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-1.5 px-1 resize-none overflow-hidden leading-relaxed"
           rows="1"
           @keydown.enter="handleEnter"
           @input="adjustTextarea"
@@ -139,13 +166,18 @@
         ></textarea>
         <button 
           @click="submit"
-          class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-600/20"
-          :disabled="!input.trim()"
+          class="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-blue-600/20 mb-0.5"
+          :disabled="!input.trim() && attachedImages.length === 0"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
         </button>
       </div>
     </div>
+
+    <AttachmentModal 
+      v-model="showAttachmentModal"
+      @select="handleImagesSelected"
+    />
 
     <Handle type="source" :position="Position.Bottom" class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
   </div>
@@ -156,6 +188,7 @@ import { ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import { renderMarkdown } from '../../utils/markdown'
+import AttachmentModal from '../chat/AttachmentModal.vue'
 
 const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
@@ -163,6 +196,8 @@ const input = ref('')
 const showInput = ref(false)
 const copiedId = ref<string | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const showAttachmentModal = ref(false)
+const attachedImages = ref<string[]>([])
 
 const copyMessage = (id: string, content: string) => {
   navigator.clipboard.writeText(content).then(() => {
@@ -181,16 +216,25 @@ const adjustTextarea = () => {
 }
 
 const handleEnter = (e: KeyboardEvent) => {
-  if ((e.metaKey || e.ctrlKey) && input.value.trim()) {
+  if ((e.metaKey || e.ctrlKey) && (input.value.trim() || attachedImages.value.length > 0)) {
     e.preventDefault()
     submit()
   }
 }
 
+const handleImagesSelected = (images: string[]) => {
+  attachedImages.value = [...attachedImages.value, ...images]
+}
+
+const removeAttachment = (index: number) => {
+  attachedImages.value.splice(index, 1)
+}
+
 const submit = () => {
-  if (input.value.trim() && props.data.onSubmit) {
-    props.data.onSubmit(input.value)
+  if ((input.value.trim() || attachedImages.value.length > 0) && props.data.onSubmit) {
+    props.data.onSubmit(input.value, attachedImages.value)
     input.value = ''
+    attachedImages.value = []
     showInput.value = false
     setTimeout(() => adjustTextarea(), 0)
   }

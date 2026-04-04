@@ -8,7 +8,7 @@ import { threadManager } from '../threads'
 export interface PipelineContext {
 	updateStatus: (status: string) => Promise<void>;
 	next: (data: any) => void;
-	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number; shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => Promise<void>;
+	finish: (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number; shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary' | 'image', files?: Array<{ url: string, type: FileType }> }) => Promise<void>;
 	fail: (error: string) => Promise<void>;
 	savePreprocessing: (updates: Partial<Thread['preprocessing']>) => Promise<void>;
 	recordUsage: (record: import('../../shared/types').UsageRecord) => Promise<void>;
@@ -23,6 +23,7 @@ export interface PipelineContext {
 	context: string;   // Full conversation history as text
 	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
+	attachedImages?: string[];
 }
 
 import { backgroundTaskManager } from '../tasks'
@@ -37,16 +38,18 @@ export class Pipeline {
 	private editRefId?: string
 	private baseTimeline?: EnrichedTimelineSegment[]
 	private intentResult?: import('../../shared/types').IntentResult
+	private attachedImages?: string[]
 	private isFinished: boolean = false
 	private abortController: AbortController = new AbortController()
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string, attachedImages?: string[]) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
 		this.context = context
 		this.baseTimeline = baseTimeline
 		this.editRefId = editRefId
+		this.attachedImages = attachedImages
 	}
 
 	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
@@ -142,13 +145,14 @@ export class Pipeline {
 		const self = this
 		return {
 			threadId: this.threadId,
-			videoPath: thread.videoPath,
+			videoPath: thread.videoPath || '',
 			tempDir: thread.tempDir,
 			preprocessing: thread.preprocessing,
 			messageId: this.messageId,
 			context: this.context,
 			editRefId: this.editRefId,
 			baseTimeline: this.baseTimeline,
+			attachedImages: this.attachedImages,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
 			signal: this.abortController.signal,
@@ -211,7 +215,7 @@ export class Pipeline {
 			next: (_nextData?: any) => {
 				// This is a placeholder, will be overridden in the loop
 			},
-			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) => {
+			finish: async (message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary' | 'image', files?: Array<{ url: string, type: FileType }> }) => {
 				return this.finish(message, video, timeline, options);
 			},
 			fail: async (error: string) => {
@@ -220,7 +224,7 @@ export class Pipeline {
 		}
 	}
 
-	private async finish(message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary', files?: Array<{ url: string, type: FileType }> }) {
+	private async finish(message: string, video?: { path: string; type: FileType.Preview | FileType.Actual }, timeline?: EnrichedTimelineSegment[], options?: { version?: number, shouldVersion?: boolean, resultType?: 'video' | 'thumbnail' | 'summary' | 'image', files?: Array<{ url: string, type: FileType }> }) {
 		console.log(`[PIPELINE CORE] finish() called.`)
 		if (this.isFinished) return
 		this.isFinished = true
@@ -260,12 +264,7 @@ export class Pipeline {
 		const isAborted = this.abortController.signal.aborted
 		const statusContent = isAborted ? 'Processing stopped by user' : `Error: ${error}`
 
-		this.browserWindow.webContents.send('pipeline-update', {
-			id: this.messageId,
-			type: 'status',
-			content: statusContent
-		})
-
+		// Important: Send ONLY finish here to avoid race conditions in the renderer
 		this.browserWindow.webContents.send('pipeline-update', {
 			id: this.messageId,
 			type: 'finish',

@@ -44,8 +44,9 @@ export const useVideoStore = defineStore('video', () => {
 		threads.value = await (window as any).api.getAllThreads()
 	}
 
-	const createThread = async (videoPath: string, videoName: string) => {
-		const newThread = await (window as any).api.createThread(videoPath, videoName)
+	const createThread = async (videoPath: string | undefined, videoName: string, imagePaths?: string[]) => {
+		const payload = { videoPath, videoName, imagePaths }
+		const newThread = await (window as any).api.createThread(JSON.parse(JSON.stringify(payload)))
 		threads.value.unshift(newThread)
 		currentThreadId.value = newThread.id
 		return newThread.id
@@ -70,17 +71,20 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const addMessage = async (content: string, role: MessageRole, editRefId?: string) => {
+	const addMessage = async (content: string, role: MessageRole, editRefId?: string, attachedImages?: string[]) => {
 		if (!currentThreadId.value) return
 
 		const message = {
 			role,
 			content,
 			editRefId,
+			attachedImages,
 			isPending: role === 'ai'
 		}
 
-		const newMessage = await (window as any).api.addMessage(currentThreadId.value, message)
+		// Ensure the message is a plain object to avoid cloning issues with Vue Proxies over IPC
+		const plainMessage = JSON.parse(JSON.stringify(message))
+		const newMessage = await (window as any).api.addMessage(currentThreadId.value, plainMessage)
 
 		// Update local state
 		if (currentThread.value) {
@@ -140,7 +144,11 @@ export const useVideoStore = defineStore('video', () => {
 			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
 				if (data.id === newAiMessageId || data.messageId === newAiMessageId) {
 					if (data.type === 'status' || data.status) {
-						updateMessage(newAiMessageId, { content: data.status || data.content, isPending: true })
+						// Only update status if the message is still pending
+						const msg = currentThread.value?.messages.find(m => m.id === newAiMessageId)
+						if (msg && msg.isPending) {
+							updateMessage(newAiMessageId, { content: data.status || data.content, isPending: true })
+						}
 					} else if (data.type === 'finish') {
 						updateMessage(newAiMessageId, {
 							content: data.content,

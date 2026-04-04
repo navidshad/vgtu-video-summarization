@@ -473,12 +473,19 @@ export class GeminiAdapter {
 			}
 
 			if (!base64Data) {
-				// Fallback: check if it's in the text part (not expected for this model but good for safety)
-				const text = response.candidates[0].content?.parts?.[0]?.text;
-				if (text) {
-					throw new Error(`Model returned text instead of an image: ${text.substring(0, 100)}...`);
+				const candidate = response.candidates[0];
+				const finishReason = candidate.finishReason || 'UNKNOWN';
+				const text = candidate.content?.parts?.[0]?.text;
+				
+				if (finishReason === 'SAFETY') {
+					throw new Error('Image generation blocked by safety filters. Try a different prompt.');
 				}
-				throw new Error('No image data found in the model response.');
+
+				if (text) {
+					throw new Error(`Model returned explanation instead of image: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+				}
+				
+				throw new Error(`No image data found (Finish Reason: ${finishReason}). The prompt may be too complex or outside model capabilities.`);
 			}
 
 			const buffer = Buffer.from(base64Data, 'base64');

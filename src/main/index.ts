@@ -11,6 +11,9 @@ import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
 import * as thumbnail from './pipeline/phases/thumbnail'
+import * as imageExtraction from './pipeline/phases/image-extraction'
+import * as imageIntent from './pipeline/phases/image-intent'
+import * as imageGeneration from './pipeline/phases/image-generation'
 import { backgroundTaskManager } from './tasks'
 import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
@@ -108,6 +111,10 @@ app.whenReady().then(() => {
 		}
 	})
 
+	ipcMain.handle('show-open-dialog', async (_event, options) => {
+		return await dialog.showOpenDialog(options)
+	})
+
 	ipcMain.handle('check-system-requirements', async () => {
 		const [ffmpegAvailable, scenedetectAvailable, ytDlpAvailable] = await Promise.all([
 			checkFFmpegAvailability(),
@@ -175,19 +182,30 @@ app.whenReady().then(() => {
 
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
 
-		pipeline
-			.register(extraction.waitForEnsureLowResolution)
-			.register(extraction.waitForConvertToAudio)
-			.register(extraction.waitForExtractRawTranscript)
-			.register(intent.determineIntent)
-			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.waitForExtractCorrectedTranscript)
-			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
-			.register(generation.waitForEnrichTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
-			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
-			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
-			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+		if (thread.type === 'image') {
+			pipeline
+				.register(async (data, ctx) => {
+					await ctx.updateStatus('Waiting for image analysis...')
+					await ctx.waitForTask('imageExtraction')
+					ctx.next(data)
+				})
+				.register(imageIntent.determineImageIntent)
+				.register(imageGeneration.generateOutputImage, { skipIf: ctx => ctx.intentResult?.type !== 'generate-image' })
+		} else {
+			pipeline
+				.register(extraction.waitForEnsureLowResolution)
+				.register(extraction.waitForConvertToAudio)
+				.register(extraction.waitForExtractRawTranscript)
+				.register(extraction.waitForExtractCorrectedTranscript)
+				.register(extraction.waitForExtractSceneTiming)
+				.register(extraction.waitForGenerateSceneDescription)
+				.register(intent.determineIntent)
+				// These steps only run if intent is generate-timeline
+				.register(generation.waitForEnrichTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+				.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+				.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
+				.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+		}
 
 		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start() in background...`)
 		activePipelines.set(newAiMessageId, pipeline)
@@ -264,9 +282,13 @@ app.whenReady().then(() => {
 	})
 
 	// Thread Management
-	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
-		const newThread = await threadManager.createThread(videoPath, videoName)
-		backgroundTaskManager.startPreprocessing(newThread.id)
+	ipcMain.handle('create-thread', async (_event, { videoPath, videoName, imagePaths }) => {
+		const newThread = await threadManager.createThread(videoPath, videoName, imagePaths)
+		if (newThread.type === 'image') {
+			backgroundTaskManager.startImageProcessing(newThread.id)
+		} else {
+			backgroundTaskManager.startPreprocessing(newThread.id)
+		}
 		return newThread
 	})
 

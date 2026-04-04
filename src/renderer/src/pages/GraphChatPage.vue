@@ -65,6 +65,9 @@
         <template #node-input="props">
           <ChatInputNode v-bind="props" />
         </template>
+        <template #node-image-collection="props">
+          <ImageCollectionNode v-bind="props" />
+        </template>
       </VueFlow>
     </div>
   </div>
@@ -90,6 +93,7 @@ import VideoNode from '../components/graph/VideoNode.vue'
 import ThumbnailNode from '../components/graph/ThumbnailNode.vue'
 import SummaryNode from '../components/graph/SummaryNode.vue'
 import ChatInputNode from '../components/graph/ChatInputNode.vue'
+import ImageCollectionNode from '../components/graph/ImageCollectionNode.vue'
 
 import { useRoute, useRouter } from 'vue-router'
 import { MessageRole } from '@shared/types'
@@ -204,15 +208,17 @@ watch(() => videoStore.messages, (messages) => {
   }
   
   // Root Media Node (Always branching)
+  const isImageThread = videoStore.currentThread?.type === 'image'
+  
   newNodes.push({
     id: 'root-media',
-    type: 'media',
+    type: isImageThread ? 'image-collection' : 'media',
     position: nodePositions['root-media'],
     data: { 
       filename: videoStore.currentVideoName, 
       videoPath: videoStore.currentVideoPath,
-      onSubmit: async (val: string) => {
-         const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined)
+      onSubmit: async (val: string, attachedImages?: string[]) => {
+         const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
          if (newMsgId && videoStore.currentThreadId) {
            await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
          }
@@ -280,7 +286,7 @@ watch(() => videoStore.messages, (messages) => {
         const type = msg.resultType || ((msg.files && msg.files.length > 0) ? 'video' : 'summary')
         // Normalize nodeType to specialized components
         if (type === 'video') nodeType = 'video'
-        else if (type === 'thumbnail' || type === 'generate-thumbnail') nodeType = 'thumbnail'
+        else if (type === 'thumbnail' || type === 'generate-thumbnail' || type === 'image' || type === 'result-image') nodeType = 'thumbnail'
         else if (type === 'summary' || type === 'cover') nodeType = 'summary'
         else nodeType = 'summary' // Default fallback
 
@@ -301,8 +307,8 @@ watch(() => videoStore.messages, (messages) => {
                await videoStore.removeMessageBranch(strand.id)
              }
           },
-          onSubmit: async (val: string) => {
-            const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id)
+          onSubmit: async (val: string, attachedImages?: string[]) => {
+            const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id, attachedImages)
             if (newMsgId && videoStore.currentThreadId) {
                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
             }
@@ -330,8 +336,8 @@ watch(() => videoStore.messages, (messages) => {
                await videoStore.removeMessageBranch(strand.id)
              }
           },
-          onSubmit: async (val: string) => {
-            const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId)
+          onSubmit: async (val: string, attachedImages?: string[]) => {
+            const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId, attachedImages)
             if (newMsgId && videoStore.currentThreadId) {
                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
             }
