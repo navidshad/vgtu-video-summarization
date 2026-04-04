@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, realpathSync } from 'fs'
 import os from 'os'
 import { ModelSettings } from '../shared/types'
 import { DEFAULT_MODEL_SETTINGS } from './constants/gemini'
@@ -23,6 +23,13 @@ class SettingsManager {
 		this.settings = this.loadSettings()
 	}
 
+	private mergeModelSettings(existing: ModelSettings): ModelSettings {
+		return {
+			pricing: { ...DEFAULT_MODEL_SETTINGS.pricing, ...existing.pricing },
+			selection: { ...DEFAULT_MODEL_SETTINGS.selection, ...existing.selection }
+		}
+	}
+
 	private loadSettings(): Settings {
 		try {
 			if (existsSync(this.settingsPath)) {
@@ -31,7 +38,7 @@ class SettingsManager {
 				return {
 					tempDir: parsed.tempDir || this.defaultTempDir,
 					geminiApiKey: parsed.geminiApiKey,
-					modelSettings: parsed.modelSettings || DEFAULT_MODEL_SETTINGS
+					modelSettings: this.mergeModelSettings(parsed.modelSettings || DEFAULT_MODEL_SETTINGS)
 				}
 			}
 		} catch (error) {
@@ -58,6 +65,24 @@ class SettingsManager {
 			mkdirSync(dir, { recursive: true })
 		}
 		return dir
+	}
+
+	isTempDirUnsafe(): boolean {
+		try {
+			const currentDir = this.getTempDir()
+			const systemTemp = os.tmpdir()
+
+			// On macOS, /var is often a symlink to /private/var.
+			// Resolving both paths ensures accurate comparison.
+			const resolvedCurrent = realpathSync(currentDir)
+			const resolvedSystem = realpathSync(systemTemp)
+
+			return resolvedCurrent.startsWith(resolvedSystem)
+		} catch (error) {
+			console.error('Failed to check if temp dir is unsafe:', error)
+			// Fallback to simpler check if realpath fails
+			return this.settings.tempDir.startsWith(os.tmpdir())
+		}
 	}
 
 	setTempDir(path: string): void {
@@ -103,7 +128,7 @@ class SettingsManager {
 	}
 
 	setModelSettings(settings: ModelSettings): void {
-		this.settings.modelSettings = settings
+		this.settings.modelSettings = this.mergeModelSettings(settings)
 		this.saveSettings()
 	}
 

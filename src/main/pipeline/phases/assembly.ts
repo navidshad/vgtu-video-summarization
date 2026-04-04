@@ -1,10 +1,11 @@
-import { FileType } from '../../../shared/types'
+import { FileType, EnrichedTimelineSegment } from '../../../shared/types'
 import { PipelineFunction } from '../index'
-import { TimelineSegment } from '../../../shared/types'
 import { assembleVideo } from '../../ffmpeg'
+import fs from 'fs'
+import path from 'path'
 
 export const assembleVideoFromTimeline: PipelineFunction = async (data, context) => {
-	const timeline = data.timeline as TimelineSegment[]
+	const timeline = data.timeline as EnrichedTimelineSegment[]
 	const videoPath = context.preprocessing.lowResVideoPath || context.videoPath // Use original high-res video for assembly
 
 	if (!videoPath) {
@@ -20,14 +21,18 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 	context.updateStatus('Assembling video from timeline...')
 
 	try {
+		const resultsDir = path.join(context.tempDir, 'generated-videos')
+		if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true })
+
 		const outputPath = await assembleVideo(
 			videoPath,
 			timeline,
-			context.tempDir,
+			resultsDir,
 			context.messageId,
 			(percent) => {
 				context.updateStatus(`Assembling video (${percent}%)...`)
-			}
+			},
+			context.signal
 		)
 
 		context.finish('Processing complete. Your video is ready.', {
@@ -35,7 +40,9 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 			type: FileType.Preview
 		}, timeline, { shouldVersion: true })
 	} catch (error) {
-		console.error('Assembly failed:', error)
+		if (!context.signal.aborted) {
+			console.error('Assembly failed:', error)
+		}
 		context.finish('Video assembly failed.')
 	}
 }

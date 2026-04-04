@@ -2,13 +2,13 @@ import { PipelineFunction } from '../index'
 import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
-import { extractTranscript, generateSRT } from '../../gemini/utils'
+import { extractTranscript, formatTranscript } from '../../gemini/utils'
 import { SceneDetector, checkScenedetectAvailability } from '../../scenedetect'
 import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
 import { GEMINI_MODEL_2_5_FLASH_LITE } from '../../constants/gemini'
+import { settingsManager } from '../../settings'
 
-const BASE_SCENE_PROMPT = `Describe the visual action, setting, and atmosphere of this image in one concise sentence. Focus on what is happening.`
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	const videoPath = context.videoPath
@@ -22,10 +22,12 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	}
 
 	context.updateStatus('Downscaling video to 480p for faster processing...')
-	const tempDir = context.tempDir
-	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, tempDir, (percent) => {
+	const videoDir = path.join(context.tempDir, 'video')
+	if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
+
+	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, videoDir, (percent) => {
 		context.updateStatus(`Downscaling video... ${percent}%`)
-	})
+	}, context.signal)
 
 	context.savePreprocessing({ lowResVideoPath: lowResPath })
 	context.updateStatus('Video downscaled successfully.')
@@ -36,10 +38,12 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	const videoPath = context.preprocessing.lowResVideoPath! || context.videoPath;
 	context.updateStatus('Converting video to audio...')
 
-	const tempDir = context.tempDir
-	const audioPath = await ffmpegAdapter.toAudio(videoPath, tempDir, (percent) => {
+	const audioDir = path.join(context.tempDir, 'audio')
+	if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true })
+
+	const audioPath = await ffmpegAdapter.toAudio(videoPath, audioDir, (percent) => {
 		context.updateStatus(`Converting to audio... ${percent}%`)
-	})
+	}, context.signal)
 
 	context.savePreprocessing({ audioPath })
 	context.updateStatus('Audio extracted successfully.')
@@ -56,14 +60,20 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 	context.updateStatus('Extracting raw transcript...')
 	const duration = await ffmpegAdapter.getVideoDuration(audioPath)
 
-	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration)
-	context.recordUsage(record)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, undefined, context.signal)
 
-	const tempDir = context.tempDir
-	const rawResponsePath = path.join(tempDir, `raw_transcript_response.txt`)
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
+
+	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
+
+	const rawResponsePath = path.join(transcriptsDir, `raw_transcript_response.txt`)
 	fs.writeFileSync(rawResponsePath, rawResponseText)
 
-	const rawTranscriptPath = path.join(tempDir, `raw_transcript.json`)
+	const rawTranscriptPath = path.join(transcriptsDir, `raw_transcript.json`)
 	fs.writeFileSync(rawTranscriptPath, JSON.stringify(transcript, null, 2))
 
 	context.savePreprocessing({ rawTranscriptPath, transcriptPath: rawTranscriptPath })
@@ -85,16 +95,22 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 
 	const transcriptJson = fs.readFileSync(rawTranscriptPath, 'utf-8')
 	const rawTranscript = JSON.parse(transcriptJson)
-	const rawSrt = generateSRT(rawTranscript)
+	const rawTranscriptText = formatTranscript(rawTranscript)
 
-	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawSrt)
-	context.recordUsage(record)
+	const { items: transcript, rawResponseText, record } = await extractTranscript(audioPath, duration, rawTranscriptText, context.signal)
 
-	const tempDir = context.tempDir
-	const rawResponsePath = path.join(tempDir, `corrected_transcript_response.txt`)
+	// Record usage immediately
+	await context.recordUsage(record)
+
+	if (context.signal.aborted) return;
+
+	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
+
+	const rawResponsePath = path.join(transcriptsDir, `corrected_transcript_response.txt`)
 	fs.writeFileSync(rawResponsePath, rawResponseText)
 
-	const correctedTranscriptPath = path.join(tempDir, `corrected_transcript.json`)
+	const correctedTranscriptPath = path.join(transcriptsDir, `corrected_transcript.json`)
 	fs.writeFileSync(correctedTranscriptPath, JSON.stringify(transcript, null, 2))
 
 	context.savePreprocessing({ correctedTranscriptPath, transcriptPath: correctedTranscriptPath })
@@ -118,22 +134,28 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 	const detector = new SceneDetector()
 	let scenes: Scene[] = []
 	try {
-		scenes = await detector.detectScenes(videoPath)
+		scenes = await detector.detectScenes(videoPath, context.signal)
 	} catch (error) {
-		console.error('Scene detection failed:', error)
+		if (!context.signal.aborted) {
+			console.error('Scene detection failed:', error)
+		}
 		context.updateStatus('Scene detection failed, proceeding without scenes.')
 		context.next(data)
 		return
 	}
 
-	const tempDir = context.tempDir
-	const sceneTimesPath = path.join(tempDir, `scenes.json`)
+	const analysisDir = path.join(context.tempDir, 'analysis')
+	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
+
+	const sceneTimesPath = path.join(analysisDir, `scenes.json`)
 	fs.writeFileSync(sceneTimesPath, JSON.stringify(scenes, null, 2))
 
 	context.savePreprocessing({ sceneTimesPath })
 	context.updateStatus(`Detected ${scenes.length} scenes.`)
 	context.next({ ...data, scenes })
 }
+
+const BATCH_SIZE = 50
 
 export const generateSceneDescription: PipelineFunction = async (data, context) => {
 	const sceneTimesPath = context.preprocessing.sceneTimesPath
@@ -149,8 +171,9 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	context.updateStatus(`Generating descriptions for ${scenes.length} scenes...`)
 
 	const gemini = GeminiAdapter.create()
-	// Use a cheap model for description
-	const modelName = GEMINI_MODEL_2_5_FLASH_LITE
+	// Read model from settings
+	const modelSettings = settingsManager.getModelSettings()
+	const modelName = modelSettings.selection['scene-description'] || GEMINI_MODEL_2_5_FLASH_LITE
 
 	const descriptions: { index: number, startTime: number, description: string }[] = []
 	const framesDir = path.join(tempDir, 'frames')
@@ -158,53 +181,107 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 		fs.mkdirSync(framesDir)
 	}
 
-	// Process in batches to avoid overwhelming (though sequential is safer for FFmpeg)
-	for (let i = 0; i < scenes.length; i++) {
-		const scene = scenes[i]
-		const midpoint = scene.startTime + (scene.duration / 2)
+	// Process in batches to reduce API overhead and improve speed
+	for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
+		const batchScenes = scenes.slice(i, i + BATCH_SIZE)
+		const batchFramePaths: string[] = []
+		const validBatchInfo: { scene: Scene, index: number }[] = []
 
-		// Skip very short scenes?
-		if (scene.duration < 1.0) continue;
+		context.updateStatus(`Analyzing scenes ${i + 1} to ${Math.min(i + BATCH_SIZE, scenes.length)} / ${scenes.length}...`)
+
+		// 1. Extract Frames for the batch (sequential extraction is safer for FFmpeg resources)
+		for (let j = 0; j < batchScenes.length; j++) {
+			const scene = batchScenes[j]
+			const originalIndex = i + j
+
+			// Skip very short scenes?
+			if (scene.duration < 1.0) continue;
+
+			try {
+				const midpoint = scene.startTime + (scene.duration / 2)
+				const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir, context.signal)
+				batchFramePaths.push(framePath)
+				validBatchInfo.push({ scene, index: originalIndex })
+			} catch (error) {
+				if (!context.signal.aborted) {
+					console.error(`Failed to extract frame for scene ${originalIndex}:`, error)
+				}
+			}
+		}
+
+		if (validBatchInfo.length === 0) continue;
 
 		try {
-			context.updateStatus(`analyzing scene ${i + 1}/${scenes.length}...`)
+			// 2. Upload Frames in parallel
+			const uploadPromises = batchFramePaths.map(fpath => gemini.uploadFile(fpath, 'image/jpeg'))
+			const frameUris = await Promise.all(uploadPromises)
 
-			// 1. Extract Frame
-			const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir)
+			// 3. Describe Frames in batch
+			// Add context from previous batches to maintain continuity
+			let prompt = `I am providing you with ${validBatchInfo.length} chronological frames from a video. 
+For EACH frame, provide a concise one-sentence description focusing on visual action, setting, and atmosphere. 
+Maintain consistency in identifying people, objects, and settings across the frames.
 
-			// 2. Upload Frame
-			const frameUri = await gemini.uploadFile(framePath, 'image/jpeg')
+Return the descriptions as an array of strings in the exact same order as the images provided.`
 
-			// 3. Describe Frame
-			// Add context from previous scenes to maintain continuity
-			let prompt = BASE_SCENE_PROMPT
 			if (descriptions.length > 0) {
 				const recentContext = descriptions.slice(-3).map(d => d.description).join('\n- ')
 				prompt += `\n\nContext from previous scenes (use this to identify recurring people/settings if applicable):\n- ${recentContext}`
 			}
 
-			const { text, record } = await gemini.generateDescriptionFromImage(
+			const schema = {
+				type: 'object',
+				properties: {
+					descriptions: {
+						type: 'array',
+						items: { type: 'string' },
+						description: 'One sentence description for each frame, in order.'
+					}
+				},
+				required: ['descriptions']
+			}
+
+			const { data: result, record } = await gemini.generateStructuredFromImages<{ descriptions: string[] }>(
 				modelName,
 				prompt,
-				frameUri
+				frameUris,
+				schema,
+				context.signal
 			)
-			context.recordUsage(record)
 
-			descriptions.push({
-				index: i,
-				startTime: scene.startTime,
-				description: text.trim()
+			// Record usage immediately
+			await context.recordUsage(record)
+
+			if (context.signal.aborted) return;
+
+			// 4. Map results back to scenes
+			result.descriptions.forEach((text, index) => {
+				const info = validBatchInfo[index]
+				if (info) {
+					descriptions.push({
+						index: info.index,
+						startTime: info.scene.startTime,
+						description: text.trim()
+					})
+				}
 			})
 
-			// Cleanup frame to save space
-			fs.unlinkSync(framePath)
+			// 5. Cleanup frames for this batch
+			batchFramePaths.forEach(fpath => {
+				try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath) } catch (e) { }
+			})
 
 		} catch (error) {
-			console.error(`Failed to describe scene ${i}:`, error)
+			if (!context.signal.aborted) {
+				console.error(`Failed to describe batch starting at index ${i}:`, error)
+			}
 		}
 	}
 
-	const sceneDescriptionsPath = path.join(tempDir, `scene_descriptions.json`)
+	const analysisDir = path.join(tempDir, 'analysis')
+	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
+
+	const sceneDescriptionsPath = path.join(analysisDir, `scene_descriptions.json`)
 	fs.writeFileSync(sceneDescriptionsPath, JSON.stringify(descriptions, null, 2))
 
 	context.savePreprocessing({ sceneDescriptionsPath })
@@ -215,37 +292,49 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 
 // Wait functions for pipeline to use
 export const waitForEnsureLowResolution: PipelineFunction = async (data, context) => {
-	context.updateStatus('Ensuring optimal video resolution...')
+	console.log(`[EXTRACTION PHASE] Entering waitForEnsureLowResolution`)
+	await context.updateStatus('Ensuring optimal video resolution...')
 	await context.waitForTask('downscale')
+	console.log(`[EXTRACTION PHASE] Leaving waitForEnsureLowResolution`)
 	context.next(data)
 }
 
 export const waitForConvertToAudio: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for audio extraction...')
+	console.log(`[EXTRACTION PHASE] Entering waitForConvertToAudio`)
+	await context.updateStatus('Waiting for audio extraction...')
 	await context.waitForTask('audio')
+	console.log(`[EXTRACTION PHASE] Leaving waitForConvertToAudio`)
 	context.next(data)
 }
 
 export const waitForExtractRawTranscript: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for raw transcript...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractRawTranscript`)
+	await context.updateStatus('Waiting for raw transcript...')
 	await context.waitForTask('rawTranscript')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractRawTranscript`)
 	context.next(data)
 }
 
 export const waitForExtractCorrectedTranscript: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for transcript refinement...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractCorrectedTranscript`)
+	await context.updateStatus('Waiting for transcript refinement...')
 	await context.waitForTask('correctedTranscript')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractCorrectedTranscript`)
 	context.next(data)
 }
 
 export const waitForExtractSceneTiming: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for scene timing detection...')
+	console.log(`[EXTRACTION PHASE] Entering waitForExtractSceneTiming`)
+	await context.updateStatus('Waiting for scene timing detection...')
 	await context.waitForTask('sceneTiming')
+	console.log(`[EXTRACTION PHASE] Leaving waitForExtractSceneTiming`)
 	context.next(data)
 }
 
 export const waitForGenerateSceneDescription: PipelineFunction = async (data, context) => {
-	context.updateStatus('Waiting for scene descriptions...')
+	console.log(`[EXTRACTION PHASE] Entering waitForGenerateSceneDescription`)
+	await context.updateStatus('Waiting for scene descriptions...')
 	await context.waitForTask('sceneDescriptions')
+	console.log(`[EXTRACTION PHASE] Leaving waitForGenerateSceneDescription`)
 	context.next(data)
 }

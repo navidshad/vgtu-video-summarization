@@ -10,10 +10,14 @@ import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
 import * as assembly from './pipeline/phases/assembly'
+import * as thumbnail from './pipeline/phases/thumbnail'
 import { backgroundTaskManager } from './tasks'
-import { checkFFmpegAvailability } from './ffmpeg'
+import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
+import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+
+const activePipelines = new Map<string, Pipeline>()
 
 protocol.registerSchemesAsPrivileged([
 	{
@@ -105,46 +109,111 @@ app.whenReady().then(() => {
 	})
 
 	ipcMain.handle('check-system-requirements', async () => {
-		const [ffmpegAvailable, scenedetectAvailable] = await Promise.all([
+		const [ffmpegAvailable, scenedetectAvailable, ytDlpAvailable] = await Promise.all([
 			checkFFmpegAvailability(),
-			checkScenedetectAvailability()
+			checkScenedetectAvailability(),
+			checkYtDlpAvailability()
 		])
-		return { ffmpegAvailable, scenedetectAvailable }
+		return { 
+			ffmpegAvailable, 
+			scenedetectAvailable, 
+			ytDlpAvailable,
+			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
+		}
+	})
+
+	ipcMain.handle('get-video-metadata', async (_event, filePath: string) => {
+		return await getVideoMetadata(filePath)
+	})
+
+	ipcMain.handle('fetch-video-formats', async (_event, url: string) => {
+		return await getVideoFormats(url)
+	})
+
+	ipcMain.handle('download-video', async (event, url: string, resolution?: string) => {
+		const tempDir = join(settingsManager.getTempDir(), `download-${Date.now()}`)
+		if (!fs.existsSync(tempDir)) {
+			fs.mkdirSync(tempDir, { recursive: true })
+		}
+		return await downloadVideo(url, tempDir, resolution, (percent) => {
+			event.sender.send('download-progress', percent)
+		})
+	})
+
+	ipcMain.handle('is-temp-dir-unsafe', () => {
+		return settingsManager.isTempDirUnsafe()
+	})
+
+	ipcMain.handle('debug-log', (_event, ...args: any[]) => {
+		console.log('[FRONTEND LOG]', ...args)
 	})
 
 	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
+		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}`)
 		const window = BrowserWindow.fromWebContents(event.sender)
-		if (!window) return
+		if (!window) {
+			console.log(`[DEBUG IPC] FAILED: window not found`)
+			return
+		}
 
 		const thread = threadManager.getThread(threadId)
-		if (!thread) return
+		if (!thread) {
+			console.log(`[DEBUG IPC] FAILED: thread not found`)
+			return
+		}
 
-		// Derive edit reference from the last user message
-		const lastUserMsg = threadManager.getLatestUserMessage(threadId)
-		const editRefId = lastUserMsg?.editRefId
+		// The newly created AI pending message links back to the user prompt via editRefId
+		const aiMsg = thread.messages.find(m => m.id === newAiMessageId)
+		const userMsgId = aiMsg?.editRefId
+		console.log(`[DEBUG IPC] aiMsg found? ${!!aiMsg}, userMsgId=${userMsgId}`)
 
-		// Prepare the context
-		// Full thread history is the context for the pipeline
-		const context = threadManager.getThreadContext(threadId)
+		// Traverse graph lineage backwards
+		const context = threadManager.getBranchContext(threadId, userMsgId)
 
 		// Prepare the base timeline
-		const baseTimeline = editRefId ? thread.messages.find(m => m.id === editRefId)?.timeline : undefined;
+		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, editRefId)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
 
 		pipeline
-			.register(extraction.waitForEnsureLowResolution, { skipIf: ctx => !!ctx.preprocessing.lowResVideoPath })
-			.register(extraction.waitForConvertToAudio, { skipIf: ctx => !!ctx.preprocessing.audioPath })
-			.register(extraction.waitForExtractRawTranscript, { skipIf: ctx => !!ctx.preprocessing.rawTranscriptPath })
+			.register(extraction.waitForEnsureLowResolution)
+			.register(extraction.waitForConvertToAudio)
+			.register(extraction.waitForExtractRawTranscript)
 			.register(intent.determineIntent)
 			// These steps only run if intent is generate-timeline (handled by pipeline logic if needed, but here we can add skipIf or the determineIntent can just finish)
-			.register(extraction.waitForExtractCorrectedTranscript, { skipIf: ctx => !!ctx.preprocessing.correctedTranscriptPath })
-			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneTimesPath })
-			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || !!ctx.preprocessing.sceneDescriptionsPath })
-			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
-			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.waitForExtractCorrectedTranscript)
+			.register(extraction.waitForExtractSceneTiming, { skipIf: ctx => ctx.intentResult?.type === 'text' })
+			.register(extraction.waitForGenerateSceneDescription, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(generation.waitForEnrichTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
+			.register(thumbnail.generateThumbnail, { skipIf: ctx => ctx.intentResult?.type !== 'generate-thumbnail' })
+			.register(assembly.assembleVideoFromTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 
-		await pipeline.start({})
+		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start() in background...`)
+		activePipelines.set(newAiMessageId, pipeline)
+		
+		pipeline.start({})
+			.then(() => {
+				console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
+			})
+			.catch((e) => {
+				console.error(`[DEBUG IPC] pipeline.start() threw error:`, e)
+			})
+			.finally(() => {
+				activePipelines.delete(newAiMessageId)
+			})
+
+		return true
+	})
+
+	ipcMain.handle('abort-pipeline', async (_event, messageId) => {
+		console.log(`[DEBUG IPC] abort-pipeline called for messageId=${messageId}`)
+		const pipeline = activePipelines.get(messageId)
+		if (pipeline) {
+			pipeline.abort()
+			return true
+		}
+		return false
 	})
 
 	ipcMain.handle('get-temp-dir', () => {
@@ -196,9 +265,14 @@ app.whenReady().then(() => {
 
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName }) => {
-		const newThread = threadManager.createThread(videoPath, videoName)
+		const newThread = await threadManager.createThread(videoPath, videoName)
 		backgroundTaskManager.startPreprocessing(newThread.id)
 		return newThread
+	})
+
+	ipcMain.handle('retry-preprocessing', async (_event, threadId) => {
+		await backgroundTaskManager.startPreprocessing(threadId)
+		return true
 	})
 
 	ipcMain.handle('get-all-threads', () => {
@@ -226,14 +300,18 @@ app.whenReady().then(() => {
 		return false
 	})
 
-	ipcMain.handle('add-message', (_event, { threadId, message }) => {
-		return threadManager.addMessageToThread(threadId, message)
+	ipcMain.handle('add-message', async (_event, { threadId, message }) => {
+		return await threadManager.addMessageToThread(threadId, message)
 	})
 
-	ipcMain.handle('remove-message', (_event, { threadId, messageId }) => {
-		return threadManager.removeMessageFromThread(threadId, messageId)
+	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
+		return await threadManager.removeMessageBranchFromThread(threadId, messageId)
 	})
-
+ 
+	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
+		return await threadManager.updateThreadNodePositions(threadId, positions)
+	})
+ 
 	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
 		if (!focusedWindow) return cancelId

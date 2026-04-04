@@ -3,8 +3,9 @@ import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message, Thread, Usage, UsageRecord } from '@shared/types'
+import type { Message, Thread, Usage, UsageRecord, VideoMetadata } from '@shared/types'
 import { settingsManager } from '../settings'
+import { getVideoMetadata } from '../ffmpeg'
 
 // Re-export needed types for consumers (if any, though shared is better)
 export { MessageRole, FileType }
@@ -13,6 +14,7 @@ export type { Message }
 
 class ThreadManager {
 	private threadsDir: string
+	private updateQueues: Map<string, Promise<any>> = new Map()
 
 	constructor() {
 		this.threadsDir = path.join(app.getPath('userData'), 'threads')
@@ -44,16 +46,59 @@ class ThreadManager {
 	}
 
 	// Create a new thread
-	createThread(videoPath: string, videoName: string): Thread {
+	async createThread(videoPath: string, videoName: string): Promise<Thread> {
 		const id = uuidv4()
+		const tempDir = settingsManager.getThreadTempDir(id)
+		
+		// If the video is in a temporary download folder, move it to the thread's artifact folder
+		let finalVideoPath = videoPath
+		const systemTempDir = settingsManager.getTempDir()
+		
+		// Strict check: No directories allowed as video source
+		if (fs.existsSync(videoPath) && fs.statSync(videoPath).isDirectory()) {
+			throw new Error(`Invalid video source: "${videoPath}" is a directory. Please provide a valid video file.`)
+		}
+
+		if (videoPath.startsWith(systemTempDir)) {
+			try {
+				const videoDir = path.join(tempDir, 'video')
+				if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
+				
+				// Sanitize the name for the filesystem
+				const sanitizedName = videoName.replace(/[^\x00-\x7F]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_').trim()
+				const targetPath = path.join(videoDir, sanitizedName)
+				
+				fs.renameSync(videoPath, targetPath)
+				finalVideoPath = targetPath
+				
+				// Cleanup empty source download folder
+				const sourceDir = path.dirname(videoPath)
+				if (sourceDir !== systemTempDir && fs.existsSync(sourceDir) && fs.readdirSync(sourceDir).length === 0) {
+					fs.rmdirSync(sourceDir)
+				}
+			} catch (error) {
+				console.error(`Failed to move video to thread directory:`, error)
+				// Fallback to original path if move fails
+			}
+		}
+
+
+		let videoMetadata: VideoMetadata | undefined
+		try {
+			videoMetadata = await getVideoMetadata(finalVideoPath)
+		} catch (error) {
+			console.error(`Failed to extract metadata for ${finalVideoPath}:`, error)
+		}
+
 		const thread: Thread = {
 			id,
 			title: videoName,
-			videoPath,
+			videoPath: finalVideoPath,
 			preprocessing: {},
-			tempDir: settingsManager.getThreadTempDir(id),
+			tempDir,
 			messages: [],
 			versionCounter: 0,
+			videoMetadata,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
@@ -62,6 +107,7 @@ class ThreadManager {
 		return thread
 	}
 
+
 	// Get all threads (for the list view)
 	getAllThreads(): Thread[] {
 		this.ensureThreadsDir()
@@ -69,9 +115,19 @@ class ThreadManager {
 		const threads: Thread[] = []
 
 		for (const file of files) {
+			const filePath = path.join(this.threadsDir, file)
 			try {
-				const content = fs.readFileSync(path.join(this.threadsDir, file), 'utf-8')
-				const thread = JSON.parse(content)
+				const content = fs.readFileSync(filePath, 'utf-8')
+				const thread = JSON.parse(content) as Thread
+				
+				// Cleanup: if tempDir is gone, the project artifacts are gone.
+				// We remove it from the list.
+				if (thread.tempDir && !fs.existsSync(thread.tempDir)) {
+					console.warn(`Thread ${thread.id} artifact directory is missing. Cleaning up metadata...`)
+					fs.unlinkSync(filePath)
+					continue
+				}
+
 				threads.push(thread)
 			} catch (error) {
 				console.error(`Failed to parse thread file ${file}:`, error)
@@ -98,19 +154,37 @@ class ThreadManager {
 		}
 	}
 
-	// Update a thread
-	updateThread(id: string, updates: Partial<Thread>): Thread | null {
-		const thread = this.getThread(id)
-		if (!thread) return null
+	// Update a thread atomically
+	updateThread(id: string, updates: Partial<Thread>): Promise<Thread | null> {
+		const existingQueue = this.updateQueues.get(id) || Promise.resolve()
 
-		const updatedThread = {
-			...thread,
-			...updates,
-			updatedAt: Date.now()
-		}
+		const nextUpdate = existingQueue.then(async () => {
+			const thread = this.getThread(id)
+			if (!thread) return null
 
-		this.saveThread(updatedThread)
-		return updatedThread
+			const updatedThread = {
+				...thread,
+				...updates,
+				updatedAt: Date.now()
+			}
+
+			this.saveThread(updatedThread)
+			return updatedThread
+		}).catch(err => {
+			console.error(`Atomic update failed for thread ${id}:`, err)
+			return null
+		})
+
+		this.updateQueues.set(id, nextUpdate)
+
+		// Optional: clean up map if queue is idle (not strictly necessary for small number of threads)
+		nextUpdate.finally(() => {
+			if (this.updateQueues.get(id) === nextUpdate) {
+				// Don't delete if another update was already queued
+			}
+		})
+
+		return nextUpdate
 	}
 
 	private deleteFile(filePath: string) {
@@ -190,36 +264,30 @@ class ThreadManager {
 	}
 
 	// Helper to add a message to a thread
-	addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Message | null {
-		const thread = this.getThread(threadId)
-		if (!thread) return null
-
+	async addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Promise<Message | null> {
+		const id = uuidv4()
+		const createdAt = Date.now()
 		const fullMessage: Message = {
-			id: uuidv4(),
-			createdAt: Date.now(),
+			id,
+			createdAt,
 			...message
 		}
 
-		thread.messages.push(fullMessage)
-		thread.updatedAt = Date.now()
+		await this.updateThread(threadId, {
+			messages: [...(this.getThread(threadId)?.messages || []), fullMessage]
+		})
 
-		this.saveThread(thread)
 		return fullMessage
 	}
 
 	// Update specific message in a thread
-	updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
-
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
-
-		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
-		thread.updatedAt = Date.now()
-
-		this.saveThread(thread)
-		return true
+	async updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m =>
+				m.id === messageId ? { ...m, ...updates } : m
+			)
+		})
+		return !!result
 	}
 
 	getNextVersion(threadId: string): number {
@@ -232,32 +300,33 @@ class ThreadManager {
 	}
 
 	// Update usage and cost for a message
-	updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
+	async updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m => {
+				if (m.id !== messageId) return m
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
+				const newUsage: Usage = {
+					promptTokens: (m.usage?.promptTokens || 0) + record.usage.promptTokens,
+					candidatesTokens: (m.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
+					thinkingTokens: (m.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
+					totalTokens: (m.usage?.totalTokens || 0) + record.usage.totalTokens
+				}
 
-		const currentMsg = thread.messages[msgIndex]
-		const newUsage: Usage = {
-			promptTokens: (currentMsg.usage?.promptTokens || 0) + record.usage.promptTokens,
-			candidatesTokens: (currentMsg.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
-			thinkingTokens: (currentMsg.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
-			totalTokens: (currentMsg.usage?.totalTokens || 0) + record.usage.totalTokens
-		}
+				return {
+					...m,
+					usage: newUsage,
+					cost: (m.cost || 0) + record.cost
+				}
+			})
+		})
+		return !!result
+	}
 
-		const newCost = (currentMsg.cost || 0) + record.cost
-
-		thread.messages[msgIndex] = {
-			...currentMsg,
-			usage: newUsage,
-			cost: newCost
-		}
-
-		thread.updatedAt = Date.now()
-		this.saveThread(thread)
-		return true
+	async updateThreadNodePositions(threadId: string, positions: Record<string, { x: number; y: number }>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			nodePositions: positions
+		})
+		return !!result
 	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
 	resetPendingMessages(): void {
@@ -293,6 +362,39 @@ class ThreadManager {
 		}).join('\n\n')
 	}
 
+	// Traverse the node tree backwards via editRefId as the parent link to form an isolated branch context
+	getBranchContext(threadId: string, messageId?: string): string {
+		const thread = this.getThread(threadId)
+		if (!thread) return ''
+
+		if (!messageId) {
+			return this.getThreadContext(threadId)
+		}
+
+		const branchMessages: Message[] = []
+		let currentMsgId: string | undefined = messageId
+
+		while (currentMsgId) {
+			const msg = thread.messages.find(m => m.id === currentMsgId)
+			if (!msg) break
+			
+			branchMessages.push(msg)
+			currentMsgId = msg.editRefId
+		}
+
+		// Array is constructed backward (leaf to root), reverse it chronologically
+		branchMessages.reverse()
+
+		return branchMessages.map(m => {
+			let content = `${m.role.toUpperCase()}: ${m.content}`
+			if (m.timeline && m.timeline.length > 0) {
+				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
+				content += `\n(AI Generated Timeline):\n${timelineText}`
+			}
+			return content
+		}).join('\n\n')
+	}
+
 	// Get the last user message in a thread
 	getLatestUserMessage(threadId: string): Message | null {
 		const thread = this.getThread(threadId)
@@ -300,31 +402,38 @@ class ThreadManager {
 		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
 	}
 
-	// Remove a message from a thread and delete its files
-	removeMessageFromThread(threadId: string, messageId: string): boolean {
+	// Remove a message from a thread and all its descendants recursively
+	async removeMessageBranchFromThread(threadId: string, messageId: string): Promise<boolean> {
 		const thread = this.getThread(threadId)
 		if (!thread) return false
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
+		const toRemove = new Set<string>()
+		const collect = (id: string) => {
+			if (toRemove.has(id)) return
+			toRemove.add(id)
+			const children = thread.messages.filter(m => m.editRefId === id)
+			children.forEach(c => collect(c.id))
+		}
 
-		const msg = thread.messages[msgIndex]
+		collect(messageId)
 
-		// Delete associated files (except original)
-		if (msg.files) {
-			for (const file of msg.files) {
-				if (file.type !== FileType.Original) {
-					this.deleteFile(file.url)
+		// Delete associated files for all messages in the branch (except original)
+		for (const id of toRemove) {
+			const msg = thread.messages.find(m => m.id === id)
+			if (msg && msg.files) {
+				for (const file of msg.files) {
+					if (file.type !== FileType.Original) {
+						this.deleteFile(file.url)
+					}
 				}
 			}
 		}
 
-		// Remove from messages array
-		thread.messages.splice(msgIndex, 1)
-		thread.updatedAt = Date.now()
+		const result = await this.updateThread(threadId, {
+			messages: thread.messages.filter(m => !toRemove.has(m.id))
+		})
 
-		this.saveThread(thread)
-		return true
+		return !!result
 	}
 }
 
