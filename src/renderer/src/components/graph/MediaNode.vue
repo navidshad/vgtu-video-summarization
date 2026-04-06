@@ -89,27 +89,14 @@
       </div>
     </div>
 
-    <!-- Branching Input -->
-    <div class="p-3 bg-black/5 dark:bg-black/20 border-t border-black/5 dark:border-white/5">
-      <div class="flex items-end space-x-2 bg-white/50 dark:bg-white/5 p-1.5 rounded-xl border border-black/5 dark:border-white/5 input-focus-ring transition-all duration-300">
-        <textarea 
-          v-model="input"
-          ref="textareaRef"
-          placeholder="Start a new analysis..."
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1.5 px-1 resize-none max-h-[150px] overflow-y-auto custom-scrollbar leading-relaxed"
-          rows="1"
-          @input="adjustTextarea"
-          @keydown.enter="handleEnter"
-        ></textarea>
-        <button 
-          @click="submit"
-          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20 mb-0.5"
-          :disabled="!input.trim()"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-        </button>
-      </div>
-    </div>
+    <BaseMessageInput 
+      v-model="input"
+      v-model:attachedImages="attachedImages"
+      placeholder="Start a new analysis..."
+      compact
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      @send="submit"
+    />
 
     <!-- Full Screen Modal (Teleport to body) -->
     <Teleport to="body">
@@ -127,9 +114,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
+import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
 const videoStore = useVideoStore()
@@ -138,7 +126,7 @@ const isFullScreen = ref(false)
 const isPlaying = ref(false)
 const showDetails = ref(false)
 const videoRef = ref<HTMLVideoElement | null>(null)
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
+const attachedImages = ref<string[]>([])
 
 const metadata = computed(() => videoStore.currentThread?.videoMetadata)
 
@@ -164,25 +152,17 @@ const togglePlay = () => {
   }
 }
 
-const adjustTextarea = () => {
-  if (textareaRef.value) {
-    textareaRef.value.style.height = 'auto'
-    textareaRef.value.style.height = textareaRef.value.scrollHeight + 'px'
-  }
+
+const mediaUrl = (url: string) => {
+  if (!url) return ''
+  return url.startsWith('media://') ? url : `media://${url}`
 }
 
-const handleEnter = (e: KeyboardEvent) => {
-  if ((e.metaKey || e.ctrlKey) && input.value.trim()) {
-    e.preventDefault()
-    submit()
-  }
-}
-
-const submit = () => {
-  if (input.value.trim() && props.data.onSubmit) {
-    props.data.onSubmit(input.value)
+const submit = (text: string, images: string[]) => {
+  if ((text.trim() || images.length > 0) && props.data.onSubmit) {
+    props.data.onSubmit(text, images)
     input.value = ''
-    setTimeout(adjustTextarea, 0)
+    attachedImages.value = []
   }
 }
 
@@ -202,8 +182,5 @@ const formatFileSize = (bytes?: number) => {
   return `${mb.toFixed(1)} MB`
 }
 
-onMounted(() => {
-  adjustTextarea()
-})
 </script>
 

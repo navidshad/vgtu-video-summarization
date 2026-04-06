@@ -29,7 +29,7 @@
            </div>
         </div>
         <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest text-primary-light">Result: Thumbnail</div>
+           <div class="text-[9px] font-black uppercase tracking-widest text-primary-light">Result: {{ displayType }}</div>
            <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
              {{ activeFileType }}
            </div>
@@ -47,7 +47,7 @@
     <!-- Reference Frames Gallery (Visible by default if present) -->
     <div v-if="referenceFrames.length > 0" class="px-3 py-2 bg-black/10 dark:bg-black/40 border-b border-black/5 dark:border-white/5">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">Reference Frames</span>
+            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">{{ displayReferenceLabel }}</span>
             <span class="text-[8px] font-bold text-zinc-400">{{ referenceFrames.length }} detected</span>
         </div>
         <div class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar scroll-smooth">
@@ -98,25 +98,14 @@
       </div>
     </div>
     
-    <!-- Branching Input -->
-    <div class="p-3 bg-black/5 dark:bg-black/20 mt-auto border-t border-black/5 dark:border-white/5">
-      <div class="flex items-center space-x-2 bg-white/50 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/5 focus-within:border-primary/50 transition-all duration-300">
-        <input 
-          v-model="input"
-          type="text" 
-          placeholder="Adjust or follow up..."
-          class="flex-1 bg-transparent border-none text-[11px] focus:ring-0 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 py-1 px-1"
-          @keyup.enter="submit"
-        />
-        <button 
-          @click="submit"
-          class="p-1.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-30 transition-all shadow-md shadow-primary/20"
-          :disabled="!input.trim()"
-        >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"></path></svg>
-        </button>
-      </div>
-    </div>
+    <BaseMessageInput 
+      v-model="input"
+      v-model:attachedImages="attachedImages"
+      placeholder="Adjust or follow up..."
+      compact
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      @send="submit"
+    />
 
     <!-- Full Screen Modal -->
     <Teleport to="body">
@@ -136,11 +125,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
 const isFullScreen = ref(false)
 const showDetails = ref(false)
 const input = ref('')
+const attachedImages = ref<string[]>([])
 const metadata = ref<any>(null)
 const isMetadataLoading = ref(false)
 const previewUrl = ref<string | null>(null)
@@ -168,7 +159,21 @@ const activeFileType = computed(() => {
     return actualFile.value ? 'Actual' : 'Preview'
 })
 
+const displayType = computed(() => {
+    const type = props.data.type || 'thumbnail'
+    if (type === 'image' || type === 'result-image') return 'Image Result'
+    return 'Thumbnail'
+})
+
+const displayReferenceLabel = computed(() => {
+    const type = props.data.type || 'thumbnail'
+    if (type === 'image' || type === 'result-image') return 'Reference Images'
+    return 'Reference Frames'
+})
+
 const versionedTitle = computed(() => {
+  const type = props.data.type || 'thumbnail'
+  if (type === 'image' || type === 'result-image') return 'AI Generated Image'
   return 'AI Generated Thumbnail'
 })
 
@@ -196,10 +201,11 @@ const handleSave = async () => {
   }
 }
 
-const submit = () => {
-  if (input.value.trim() && props.data.onSubmit) {
-    props.data.onSubmit(input.value)
+const submit = (text: string, images: string[]) => {
+  if ((text.trim() || images.length > 0) && props.data.onSubmit) {
+    props.data.onSubmit(text, images)
     input.value = ''
+    attachedImages.value = []
   }
 }
 

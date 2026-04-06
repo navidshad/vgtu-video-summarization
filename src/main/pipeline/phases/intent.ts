@@ -7,7 +7,7 @@ import fs from 'fs'
 
 const INTENT_SYSTEM_INSTRUCTION = `
 Model Role:
-You are an AI assistant for a video editing tool. Your goal is to understand the user's intent based on their latest message, the conversation history, the video transcript, and optionally, a reference timeline (a list of scenes to be extracted from the original video).
+You are an AI assistant for a video editing tool. Your goal is to understand the user's intent based on their latest message, the conversation history, the video transcript, and optionally, a reference timeline and any attached images provided by the user.
 
 Task:
 You must decide between two types of actions:
@@ -19,6 +19,10 @@ Reference Timeline (Edit Mode):
 - If a "REFERENCE TIMELINE" is provided below, it means the user is currently editing an existing summary.
 - Your goal is to decide whether to update/modify this timeline or just answer the user's question about it.
 - If the user asks to "change", "add", "remove", "extend", or "refine" parts of it, trigger "generate-timeline".
+
+Attached Images:
+- If the user provides images (frames from the video or uploaded assets), they are likely intended as reference material for a thumbnail, cover, or as a specific moment they want included in the video summary.
+- Use these images to better understand what the user is referring to (e.g., "make a cover like this").
 
 Confirmation Rules (STRICT ENFORCEMENT):
 - NEVER trigger "generate-timeline" for suggestive or planning phrases like "let's make a summary", "can you create a highlights clip", "how about a summary", or "I want to see the key moments", etc.
@@ -34,6 +38,7 @@ Thumbnail Rules:
 - ONLY trigger "generate-thumbnail" if:
     a) The user explicitly confirms a previously proposed THUMBNAIL idea (e.g., "Yes", "Go ahead", "Do it", "Looks good", "cool", "coll"). If the conversation history shows your last response was a thumbnail proposal, interpret "Yes/Go ahead" as "generate-thumbnail".
     b) The user gives a direct, unambiguous COMMAND for a specific thumbnail (e.g., "Generate a thumbnail with a blue background and text 'Hello'").
+    c) The user provides specific images and asks to "make a cover/thumbnail with these". In this case, you can trigger "generate-thumbnail" immediately as the intent is clear and visual reference is provided.
 - If the user asks "Tell me about the video", provide a detailed text description in the chat and do NOT trigger generation.
 
 Behavioral Guidelines:
@@ -45,7 +50,8 @@ Respond ONLY with a JSON object following this schema:
 {
   "type": "text" | "generate-timeline" | "generate-thumbnail",
   "content": "A detailed idea/prompt for the thumbnail (if generate-thumbnail) OR a description for timeline builder (if generate-timeline) OR the final text answer (if text)",
-  "duration": number (only if type is "generate-timeline")
+  "duration": number (only if type is "generate-timeline"),
+  "selectedIndices": number[] (ONLY if type is "generate-thumbnail" and you want to use specific scenes from the video as reference. Indices are 0-based based on the ENRICHED TIMELINE SEGMENTS provided)
 }
 
 Specific rules for 'content' field:
@@ -59,7 +65,12 @@ const INTENT_SCHEMA = {
 	properties: {
 		type: { type: 'string', enum: ['text', 'generate-timeline', 'generate-thumbnail'] },
 		content: { type: 'string' },
-		duration: { type: 'number' }
+		duration: { type: 'number' },
+		selectedIndices: { 
+			type: 'array', 
+			items: { type: 'number' },
+			description: 'Indices of scenes from the enriched timeline to be used as visual references for the thumbnail/cover.'
+		}
 	},
 	required: ['type', 'content']
 }
@@ -67,21 +78,26 @@ const INTENT_SCHEMA = {
 export const determineIntent: PipelineFunction = async (data, context) => {
 	context.updateStatus('Analyzing your request...')
 
+	// 1. Gather Video Context (Timeline Segments OR Transcript)
+	let videoContextText = ''
+	const sceneDescriptionsPath = context.preprocessing.sceneDescriptionsPath
 	const transcriptPath = context.preprocessing.rawTranscriptPath
-	let transcript: TranscriptItem[] = []
 
-	if (transcriptPath && fs.existsSync(transcriptPath)) {
-		const content = fs.readFileSync(transcriptPath, 'utf-8')
-		transcript = JSON.parse(content)
+	if (sceneDescriptionsPath && fs.existsSync(sceneDescriptionsPath)) {
+		// Use Enriched Timeline Segments as primary visual-first context
+		const scenes = JSON.parse(fs.readFileSync(sceneDescriptionsPath, 'utf-8'));
+		videoContextText = `ENRICHED TIMELINE SEGMENTS (Scene Descriptions):\n` + 
+			scenes.map((s: any, idx: number) => `Scene ${idx+1} [${s.start} - ${s.end}]: ${s.description}`).join('\n');
+	} else if (transcriptPath && fs.existsSync(transcriptPath)) {
+		// Fallback to audio transcript if scenes are missing
+		const transcript: TranscriptItem[] = JSON.parse(fs.readFileSync(transcriptPath, 'utf-8'));
+		videoContextText = `AUDIO TRANSCRIPT:\n` + formatTranscript(transcript);
 	}
 
-	// Include timestamps for better context in intent analysis
-	const transcriptText = formatTranscript(transcript);
-
-	// Get video duration from ffmpeg (source of truth)
+	// 2. Technical Metadata
 	const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
 
-	// Format base timeline if available
+	// 3. Format base timeline if available (edit mode)
 	let baseTimelineContext = ''
 	if (context.baseTimeline && Array.isArray(context.baseTimeline) && context.baseTimeline.length > 0) {
 		baseTimelineContext = `
@@ -90,29 +106,33 @@ ${context.baseTimeline.map((s: any) => `• [${s.start} --> ${s.end}] (${s.durat
 `
 	}
 
-	const userPrompt = `The original video is approximately ${videoDuration} seconds long.
+	// 4. Build Final User Prompt
+	const userPrompt = `Video Duration: ${videoDuration}s
+
+${videoContextText}
 
 ${baseTimelineContext}
 
-START OF TRANSCRIPT (keep in mind as reference):
-${transcriptText}
-END OF TRANSCRIPT
-
 Conversation History:
 ${context.context}
-END OF CONVERSATION HISTORY
 `
+
+	// 5. Limit and Deduplicate Images (Base64 is expensive, limit to last 8)
+	const uniqueImages = Array.from(new Set(context.attachedImages || []))
+	const limitedImages = uniqueImages.slice(-8)
 
 	try {
 		const adapter = GeminiAdapter.create()
 		const modelSettings = (await import('../../settings')).settingsManager.getModelSettings()
 		const modelName = modelSettings.selection['intent']
+		
 		const { data: result, record } = await adapter.generateStructuredText<IntentResult>(
 			modelName,
 			userPrompt,
 			INTENT_SCHEMA,
 			INTENT_SYSTEM_INSTRUCTION,
-			context.signal
+			context.signal,
+			limitedImages
 		)
 
 		// Record usage immediately

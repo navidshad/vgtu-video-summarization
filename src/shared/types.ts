@@ -55,19 +55,21 @@ export interface Message {
 	content: string;
 	isPending: boolean;
 	files?: Attachment[];
+	attachedImages?: string[]; // New: base64/paths of attached images
 	timeline?: EnrichedTimelineSegment[];
 	usage?: Usage;
 	cost?: number;
 	version?: number;
 	editRefId?: string;
-	resultType?: 'video' | 'thumbnail' | 'summary';
+	resultType?: 'video' | 'thumbnail' | 'summary' | 'image';
 	createdAt: number;
 }
 
 export interface Thread {
 	id: string
 	title: string
-	videoPath: string
+	type?: 'video' | 'image' // New
+	videoPath?: string // Now optional
 	preprocessing: {
 		/**
 		 * Path to the extracted audio file (MP3/WAV).
@@ -119,6 +121,21 @@ export interface Thread {
 		 * Used as a source of truth for both video and thumbnail pipelines.
 		 */
 		enrichedTranscriptPath?: string;
+
+		/**
+		 * Reference frames extracted from the video or provided by the user.
+		 */
+		'reference-frames'?: string[]; // New
+
+		/**
+		 * Source images for image-based threads.
+		 */
+		sourceImages?: string[]; // New
+
+		/**
+		 * Extracted text data from all images.
+		 */
+		imageTextPath?: string; // New
 	}
 	tempDir: string
 	messages: Message[]
@@ -144,9 +161,10 @@ export interface EnrichedTimelineSegment extends TimelineSegment {
 
 
 export interface IntentResult {
-	type: 'text' | 'generate-timeline' | 'generate-thumbnail';
+	type: 'text' | 'generate-timeline' | 'generate-thumbnail' | 'generate-image'; // Added generate-image
 	content: string; // Brief description or the text answer
 	duration?: number; // Duration in seconds
+	selectedIndices?: number[]; // indices for images to use
 }
 
 export interface ModelPricing {
@@ -165,7 +183,7 @@ export interface ModelPricing {
 	}
 }
 
-export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description'
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description' | 'image-extraction' | 'image-intent' | 'image-generation'
 
 export interface ModelSelection {
 	[key: string]: string // operation -> model name

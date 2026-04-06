@@ -47,90 +47,13 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 	const modelSettings = (await import('../../settings')).settingsManager.getModelSettings()
 	const adapter = GeminiAdapter.create()
 
-	const extractedFrames: string[] = []
-	if (!isIteration) {
-		// 1. Load Transcripts/Segments for AI analysis
-		const transcriptPath = context.preprocessing?.enrichedTranscriptPath || context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
-		let segments: any[] = []
-		if (transcriptPath && fs.existsSync(transcriptPath)) {
-			try {
-				segments = JSON.parse(fs.readFileSync(transcriptPath, 'utf-8')) as EnrichedTimelineSegment[]
-			} catch (e) {
-
-				console.warn('Failed to parse transcript for thumbnail scene selection:', e)
-			}
-		}
-
-		// 2. AI Scene Selection
-		context.updateStatus('Selecting visually relevant scenes...')
-		const selectionModel = modelSettings.selection['raw-transcript'] // Use Flash for selection
-		const selectionPrompt = `
-You are a creative director. I want to generate a thumbnail for a video based on this request: "${intent.content}".
-Below is a list of segments from the video with their visual/text descriptions.
-Select 3-5 specific moments (timestamps) that are most visually interesting or representative of this request.
-
-Video Segments:
-${JSON.stringify(segments.slice(0, 100).map(s => ({ start: s.start, end: s.end, description: s.visual || s.text })), null, 2)}
-
-
-Respond with a JSON object containing a 'selectedScenes' array of objects with 'timestamp' (HH:MM:SS) and 'reason'.
-`
-
-		const selectionSchema = {
-			type: 'object',
-			properties: {
-				selectedScenes: {
-					type: 'array',
-					items: {
-						type: 'object',
-						properties: {
-							timestamp: { type: 'string' },
-							reason: { type: 'string' }
-						},
-						required: ['timestamp', 'reason']
-					}
-				}
-			},
-			required: ['selectedScenes']
-		}
-
-		let selectedTimestamps: number[] = []
-		try {
-			const { data: selectionResult, record: selectionRecord } = await adapter.generateStructuredText<{ selectedScenes: any[] }>(
-				selectionModel,
-				selectionPrompt,
-				selectionSchema,
-				"You are an expert at selecting key frames for video thumbnails.",
-				context.signal
-			)
-			// Record usage immediately
-			await context.recordUsage(selectionRecord)
-			
-			if (context.signal.aborted) return;
-
-			selectedTimestamps = selectionResult.selectedScenes.map(s => timeToSeconds(s.timestamp))
-		} catch (e) {
-			console.warn('AI Scene selection failed, falling back to default timestamps:', e)
-			const videoDuration = await ffmpegAdapter.getVideoDuration(context.videoPath)
-			selectedTimestamps = [videoDuration * 0.1, videoDuration * 0.5, videoDuration * 0.9]
-		}
-
-	// 3. Extract Chosen Frames
-	const validTimestamps = selectedTimestamps.filter(ts => !isNaN(ts) && ts >= 0)
+	// 2. Identify all reference images
+	// a. From previous results (if iteration)
+	// b. From supply controller (which manages auto-select vs user-attachments)
 	
-	const imagesDir = path.join(context.tempDir, 'generated-images')
-	if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true })
-
-	context.updateStatus(`Extracting ${validTimestamps.length} reference frames...`)
-	for (const ts of validTimestamps) {
-		try {
-			const framePath = await ffmpegAdapter.extractFrame(context.videoPath, ts, imagesDir, context.signal)
-			extractedFrames.push(framePath)
-		} catch (e) {
-			console.warn(`Failed to extract frame at ${ts}:`, e)
-		}
-	}
-}
+	const selectedFromSupply = data.selectedReferenceImages || []
+	
+	context.updateStatus(`Preparing reference material: ${selectedFromSupply.length} images...`)
 
 // 2. Generate the Thumbnail Asset
 context.updateStatus('Generating thumbnail image with Gemini...')
@@ -164,7 +87,7 @@ The provided images include:
 Please update the previous result based on the Refinement Request while maintaining strict visual consistency with the original video content.`
 	}
 
-	const allReferenceImages = [...previousFiles, ...extractedFrames]
+	const allReferenceImages = [...previousFiles, ...selectedFromSupply]
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
 	
 	// Record usage immediately

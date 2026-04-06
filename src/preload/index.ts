@@ -37,8 +37,8 @@ const api = {
 	setModelSettings: (settings: any) => ipcRenderer.invoke('set-model-settings', settings),
 	resetModelSettings: () => ipcRenderer.invoke('reset-model-settings'),
 	// Thread Management
-	createThread: (videoPath: string, videoName: string) =>
-		ipcRenderer.invoke('create-thread', { videoPath, videoName }),
+	createThread: (data: { videoPath?: string, videoName: string, imagePaths?: string[] }) =>
+		ipcRenderer.invoke('create-thread', data),
 	getAllThreads: () => ipcRenderer.invoke('get-all-threads'),
 	getThread: (id: string) => ipcRenderer.invoke('get-thread', id),
 	deleteThread: (id: string) => ipcRenderer.invoke('delete-thread', id),
@@ -53,7 +53,8 @@ const api = {
 		ipcRenderer.invoke('show-confirmation', options),
 	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),
 	openThreadDir: (threadId: string) => ipcRenderer.invoke('open-thread-dir', threadId),
-	getVideoMetadata: (filePath: string) => ipcRenderer.invoke('get-video-metadata', filePath)
+	getVideoMetadata: (filePath: string) => ipcRenderer.invoke('get-video-metadata', filePath),
+	showOpenDialog: (options: any) => ipcRenderer.invoke('show-open-dialog', options)
 }
 
 if (process.contextIsolated) {

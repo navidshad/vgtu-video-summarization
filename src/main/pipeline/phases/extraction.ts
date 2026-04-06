@@ -176,7 +176,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	const modelName = modelSettings.selection['scene-description'] || GEMINI_MODEL_2_5_FLASH_LITE
 
 	const descriptions: { index: number, startTime: number, description: string }[] = []
-	const framesDir = path.join(tempDir, 'frames')
+	let framesDir = path.join(tempDir, 'frames')
 	if (!fs.existsSync(framesDir)) {
 		fs.mkdirSync(framesDir)
 	}
@@ -266,10 +266,10 @@ Return the descriptions as an array of strings in the exact same order as the im
 				}
 			})
 
-			// 5. Cleanup frames for this batch
-			batchFramePaths.forEach(fpath => {
-				try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath) } catch (e) { }
-			})
+			// 5. DO NOT cleanup frames - we want to keep them as reference-frames
+			// batchFramePaths.forEach(fpath => {
+			// 	try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath) } catch (e) { }
+			// })
 
 		} catch (error) {
 			if (!context.signal.aborted) {
@@ -284,7 +284,19 @@ Return the descriptions as an array of strings in the exact same order as the im
 	const sceneDescriptionsPath = path.join(analysisDir, `scene_descriptions.json`)
 	fs.writeFileSync(sceneDescriptionsPath, JSON.stringify(descriptions, null, 2))
 
-	context.savePreprocessing({ sceneDescriptionsPath })
+	// Collect all retained frames from the frames directory
+	framesDir = path.join(tempDir, 'frames')
+	let allFrames: string[] = []
+	if (fs.existsSync(framesDir)) {
+		allFrames = fs.readdirSync(framesDir)
+			.filter(f => f.endsWith('.jpg') || f.endsWith('.jpeg'))
+			.map(f => path.join(framesDir, f))
+	}
+
+	context.savePreprocessing({ 
+		sceneDescriptionsPath,
+		'reference-frames': allFrames
+	})
 	context.updateStatus('Scene descriptions generated.')
 	context.next({ ...data, sceneDescriptions: descriptions })
 }

@@ -4,6 +4,7 @@ import { threadManager } from '../threads'
 import { BackgroundTask, BackgroundTaskState, Thread } from '../../shared/types'
 import { PipelineContext } from '../pipeline'
 import * as extraction from '../pipeline/phases/extraction'
+import * as imageExtraction from '../pipeline/phases/image-extraction'
 import { enrichTranscriptWithScenes, SceneDescription } from '../timeline/enrichment'
 import { TranscriptItem } from '../gemini/utils'
 import * as ffmpegAdapter from '../ffmpeg'
@@ -92,7 +93,7 @@ class BackgroundTaskManager extends EventEmitter {
 
 		return {
 			threadId,
-			videoPath: thread.videoPath,
+			videoPath: thread.videoPath || '',
 			tempDir: thread.tempDir,
 			get preprocessing() {
 				return threadManager.getThread(threadId)?.preprocessing || {}
@@ -260,6 +261,18 @@ class BackgroundTaskManager extends EventEmitter {
 		}
 
 		enrichmentChain()
+	}
+
+	public async startImageProcessing(threadId: string) {
+		const thread = threadManager.getThread(threadId)
+		if (!thread) return
+
+		const run = this.runTask.bind(this, threadId)
+
+		// Task: Extract data from images
+		await run('imageExtraction', 'Analyzing Images', async (ctx) => {
+			await imageExtraction.extractImageData({}, ctx)
+		})
 	}
 }
 
