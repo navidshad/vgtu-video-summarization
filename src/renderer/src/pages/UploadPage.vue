@@ -211,7 +211,7 @@
 
                   <Button @click="handleLinkStep" color="primary"
                     :label="availableResolutions.length > 0 ? `Download ${selectedResolution}p Video` : 'Check Link'"
-                    class="w-full !rounded-lg !py-3 font-bold shadow-xl shadow-primary/20"
+                    class="w-full !rounded-lg !py-3 font-bold shadow-xl shadow-primary/20 disabled:!bg-zinc-100 dark:disabled:!bg-zinc-800 disabled:!text-zinc-400 dark:disabled:!text-zinc-600 transition-all"
                     :disabled="!videoUrl || !ytDlpAvailable || isAnalyzing" />
                 </div>
               </div>
@@ -274,7 +274,7 @@
                 <Button @click="startCreation" color="primary" :disabled="!canSubmit"
                   :label="isDownloading ? `Wait for download (${Math.round(downloadProgress)}%)` : 'Create Summary'"
                   size="lg" :is-loading="isCreating"
-                  class="w-full !rounded-lg !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]" />
+                  class="w-full !rounded-lg !py-4 !text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 active:scale-[0.98] disabled:!bg-zinc-100 dark:disabled:!bg-zinc-800 disabled:!text-zinc-400 dark:disabled:!text-zinc-600 transition-all" />
 
                 <!-- Tooltips -->
                 <div v-if="!ffmpegAvailable || (isDownloading && prompt.trim())"

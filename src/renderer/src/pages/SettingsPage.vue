@@ -76,7 +76,7 @@
 
             <div class="space-y-4">
               <Input v-model="apiKey" type="password" placeholder="Enter API Key..."/>
-              <Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm" class="w-full disabled:bg-zinc-200 dark:disabled:bg-zinc-800" label="Save API Key" />
+              <Button @click="handleSaveApiKey" :disabled="!apiKey || apiKey === initialApiKey" size="sm" class="w-full disabled:!bg-zinc-100 dark:disabled:!bg-zinc-800 disabled:!text-zinc-400 dark:disabled:!text-zinc-600 transition-all font-bold" label="Save API Key" />
             </div>
           </Card>
           
