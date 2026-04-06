@@ -143,6 +143,7 @@ export interface Thread {
 	nodePositions?: Record<string, { x: number; y: number }>
 	versionCounter?: number
 	videoMetadata?: VideoMetadata
+	missing?: boolean
 	createdAt: number
 	updatedAt: number
 }

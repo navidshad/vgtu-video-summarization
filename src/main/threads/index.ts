@@ -17,8 +17,17 @@ class ThreadManager {
 	private updateQueues: Map<string, Promise<any>> = new Map()
 
 	constructor() {
-		this.threadsDir = path.join(app.getPath('userData'), 'threads')
-		this.ensureThreadsDir()
+		this.threadsDir = ''
+	}
+
+	public init() {
+		try {
+			this.threadsDir = path.join(app.getPath('userData'), 'threads')
+			this.ensureThreadsDir()
+			console.log(`[ThreadManager] Initialized with threadsDir: ${this.threadsDir}`)
+		} catch (error) {
+			console.error('[ThreadManager] Failed to initialize:', error)
+		}
 	}
 
 	private ensureThreadsDir() {
@@ -266,15 +275,11 @@ class ThreadManager {
 
 				// Try to repair paths if they seem broken/moved
 				thread = this.repairThreadPaths(thread)
-
-				// Cleanup: if tempDir is gone, the project artifacts are gone.
-				// We remove it from the list.
-				if (thread.tempDir && !fs.existsSync(thread.tempDir)) {
-					console.warn(`Thread ${thread.id} artifact directory is missing. Cleaning up metadata...`)
-					fs.unlinkSync(filePath)
-					continue
-				}
-
+				
+				// Mark as missing if artifacts directory is not found, but DO NOT DELETE metadata.
+				// This allows the user to repair the path or recover files manually.
+				thread.missing = !!(thread.tempDir && !fs.existsSync(thread.tempDir))
+				
 				threads.push(thread)
 			} catch (error) {
 				console.error(`Failed to parse thread file ${file}:`, error)

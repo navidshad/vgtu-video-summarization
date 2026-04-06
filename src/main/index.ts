@@ -66,8 +66,15 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+	// Set correct appId before any path resolution if possible, 
+	// though getPath might already have been called/cached.
+	electronApp.setAppUserModelId('com.frameflow.app')
+	
+	// Initialize managers that depend on app paths
+	settingsManager.init()
+	threadManager.init()
+	
 	backgroundTaskManager.init()
-	electronApp.setAppUserModelId('com.electron')
 
 	app.on('browser-window-created', (_, window) => {
 		optimizer.watchWindowShortcuts(window)

@@ -35,14 +35,14 @@ const router = useRouter()
 onMounted(async () => {
   const existingKey = await (window as any).api.getGeminiApiKey()
   if (existingKey) {
-    router.push('/upload')
+    router.push('/home')
   }
 })
 
 const saveKey = async () => {
   if (apiKey.value) {
     await (window as any).api.setGeminiApiKey(apiKey.value)
-    router.push('/upload')
+    router.push('/home')
   }
 }
 </script>

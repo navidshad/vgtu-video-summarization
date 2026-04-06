@@ -17,10 +17,24 @@ class SettingsManager {
 	private defaultTempDir: string
 
 	constructor() {
-		const userDataPath = app.getPath('userData')
-		this.settingsPath = join(userDataPath, 'settings.json')
 		this.defaultTempDir = join(os.tmpdir(), 'FrameFlow')
-		this.settings = this.loadSettings()
+		this.settings = {
+			tempDir: this.defaultTempDir,
+			modelSettings: DEFAULT_MODEL_SETTINGS
+		}
+		// settingsPath will be set in init()
+		this.settingsPath = ''
+	}
+
+	public init() {
+		try {
+			const userDataPath = app.getPath('userData')
+			this.settingsPath = join(userDataPath, 'settings.json')
+			this.settings = this.loadSettings()
+			console.log(`[SettingsManager] Initialized with userData: ${userDataPath}`)
+		} catch (error) {
+			console.error('[SettingsManager] Failed to initialize:', error)
+		}
 	}
 
 	private mergeModelSettings(existing: ModelSettings): ModelSettings {

@@ -9,10 +9,7 @@ import GraphChatPage from './pages/GraphChatPage.vue'
 const routes = [
 	{
 		path: '/',
-		redirect: () => {
-			const key = localStorage.getItem('gemini_api_key')
-			return key ? '/home' : '/api-key'
-		}
+		redirect: '/home'
 	},
 	{
 		path: '/home',
@@ -41,6 +38,19 @@ const routes = [
 const router = createRouter({
 	history: createWebHashHistory(),
 	routes
+})
+
+// Global API Key Guard
+router.beforeEach(async (to) => {
+	if (to.path === '/api-key') return true
+
+	// Check main process for stored key
+	const key = await (window as any).api.getGeminiApiKey()
+	if (!key) {
+		return '/api-key'
+	}
+	
+	return true
 })
 
 export default router
