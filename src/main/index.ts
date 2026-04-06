@@ -250,7 +250,13 @@ app.whenReady().then(() => {
 			return null
 		}
 
-		const newPath = result.filePaths[0]
+		const selectedPath = result.filePaths[0]
+		const newPath = join(selectedPath, 'FrameFlow')
+		
+		if (!fs.existsSync(newPath)) {
+			fs.mkdirSync(newPath, { recursive: true })
+		}
+
 		settingsManager.setTempDir(newPath)
 		return newPath
 	})
