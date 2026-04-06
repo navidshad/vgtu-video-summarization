@@ -258,11 +258,14 @@ app.whenReady().then(() => {
 		}
 
 		settingsManager.setTempDir(newPath)
+		threadManager.syncWithArtifactDir()
 		return newPath
 	})
 
 	ipcMain.handle('reset-temp-dir', () => {
-		return settingsManager.resetTempDir()
+		const path = settingsManager.resetTempDir()
+		threadManager.syncWithArtifactDir()
+		return path
 	})
 
 	ipcMain.handle('open-temp-dir', async () => {

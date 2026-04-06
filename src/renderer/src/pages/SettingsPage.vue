@@ -313,6 +313,10 @@ const handleChange = async () => {
   if (result) {
     tempDir.value = result
     isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
+    
+    // Refresh threads and go home
+    await videoStore.fetchThreads()
+    router.push('/home')
   }
 }
 
@@ -325,6 +329,10 @@ const handleReset = async () => {
   if (result) {
     tempDir.value = result
     isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
+    
+    // Refresh threads and go home
+    await videoStore.fetchThreads()
+    router.push('/home')
   }
 }
 

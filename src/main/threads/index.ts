@@ -127,8 +127,133 @@ class ThreadManager {
 	}
 
 
+	// Helper to normalize paths (handles symlinks like /var vs /private/var on macOS)
+	private normalize(p: string | undefined): string | undefined {
+		if (!p) return p
+		try {
+			if (fs.existsSync(p)) return fs.realpathSync(p)
+		} catch (e) {
+			// Fallback to absolute path if realpath fails
+		}
+		return path.resolve(p)
+	}
+
+	// Helper to repair paths in a thread if it was moved
+	private repairThreadPaths(thread: Thread): Thread {
+		const currentArtifactDir = settingsManager.getTempDir()
+		const threadId = thread.id
+		const expectedTempDir = path.join(currentArtifactDir, threadId)
+
+		// Robust comparison using normalized paths
+		const normalizedCurrent = this.normalize(thread.tempDir)
+		const normalizedExpected = this.normalize(expectedTempDir)
+
+		if (normalizedCurrent !== normalizedExpected) {
+			if (fs.existsSync(expectedTempDir)) {
+				console.log(`[ThreadManager] Repairing paths for thread ${threadId}: ${thread.tempDir} -> ${expectedTempDir}`)
+
+				const oldRoot = thread.tempDir
+				const newRoot = expectedTempDir
+
+				const fixPath = (p: string | undefined) => {
+					if (!p) return p
+					if (p.startsWith(oldRoot)) {
+						return p.replace(oldRoot, newRoot)
+					}
+					return p
+				}
+
+				// Update root tempDir
+				thread.tempDir = newRoot
+
+				// Update video path
+				thread.videoPath = fixPath(thread.videoPath)
+
+				// Update preprocessing paths
+				if (thread.preprocessing) {
+					thread.preprocessing.audioPath = fixPath(thread.preprocessing.audioPath)
+					thread.preprocessing.lowResVideoPath = fixPath(thread.preprocessing.lowResVideoPath)
+					thread.preprocessing.transcriptPath = fixPath(thread.preprocessing.transcriptPath)
+					thread.preprocessing.sceneTimesPath = fixPath(thread.preprocessing.sceneTimesPath)
+					thread.preprocessing.rawTranscriptPath = fixPath(thread.preprocessing.rawTranscriptPath)
+					thread.preprocessing.sceneDescriptionsPath = fixPath(thread.preprocessing.sceneDescriptionsPath)
+					thread.preprocessing.enrichedTranscriptPath = fixPath(thread.preprocessing.enrichedTranscriptPath)
+
+					if (thread.preprocessing.sourceImages) {
+						thread.preprocessing.sourceImages = thread.preprocessing.sourceImages.map(fixPath) as string[]
+					}
+				}
+
+				// Update message file paths
+				thread.messages = thread.messages.map(msg => {
+					if (msg.files) {
+						msg.files = msg.files.map(f => ({
+							...f,
+							url: fixPath(f.url) || ''
+						}))
+					}
+					if (msg.attachedImages) {
+						msg.attachedImages = msg.attachedImages.map(fixPath) as string[]
+					}
+					return msg
+				})
+
+				// Save the repaired thread back to metadata and mirror it
+				this.saveThread(thread)
+			}
+		}
+
+		return thread
+	}
+
+	// Sync threads between userData and artifact directory
+	syncWithArtifactDir() {
+		this.ensureThreadsDir()
+		const currentArtifactDir = settingsManager.getTempDir()
+
+		if (!fs.existsSync(currentArtifactDir)) return
+
+		const projectFolders = fs.readdirSync(currentArtifactDir).filter(f => {
+			const fullPath = path.join(currentArtifactDir, f)
+			return fs.statSync(fullPath).isDirectory() && fs.existsSync(path.join(fullPath, 'thread.json'))
+		})
+
+		for (const folder of projectFolders) {
+			const metadataPath = this.getThreadPath(folder)
+			const hasMetadata = fs.existsSync(metadataPath)
+
+			if (!hasMetadata) {
+				console.log(`[ThreadManager] Recovering project metadata for ${folder} from artifact directory...`)
+				try {
+					const mirrorPath = path.join(currentArtifactDir, folder, 'thread.json')
+					const content = fs.readFileSync(mirrorPath, 'utf-8')
+					const thread = JSON.parse(content) as Thread
+
+					// Force path repair upon recovery to ensure it matches current setup
+					const repairedThread = this.repairThreadPaths(thread)
+					this.saveThread(repairedThread)
+					console.log(`[ThreadManager] Successfully recovered project ${folder}`)
+				} catch (error) {
+					console.error(`[ThreadManager] Failed to recover project ${folder}:`, error)
+				}
+			} else {
+				// Even if metadata exists, we trigger a repair check to be safe
+				try {
+					const content = fs.readFileSync(metadataPath, 'utf-8')
+					const thread = JSON.parse(content) as Thread
+					this.repairThreadPaths(thread)
+				} catch (e) {
+					// Ignore parse errors here, getAllThreads will handle them
+				}
+			}
+		}
+	}
+
 	// Get all threads (for the list view)
 	getAllThreads(): Thread[] {
+		// First, sync with the artifact directory to recover any "lost" projects
+		this.syncWithArtifactDir()
+
 		this.ensureThreadsDir()
 		const files = fs.readdirSync(this.threadsDir).filter(file => file.endsWith('.json'))
 		const threads: Thread[] = []
@@ -137,8 +262,11 @@ class ThreadManager {
 			const filePath = path.join(this.threadsDir, file)
 			try {
 				const content = fs.readFileSync(filePath, 'utf-8')
-				const thread = JSON.parse(content) as Thread
-				
+				let thread = JSON.parse(content) as Thread
+
+				// Try to repair paths if they seem broken/moved
+				thread = this.repairThreadPaths(thread)
+
 				// Cleanup: if tempDir is gone, the project artifacts are gone.
 				// We remove it from the list.
 				if (thread.tempDir && !fs.existsSync(thread.tempDir)) {
