@@ -382,12 +382,17 @@ class ThreadManager {
 	}
 
 	// Traverse the node tree backwards via editRefId as the parent link to form an isolated branch context
-	getBranchContext(threadId: string, messageId?: string): string {
+	getBranchContext(threadId: string, messageId?: string): { text: string, attachedImages: string[] } {
 		const thread = this.getThread(threadId)
-		if (!thread) return ''
+		if (!thread) return { text: '', attachedImages: [] }
 
 		if (!messageId) {
-			return this.getThreadContext(threadId)
+			const text = this.getThreadContext(threadId)
+			// For full thread context, collect ALL attached images from ALL messages
+			const attachedImages = Array.from(new Set(
+				thread.messages.flatMap(m => m.attachedImages || [])
+			))
+			return { text, attachedImages }
 		}
 
 		const branchMessages: Message[] = []
@@ -404,7 +409,7 @@ class ThreadManager {
 		// Array is constructed backward (leaf to root), reverse it chronologically
 		branchMessages.reverse()
 
-		return branchMessages.map(m => {
+		const text = branchMessages.map(m => {
 			let content = `${m.role.toUpperCase()}: ${m.content}`
 			if (m.timeline && m.timeline.length > 0) {
 				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
@@ -412,6 +417,12 @@ class ThreadManager {
 			}
 			return content
 		}).join('\n\n')
+
+		const attachedImages = Array.from(new Set(
+			branchMessages.flatMap(m => m.attachedImages || [])
+		))
+
+		return { text, attachedImages }
 	}
 
 	// Get the last user message in a thread

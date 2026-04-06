@@ -13,9 +13,9 @@ export const generateOutputImage: PipelineFunction = async (data, context) => {
 	const modelName = modelSettings.selection['image-generation']
 
 	const generatorPrompt = context.intentResult?.content || 'Generate a creative image based on the provided ones.'
-	const selectedImagePaths = data.selectedImagePaths || []
+	const selectedReferenceImages = data.selectedReferenceImages || data.selectedImagePaths || []
 
-	if (selectedImagePaths.length === 0) {
+	if (selectedReferenceImages.length === 0) {
 		throw new Error('No images selected for generation. Please check the intent analysis.')
 	}
 
@@ -30,7 +30,7 @@ export const generateOutputImage: PipelineFunction = async (data, context) => {
 			modelName,
 			generatorPrompt,
 			destPath,
-			selectedImagePaths,
+			selectedReferenceImages,
 			'You are an expert AI image generator. Your ONLY goal is to output a single image that fulfills the user prompt based on the visual context of the provided images. DO NOT output ANY text or explanation—ONLY raw image data.',
 			context.signal
 		)
@@ -48,7 +48,7 @@ export const generateOutputImage: PipelineFunction = async (data, context) => {
 				resultType: 'image',
 				files: [
 					{ url: savedPath, type: FileType.Actual },
-					...selectedImagePaths.map((path: string) => ({ url: path, type: FileType.Preview }))
+					...selectedReferenceImages.map((path: string) => ({ url: path, type: FileType.Preview }))
 				]
 			}
 		)

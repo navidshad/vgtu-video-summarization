@@ -95,7 +95,7 @@ ${context.context.split('\n').pop() || ''}
 	if (result.type === 'text') {
 		context.finish(result.content)
 	} else {
-		context.updateStatus(`Intent recognized: Generating a new image based on ${result.selectedIndices?.length || 0} images...`)
-		context.next({ ..._data, selectedImagePaths: result.selectedIndices?.map(idx => imagePaths[idx]) })
+		context.updateStatus(`Intent recognized: Selecting ${result.selectedIndices?.length || 0} images...`)
+		context.next({ ..._data })
 	}
 }

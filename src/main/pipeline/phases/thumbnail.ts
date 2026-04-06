@@ -49,13 +49,11 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 
 	// 2. Identify all reference images
 	// a. From previous results (if iteration)
-	// b. From pre-extracted video frames (reference-frames)
-	// c. From user attachments (attachedImages)
+	// b. From supply controller (which manages auto-select vs user-attachments)
 	
-	const referenceFrames = context.preprocessing?.['reference-frames'] || []
-	const userAttachments = context.attachedImages || []
+	const selectedFromSupply = data.selectedReferenceImages || []
 	
-	context.updateStatus(`Preparing reference material: ${referenceFrames.length} frames, ${userAttachments.length} attachments...`)
+	context.updateStatus(`Preparing reference material: ${selectedFromSupply.length} images...`)
 
 // 2. Generate the Thumbnail Asset
 context.updateStatus('Generating thumbnail image with Gemini...')
@@ -89,7 +87,7 @@ The provided images include:
 Please update the previous result based on the Refinement Request while maintaining strict visual consistency with the original video content.`
 	}
 
-	const allReferenceImages = [...previousFiles, ...referenceFrames, ...userAttachments]
+	const allReferenceImages = [...previousFiles, ...selectedFromSupply]
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
 	
 	// Record usage immediately

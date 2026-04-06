@@ -9,6 +9,7 @@ import { threadManager } from './threads'
 import * as extraction from './pipeline/phases/extraction'
 import * as generation from './pipeline/phases/generation'
 import * as intent from './pipeline/phases/intent'
+import * as supply from './pipeline/phases/supply'
 import * as assembly from './pipeline/phases/assembly'
 import * as thumbnail from './pipeline/phases/thumbnail'
 import * as imageExtraction from './pipeline/phases/image-extraction'
@@ -175,12 +176,12 @@ app.whenReady().then(() => {
 		console.log(`[DEBUG IPC] aiMsg found? ${!!aiMsg}, userMsgId=${userMsgId}`)
 
 		// Traverse graph lineage backwards
-		const context = threadManager.getBranchContext(threadId, userMsgId)
+		const { text: context, attachedImages } = threadManager.getBranchContext(threadId, userMsgId)
 
 		// Prepare the base timeline
 		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages)
 
 		if (thread.type === 'image') {
 			pipeline
@@ -190,6 +191,7 @@ app.whenReady().then(() => {
 					ctx.next(data)
 				})
 				.register(imageIntent.determineImageIntent)
+				.register(supply.supplyController, { skipIf: ctx => ctx.intentResult?.type !== 'generate-image' })
 				.register(imageGeneration.generateOutputImage, { skipIf: ctx => ctx.intentResult?.type !== 'generate-image' })
 		} else {
 			pipeline
@@ -200,6 +202,7 @@ app.whenReady().then(() => {
 				.register(extraction.waitForExtractSceneTiming)
 				.register(extraction.waitForGenerateSceneDescription)
 				.register(intent.determineIntent)
+				.register(supply.supplyController, { skipIf: ctx => ctx.intentResult?.type === 'text' })
 				// These steps only run if intent is generate-timeline
 				.register(generation.waitForEnrichTranscript, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })
 				.register(generation.buildShorterTimeline, { skipIf: ctx => ctx.intentResult?.type === 'text' || ctx.intentResult?.type === 'generate-thumbnail' })

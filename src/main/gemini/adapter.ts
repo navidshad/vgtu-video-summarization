@@ -140,11 +140,34 @@ export class GeminiAdapter {
 		userPrompt: string,
 		schema: any,
 		systemInstruction?: string,
-		signal?: AbortSignal
+		signal?: AbortSignal,
+		imagePaths?: string[]
 	): Promise<{ data: T, record: UsageRecord }> {
+		const parts: any[] = []
+		
+		// Add image parts if provided
+		const validImagePaths: string[] = []
+		if (imagePaths && imagePaths.length > 0) {
+			for (const imgPath of imagePaths) {
+				if (fs.existsSync(imgPath)) {
+					const data = fs.readFileSync(imgPath).toString('base64')
+					parts.push({
+						inlineData: {
+							data,
+							mimeType: 'image/jpeg'
+						}
+					})
+					validImagePaths.push(imgPath)
+				}
+			}
+		}
+
+		// Add text part LAST
+		parts.push({ text: userPrompt })
+
 		const request: GenerateContentParameters = {
 			model: modelName,
-			contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+			contents: [{ role: 'user', parts }],
 			config: {
 				responseMimeType: 'application/json',
 				responseSchema: schema
@@ -161,7 +184,7 @@ export class GeminiAdapter {
 		);
 
 		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, validImagePaths.length);
 		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
 		try {
@@ -489,6 +512,10 @@ export class GeminiAdapter {
 			}
 
 			const buffer = Buffer.from(base64Data, 'base64');
+			
+			// Ensure directory exists
+			const dir = path.dirname(outputPath);
+			if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
 			// Save to specified path
 			fs.writeFileSync(outputPath, buffer);
