@@ -1,6 +1,6 @@
 # 🛠 Installation & Setup Guide
 
-This guide provides detailed instructions on how to set up the environment and run the **VGTU Video Summarization** application.
+This guide provides detailed instructions on how to set up the environment and run the **FrameFlow** application.
 
 ---
 
@@ -51,8 +51,8 @@ The application relies on **FFmpeg** for video processing and **PySceneDetect** 
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/navidshad/vgtu-video-summarization.git
-   cd vgtu-video-summarization
+   git clone https://github.com/navidshad/frameflow.git
+   cd frameflow
    ```
 
 2. **Install dependencies**:

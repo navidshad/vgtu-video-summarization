@@ -1,8 +1,8 @@
 {
-  "name": "vgtu-video-summarization",
+  "name": "frameflow",
   "version": "1.1.6",
   "type": "module",
-  "description": "AI-based Video Summarizer",
+  "description": "AI-powered multimodal video and image processing platform.",
   "main": "./out/main/index.js",
   "author": "Antigravity",
   "license": "MIT",
@@ -58,8 +58,8 @@
     "vue-tsc": "^2.0.6"
   },
   "build": {
-    "appId": "com.vgtu.video-summarization",
-    "productName": "VGTU Video Summarizer",
+    "appId": "com.frameflow.app",
+    "productName": "FrameFlow",
     "directories": {
       "output": "dist"
     },

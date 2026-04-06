@@ -1,85 +1,106 @@
-
-# 🎬 VGTU Video Summarization
-![Project Process](./docs/imgs/process.jpeg)
-
-
----
-
-A high-fidelity platform that transforms long-form video content into concise, meaningful highlights. By leveraging **Google Gemini's** multimodal intelligence and precise **FFmpeg** engineering, it provides a seamless chat-based refinement experience.
-
-**Key Use Cases:**
-- 🎓 **Academic Hub**: Condense 2-hour technical lectures into 5-minute study guides.
-- 📱 **Content Creation**: Generate social media teasers from raw footage with natural language.
-- 🔍 **Quick Review**: Rapidly navigate long meetings or webinars for specific insights.
-
----
-## 🧭 Quick Links & Navigation
-
-| Topic | Resource / Section | Description |
-| :--- | :--- | :--- |
-| 🏗 **Architecture** | [**Technical Deep-Dive**](./docs/architecture.md) | Pipeline logic, intent nodes, and iterative generation. |
-| 🎨 **UI & UX** | [**Design Overview**](./docs/ui_ux.md) | Frontend components, state, and user interaction flow. |
-| 🚀 **Setup** | [**Setup Guide**](./docs/setup.md) | Prerequisites and environment installation instructions. |
-| 📦 **Repository** | [**Deliverables**](#-deliverables) | Formal project components and file structure. |
-| 🧠 **AI Logic** | [**The Pipeline**](#-the-ai-pipeline-highlights) | Logic overview of the 4-phase summarization engine. |
-| 🛠 **Verifiability** | [**Reproducibility**](#-reproducibility) | Ensuring consistent results across environments. |
-| 📸 **Demo** | [**Final Screenshot**](#-final-snapshot) | Visual overview of the chat and video editor interface. |
-
----
-
-## 📦 Deliverables
-This formal homework project delivers a complete production-grade ecosystem:
-*   **Production Code**: Electron desktop app written in Vue 3 & TypeScript.
-*   **AI Engine**: A 4-phase pipeline (Extraction, Intent, Generation, Assembly).
-*   **Reproduction Tools**: Download the [Sample Videos Folder](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) (includes full and short versions) and use the app for a 4-phase trace.
-*   **Visual Documentation**: Fully documented [Architecture](./docs/architecture.md) and [UI/UX Flow](./docs/ui_ux.md).
-
----
-
-## 🧠 The AI Pipeline (Highlights)
-
-Our unique **4-Phase Engine** ensures that every summary is contextually accurate:
-*   **Intent Recognition**: Uses a "Brain" node to distinguish between chat and generation, preventing token waste.
-*   **Iterative Refinement**: Supports an **Edit Mode** that performs a technical "diff" on previous timelines for perfect consistency.
-*   **Multimodal Fusion**: Processes visual scene transitions, audio transcripts, and user context simultaneously.
-
-> [!TIP]
-> **Deep Dive:** Check out the **[Architecture Deep-Dive](./docs/architecture.md)** for Mermaid diagrams and logic breakdowns.
-
----
-
-## 🎨 UX Highlights
-The interface is designed for **transparency** and **iterative control**:
-*   **Version History**: Switch between generated versions instantly to find the best cut.
-*   **Live Token Metrics**: Monitor AI usage costs and token counts in real-time.
-*   **Zero-Config Preprocessing**: Automatic scene detection and transcript extraction upon upload.
-
----
-
-## 🛠 Reproducibility
-To guarantee identical behavior across different environments:
-*   **Sample Data**: Download our [Main Reference Videos Folder](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) (includes full and short versions) to test the pipeline.
-*   **JSON Enforcement**: Strict schemas ensure deterministic AI responses.
-*   **Precision Slicing**: FFmpeg settings calibrated for frame-accurate cuts.
-*   **Dependency Guard**: Locked environments via `package-lock.json` and `.npmrc`.
-*   **Reference Stability**: Edit mode always builds upon a fixed "Seed" timeline to avoid hallucinations.
-
----
-
-## 🚀 Getting Started
-Check the **[Installation & Setup Guide](./docs/setup.md)** to configure:
-1.  **Environment**: Node.js and Gemini API Key.
-2.  **Tools**: FFmpeg and PySceneDetect for your OS.
-3.  **Launch**: `npm install && npm run dev`.
-
----
-
-## 📸 Final Snapshot
 <div align="center">
-  <img src="./docs/imgs/screenshot_chatpage.png" width="800px" alt="App Screenshot" />
+  <img src="./docs/imgs/process.jpeg" width="100%" alt="FrameFlow Banner" />
+  
+  # 🌊 FrameFlow
+  ### **The Next-Gen Multimodal Multimedia Platform**
+  
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  [![Platform: Electron](https://img.shields.io/badge/Platform-Electron-lightgrey.svg)](https://www.electronjs.org/)
+  [![Framework: Vue 3](https://img.shields.io/badge/Framework-Vue%203-4fc08d.svg)](https://vuejs.org/)
+  [![AI: Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4.svg)](https://deepmind.google/technologies/gemini/)
+
+  ---
+
+  **FrameFlow** is a high-fidelity multimedia platform that bridges the gap between raw video/image assets and creative intelligence. By fusing **Google Gemini's** multimodal brain with precise **FFmpeg** engineering, FrameFlow transforms how you consume, extract, and generate media.
+
 </div>
 
 ---
 
-## 📜 License
-Licensed under the MIT License - see [LICENSE](LICENSE) for details.
+## 🚀 The Three Pillars of FrameFlow
+
+FrameFlow is built on three core intelligence layers, designed for creators, researchers, and developers.
+
+### 1. 🎞️ Video to Short Video
+Transform long-form content into concise, meaningful highlights.
+- **Academic Precision**: Condense 2-hour technical lectures into 5-minute study guides.
+- **Meeting Recap**: Rapidly navigate long webinars for specific insights.
+- **Narrative Awareness**: AI understands scene transitions and audio context simultaneously.
+
+### 2. 📸 Video to Thumbnail
+Extract and generate high-fidelity visual assets from any video source.
+- **Auto-Enrichment**: AI analyzes scene quality to extract the most representative frames.
+- **Professional Thumbnails**: Generate YouTube-ready or presentation-grade thumbnails with AI-driven composition.
+- **Batch Processing**: Extract hundreds of scene-indexed images in seconds.
+
+### 3. 🎨 Images to Image
+Leverage multimodal prompts to transform existing images or generate new ones from scratch.
+- **Visual Continuity**: Use existing frames as structural references for new generations.
+- **Prompt-Driven Flow**: Refine images using natural language within a unified chat-graph interface.
+- **Multimodal Fusion**: Combine video context with external image uploads for hybrid creativity.
+
+---
+
+## 🧠 The "Brain" Pipeline
+
+Our unique **4-Phase Engine** ensures that every output is contextually grounded:
+
+```mermaid
+graph TD
+    A[Input: Video/Link/Image] --> B{Intent Engine}
+    B -- Summarize --> C[Video to Short Video]
+    B -- Extract --> D[Video to Thumbnail]
+    B -- Synthesis --> E[Images to Image]
+    C --> F[Final Multimedia Output]
+    D --> F
+    E --> F
+    
+    subgraph "Core Intelligence"
+    G[Gemini Multimodal]
+    H[FFmpeg Precision]
+    I[PySceneDetect]
+    end
+    
+    B -. Feedback .-> G
+```
+
+---
+
+## 🎨 Premium Experience (UX)
+
+FrameFlow isn't just a tool; it's an iterative workspace:
+
+- **Vue Flow Graph Interface**: Manage parallel tasks and version branches visually.
+- **Live Metrics**: Monitor AI token usage and processing costs in real-time.
+- **Zero-Config Preprocessing**: Automatic scene detection and transcript extraction.
+- **Ambient Design**: A sleek, dark-mode-first interface with glassmorphism and smooth animations.
+
+---
+
+## 🧭 Navigation & Setup
+
+| Section | Link | Purpose |
+| :--- | :--- | :--- |
+| 🏗 **Architecture** | [**Deep-Dive**](./docs/architecture.md) | Pipeline logic, intent nodes, and iterative generation. |
+| 🚀 **Installation** | [**Setup Guide**](./docs/setup.md) | Node.js, Gemini API, FFmpeg, and yt-dlp setup. |
+| 🎨 **UI/UX** | [**Design Overview**](./docs/ui_ux.md) | Frontend components and interaction flow. |
+| 🛠 **Reproducibility** | [**Sample Data**](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) | Testing datasets for consistent verification. |
+
+---
+
+## 📸 Interface Preview
+
+<div align="center">
+  <img src="./docs/imgs/screenshot_chatpage.png" width="90%" alt="FrameFlow Dashboard" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+</div>
+
+---
+
+## 📜 License & Credits
+
+FrameFlow is licensed under the **MIT License**. Created by [navidshad](https://github.com/navidshad) as part of a high-fidelity AI engineering initiative.
+
+---
+
+> [!TIP]
+> **Pro Choice:** Check the **[Architecture Deep-Dive](./docs/architecture.md)** to see how we handle multimodal intent recognition and technical "diffs" for consistency.

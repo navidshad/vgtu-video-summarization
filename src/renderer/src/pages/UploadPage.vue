@@ -10,7 +10,7 @@
     </div>
     <div class="container mx-auto px-6 py-12 max-w-7xl flex flex-col h-full z-10 relative">
       <!-- Header -->
-      <PageHeader title="Video Summarizer" subtitle="Select a video to begin the AI analysis and extract key insights."
+      <PageHeader title="FrameFlow" subtitle="Select a video or image to begin the AI analysis and extract key insights."
         :show-back="true">
         <template #back>
           <IconButton @click="router.back()" icon="IconArrowLeft" size="sm"
@@ -58,7 +58,7 @@
               <div class="text-sm mt-1 opacity-90 leading-relaxed space-y-2">
                 <p>Visual scene analysis is unavailable. The AI will only analyze audio data.</p>
                 <div class="flex items-center gap-2 mt-2">
-                  <a href="https://github.com/navidshad/vgtu-video-summarization/blob/main/docs/setup.md#-external-tool-setup"
+                  <a href="https://github.com/navidshad/frameflow/blob/main/docs/setup.md#-external-tool-setup"
                     target="_blank" class="inline-flex items-center gap-1 font-bold hover:underline">
                     Installation guide
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none"

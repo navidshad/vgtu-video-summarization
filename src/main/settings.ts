@@ -19,7 +19,7 @@ class SettingsManager {
 	constructor() {
 		const userDataPath = app.getPath('userData')
 		this.settingsPath = join(userDataPath, 'settings.json')
-		this.defaultTempDir = join(os.tmpdir(), 'vgtu-video-summarization')
+		this.defaultTempDir = join(os.tmpdir(), 'frameflow')
 		this.settings = this.loadSettings()
 	}
 
