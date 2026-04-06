@@ -22,7 +22,7 @@
 
         <!-- Library Grid -->
         <div class="flex-1 overflow-y-auto custom-scrollbar pr-1">
-          <div v-if="allProjectImages.length > 0" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+          <div v-if="allProjectImages.length > 0" class="grid grid-cols-4 sm:grid-cols-6 gap-3">
             <div v-for="(img, index) in allProjectImages" :key="index"
               class="group relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
               :class="isSelected(img) ? 'border-primary ring-2 ring-primary/20' : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700'"
