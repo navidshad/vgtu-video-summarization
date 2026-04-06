@@ -21,7 +21,7 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 	if (context.editRefId) {
 		const thread = threadManager.getThread(context.threadId)
 		let refMsg = thread?.messages.find(m => m.id === context.editRefId)
-		
+
 		// If the immediate parent is a User message, the files are in its parent (the previous AI result)
 		if (refMsg && refMsg.role === MessageRole.User && refMsg.editRefId) {
 			const grandParentId = refMsg.editRefId
@@ -44,25 +44,24 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 		}
 	}
 
-	const modelSettings = (await import('../../settings')).settingsManager.getModelSettings()
 	const adapter = GeminiAdapter.create()
 
 	// 2. Identify all reference images
 	// a. From previous results (if iteration)
 	// b. From supply controller (which manages auto-select vs user-attachments)
-	
+
 	const selectedFromSupply = data.selectedReferenceImages || []
-	
+
 	context.updateStatus(`Preparing reference material: ${selectedFromSupply.length} images...`)
 
-// 2. Generate the Thumbnail Asset
-context.updateStatus('Generating thumbnail image with Gemini...')
-const currentModelSettings = (await import('../../settings')).settingsManager.getModelSettings()
-const modelName = currentModelSettings.selection['thumbnail']
+	// 2. Generate the Thumbnail Asset
+	context.updateStatus('Generating thumbnail image with Gemini...')
+	const currentModelSettings = (await import('../../settings')).settingsManager.getModelSettings()
+	const modelName = currentModelSettings.selection['thumbnail']
 
-const resultPath = path.join(context.tempDir, 'generated-images', `thumbnail_${context.messageId}.png`)
-context.updateStatus(`Generating thumbnail image with Gemini...`)
-	
+	const resultPath = path.join(context.tempDir, 'generated-images', `thumbnail_${context.messageId}.png`)
+	context.updateStatus(`Generating thumbnail image with Gemini...`)
+
 	const systemInstruction = `You are a professional video thumbnail designer.
 Your goal is to create a high-impact, cinematic thumbnail for a video based on a user's request and provided reference frames.
 
@@ -89,7 +88,7 @@ Please update the previous result based on the Refinement Request while maintain
 
 	const allReferenceImages = [...previousFiles, ...selectedFromSupply]
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
-	
+
 	// Record usage immediately
 	await context.recordUsage(record)
 
@@ -122,11 +121,11 @@ Please update the previous result based on the Refinement Request while maintain
 
 function timeToSeconds(t: string | any): number {
 	if (typeof t !== 'string') return NaN
-	
+
 	// Remove brackets if any [HH:MM:SS]
 	const clean = t.replace(/[\[\]]/g, '').trim()
 	const parts = clean.split(':').map(val => parseFloat(val))
-	
+
 	if (parts.some(p => isNaN(p))) return NaN
 
 	if (parts.length === 3) {

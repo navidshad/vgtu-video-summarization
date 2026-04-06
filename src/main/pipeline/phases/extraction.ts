@@ -175,7 +175,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	const modelSettings = settingsManager.getModelSettings()
 	const modelName = modelSettings.selection['scene-description'] || GEMINI_MODEL_2_5_FLASH_LITE
 
-	const descriptions: { index: number, startTime: number, description: string }[] = []
+	const descriptions: { index: number, startTime: number, description: string, framePath: string }[] = []
 	let framesDir = path.join(tempDir, 'frames')
 	if (!fs.existsSync(framesDir)) {
 		fs.mkdirSync(framesDir)
@@ -185,7 +185,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	for (let i = 0; i < scenes.length; i += BATCH_SIZE) {
 		const batchScenes = scenes.slice(i, i + BATCH_SIZE)
 		const batchFramePaths: string[] = []
-		const validBatchInfo: { scene: Scene, index: number }[] = []
+		const validBatchInfo: { scene: Scene, index: number, framePath: string }[] = []
 
 		context.updateStatus(`Analyzing scenes ${i + 1} to ${Math.min(i + BATCH_SIZE, scenes.length)} / ${scenes.length}...`)
 
@@ -201,7 +201,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 				const midpoint = scene.startTime + (scene.duration / 2)
 				const framePath = await ffmpegAdapter.extractFrame(videoPath, midpoint, framesDir, context.signal)
 				batchFramePaths.push(framePath)
-				validBatchInfo.push({ scene, index: originalIndex })
+				validBatchInfo.push({ scene, index: originalIndex, framePath })
 			} catch (error) {
 				if (!context.signal.aborted) {
 					console.error(`Failed to extract frame for scene ${originalIndex}:`, error)
@@ -261,7 +261,8 @@ Return the descriptions as an array of strings in the exact same order as the im
 					descriptions.push({
 						index: info.index,
 						startTime: info.scene.startTime,
-						description: text.trim()
+						description: text.trim(),
+						framePath: info.framePath
 					})
 				}
 			})

@@ -43,11 +43,12 @@ export const supplyController: PipelineFunction = async (data, context) => {
 		// Map indices to video frames
 		const sceneDescriptionPath = context.preprocessing.sceneDescriptionsPath
 		if (sceneDescriptionPath && fs.existsSync(sceneDescriptionPath)) {
-			const scenes = JSON.parse(fs.readFileSync(sceneDescriptionPath, 'utf-8'));
+			const scenes: any[] = JSON.parse(fs.readFileSync(sceneDescriptionPath, 'utf-8'));
 			const selectedFramePaths: string[] = []
 
 			for (const idx of selectedIndices) {
-				const frame = referenceFrames[idx]
+				const scene = scenes.find(s => s.index === idx)
+				const frame = scene?.framePath
 				if (frame && fs.existsSync(frame)) {
 					selectedFramePaths.push(frame)
 				}
