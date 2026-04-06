@@ -266,7 +266,16 @@ Return the descriptions as an array of strings in the exact same order as the im
 				}
 			})
 
-			// 5. DO NOT cleanup frames - we want to keep them as reference-frames
+			// 5. Save frames discovered so far to the thread metadata so the UI updates in real-time
+			const currentFrames = fs.readdirSync(framesDir)
+				.filter(f => f.endsWith('.jpg') || f.endsWith('.jpeg'))
+				.map(f => path.join(framesDir, f))
+			
+			await context.savePreprocessing({ 
+				'reference-frames': currentFrames
+			})
+
+			// 6. DO NOT cleanup frames - we want to keep them as reference-frames
 			// batchFramePaths.forEach(fpath => {
 			// 	try { if (fs.existsSync(fpath)) fs.unlinkSync(fpath) } catch (e) { }
 			// })

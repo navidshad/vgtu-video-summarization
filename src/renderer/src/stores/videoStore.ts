@@ -203,7 +203,23 @@ export const useVideoStore = defineStore('video', () => {
 					[data.taskId]: data.task
 				}
 			}
-		})
+		});
+
+		(window as any).api.onThreadUpdated((updatedThread: Thread) => {
+			// Find the local thread and update it
+			const index = threads.value.findIndex(t => t.id === updatedThread.id)
+			if (index !== -1) {
+				// We merge some properties to avoid losing local-only state if any
+				// but since Thread is the source of truth, replacing is mostly fine.
+				threads.value[index] = {
+					...threads.value[index],
+					...updatedThread
+				}
+			} else {
+				// If it's a new thread (e.g. from another window), add it
+				threads.value.unshift(updatedThread)
+			}
+		});
 	}
 
 	const deleteThread = async (id: string) => {

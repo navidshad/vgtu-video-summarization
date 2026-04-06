@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
@@ -188,6 +188,12 @@ class ThreadManager {
 			}
 
 			this.saveThread(updatedThread)
+
+			// Broadcast update to all renderer windows
+			BrowserWindow.getAllWindows().forEach(win => {
+				win.webContents.send('thread-updated', updatedThread)
+			})
+
 			return updatedThread
 		}).catch(err => {
 			console.error(`Atomic update failed for thread ${id}:`, err)
