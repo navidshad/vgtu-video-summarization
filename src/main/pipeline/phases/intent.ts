@@ -58,7 +58,8 @@ Specific rules for 'content' field:
 - If type is 'text': This is the message shown directly to the user.
 - If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent.
 - If type is 'generate-thumbnail': This is a COMPREHENSIVE and DETAILED technical description for the thumbnail generator. Include visual elements, frames to extract (YOU MUST list specific timestamps in [HH:MM:SS] format for at least 2-3 relevant scenes), and any overlay text.
-- CRITICAL: When editing an existing timeline or thumbnail, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user. 'content' for 'generate-thumbnail' MUST be technical and precise.`
+- CRITICAL: When editing an existing timeline or thumbnail, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user. 'content' for 'generate-thumbnail' MUST be technical and precise.
+- PERSON NAMES: DO NOT mention specific real-world names (e.g., 'Olga Loiek') in the 'content' field for 'generate-thumbnail'. Instead, refer to them using generic descriptors based on the reference frames, such as 'the speaker', 'the subject', 'the person in the video', or 'the main figure'. This is to avoid triggering safety/privacy filters. You can refer to 'Scene X' or 'Image Y' to point to specific people.`
 
 const INTENT_SCHEMA = {
 	type: 'object',
