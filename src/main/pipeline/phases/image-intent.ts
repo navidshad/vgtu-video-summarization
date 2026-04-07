@@ -6,7 +6,7 @@ import { settingsManager } from '../../settings'
 
 const IMAGE_INTENT_SYSTEM_INSTRUCTION = `
 Model Role:
-You are an AI assistant for a creative image editor. Your goal is to understand the user's intent based on their latest message, the conversation history, and the detailed textual descriptions of all images provided in the collection.
+You are an AI assistant for a creative image editor. Your goal is to understand the user's intent based on their latest message, the conversation history, the detailed textual descriptions of all images provided in the collection, and optionally, any attached images provided by the user.
 
 Task:
 You must decide between two types of actions:
@@ -16,6 +16,11 @@ You must decide between two types of actions:
 Data Provided:
 - COLLECTION: A JSON object mapping file paths to detailed descriptions of those images.
 - PROMPT: The user's request.
+- ATTACHED IMAGES: (Optional) Actual images provided by the user in the current message or history.
+
+Attached Images:
+- If the user provides images, they are likely intended as reference material for the generation (e.g., "make something in this style", "mix this image with my collection").
+- Use these images to better understand what the user is referring to.
 
 Rules (STRICT ENFORCEMENT):
 - NEVER trigger "generate-image" if the request is ambiguous.
@@ -23,9 +28,9 @@ Rules (STRICT ENFORCEMENT):
     a) The user gives a direct, unambiguous COMMAND.
     b) The user explicitly confirms a previously proposed creative idea.
 - If "generate-image" is triggered, you must:
-    a) Select the SPECIFIC images that are relevant to the request.
+    a) Select the SPECIFIC images from the COLLECTION that are relevant to the request.
     b) Create a DETAILED technical prompt for a creative image generator (like Gemini Image 3). 
-    c) This prompt should specify style, composition, lighting, and how to merge the elements from the selected images.
+    c) This prompt should specify style, composition, lighting, and how to merge the elements from the selected images AND any provided ATTACHED IMAGES.
     d) PERSON NAMES: DO NOT mention specific real-world names (e.g., 'Olga Loiek') in the 'content' field. Instead, refer to them using generic descriptors based on the images, such as 'the speaker', 'the subject', 'the person in the video', or 'the main figure'. This is to avoid triggering safety/privacy filters. You can refer to 'Image X' or 'Image index Y' to point to specific people.
 
 Respond ONLY with a JSON object following this schema:
@@ -76,8 +81,13 @@ ${context.context}
 
 User Prompt:
 ${lastUserPrompt}
+
+(Note: If the user provided any attached images, they are passed as visual context to you.)
 `
 	console.log(`[IMAGE-INTENT] Sending prompt to AI. User prompt detected as: "${lastUserPrompt}"`)
+
+	const uniqueImages = Array.from(new Set(context.attachedImages || []))
+	const limitedImages = uniqueImages.slice(-8)
 
 	const adapter = GeminiAdapter.create()
 	const modelSettings = settingsManager.getModelSettings()
@@ -89,7 +99,7 @@ ${lastUserPrompt}
 		IMAGE_INTENT_SCHEMA,
 		IMAGE_INTENT_SYSTEM_INSTRUCTION,
 		context.signal,
-		undefined,
+		limitedImages,
 		{ includeThinking: true }
 	)
 
