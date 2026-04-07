@@ -50,28 +50,28 @@
     <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-2 animate-in slide-in-from-top duration-300">
       <div class="grid grid-cols-2 gap-3">
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Resolution</span>
-          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Duration</span>
-          <span class="text-[11px] text-zinc-200 font-mono">{{ formatDuration(metadata?.duration) }}</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Duration</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatDuration(metadata?.duration) }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Frame Rate</span>
-          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Frame Rate</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
         </div>
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">File Size</span>
-          <span class="text-[11px] text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">File Size</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Format</span>
-          <span class="text-[11px] text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Format</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
         </div>
         <div class="flex flex-col gap-0.5">
-          <span class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Codec</span>
-          <span class="text-[11px] text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
+          <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Codec</span>
+          <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
         </div>
       </div>
     </div>
