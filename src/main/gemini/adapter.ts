@@ -487,7 +487,8 @@ export class GeminiAdapter {
 		outputPath: string,
 		imagePaths: string[] = [],
 		systemInstruction?: string,
-		signal?: AbortSignal
+		signal?: AbortSignal,
+		options?: { includeThinking?: boolean }
 	): Promise<{ path: string, text?: string, record: UsageRecord }> {
 		try {
 			// Prepare parts: Image parts FIRST, then text prompt
@@ -508,11 +509,20 @@ export class GeminiAdapter {
 			parts.push({ text: prompt })
 
 			// For gemini-3.1-flash-image-preview, we use generateContent
+			const requestConfig: any = systemInstruction ? { systemInstruction: systemInstruction } : {};
+			
+			if (options?.includeThinking) {
+				requestConfig.thinkingConfig = {
+					includeThoughts: true,
+					thinkingBudget: 8000
+				};
+			}
+
 			const response = await this.withRetry(
 				() => (this.client.models as any).generateContent({
 					model: modelName,
 					contents: [{ role: 'user', parts }],
-					config: systemInstruction ? { systemInstruction: systemInstruction } : undefined
+					config: requestConfig
 				}, { signal }) as Promise<any>,
 				signal
 			);
@@ -524,6 +534,7 @@ export class GeminiAdapter {
 			// Extract the image from candidates (inlineData part) and text part
 			let base64Data: string | undefined;
 			let modelText: string | undefined;
+			
 			for (const part of response.candidates[0].content?.parts || []) {
 				if (part.inlineData) {
 					base64Data = part.inlineData.data;

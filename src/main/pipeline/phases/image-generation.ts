@@ -75,7 +75,8 @@ CRITICAL RULES:
 			destPath,
 			allReferenceImages,
 			systemInstruction,
-			context.signal
+			context.signal,
+			{ includeThinking: true }
 		)
 
 		await context.recordUsage(record)

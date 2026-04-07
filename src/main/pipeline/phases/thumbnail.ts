@@ -89,7 +89,7 @@ Please update the previous result based on the Refinement Request while maintain
 
 	// Use a maximum of 5 reference images to keep prompt complexity low
 	const allReferenceImages = [...previousFiles, ...selectedFromSupply].slice(0, 5)
-	const { record, text } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
+	const { record, text } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal, { includeThinking: true })
 
 	// Record usage immediately
 	await context.recordUsage(record)
