@@ -107,7 +107,7 @@
 		</div>
 
 		<!-- Edit Modal -->
-		<Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }">
+		<Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }" @close="isModalOpen = false">
 			<div class="flex flex-col gap-4 h-full overflow-hidden">
 				<div class="flex-1 overflow-hidden">
 					<TextArea

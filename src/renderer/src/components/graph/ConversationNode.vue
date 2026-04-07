@@ -85,7 +85,7 @@
             <span>AI is thinking...</span>
           </div>
           <template v-else>
-            <div v-if="editingMessageId !== msg.id" v-html="renderMarkdown(msg.content)"
+            <div v-html="renderMarkdown(msg.content)"
               class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
               :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
           </template>
@@ -150,7 +150,7 @@
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
 
     <!-- Edit Modal -->
-    <Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }">
+    <Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }" @close="cancelEdit">
       <div class="flex flex-col gap-4 h-full overflow-hidden">
         <div class="flex-1 overflow-hidden">
           <TextArea
@@ -160,7 +160,7 @@
           />
         </div>
         <div class="flex justify-end gap-3 mt-2 flex-shrink-0">
-          <Button variant="outline" @click="isModalOpen = false">Cancel</Button>
+          <Button variant="outline" @click="cancelEdit">Cancel</Button>
           <Button variant="primary" @click="saveEdit">Save Changes</Button>
         </div>
       </div>
