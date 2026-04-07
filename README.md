@@ -1,7 +1,7 @@
-<div align="center">
-  
   # 🌊 FrameFlow
-  ### **The Next-Gen Multimodal Multimedia Platform**
+
+
+<div align="center">
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
   [![Platform: Electron](https://img.shields.io/badge/Platform-Electron-lightgrey.svg)](https://www.electronjs.org/)
@@ -10,11 +10,12 @@
 
 </div>
 
+<img src="./docs/screenshots/01_light-theme.jpg" width="100%" alt="FrameFlow Banner" />
+
 ---
 
   **FrameFlow** is a high-fidelity multimedia platform that bridges the gap between raw video/image assets and creative intelligence. By fusing **Google Gemini's** multimodal brain with precise **FFmpeg** engineering, FrameFlow transforms how you consume, extract, and generate media.
 
-  <img src="./docs/screenshots/01_light-theme.jpg" width="100%" alt="FrameFlow Banner" />
 
 ---
 
