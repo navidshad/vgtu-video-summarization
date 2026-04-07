@@ -8,12 +8,14 @@
 				{{ message.role === MessageRole.User ? 'You' : 'AI Assistant' }}
 			</span>
 
-			<!-- Action Buttons (Remove/Retry) -->
-			<div v-if="!message.isPending && (!isFirst || (isLatestUser && message.role === MessageRole.User))"
+			<!-- Action Buttons (Remove/Retry/Edit) -->
+			<div v-if="!message.isPending"
 				class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity scale-75">
 				<IconButton v-if="isLatestUser && message.role === MessageRole.User" icon="IconRefresh" size="xs"
 					rounded="full" title="Retry from this message" @click="handleRetry" />
-				<IconButton v-if="!isFirst" icon="IconTrashLines" size="xs" rounded="full" title="Remove Message"
+				<IconButton v-if="message.role === MessageRole.User" icon="IconPencil" size="xs"
+					rounded="full" title="Edit Message" @click="handleStartEdit" />
+				<IconButton icon="IconTrashLines" size="xs" rounded="full" title="Remove Message"
 					@click="handleRemove" />
 			</div>
 		</div>
@@ -103,12 +105,31 @@
 				</div>
 			</Card>
 		</div>
+
+		<!-- Edit Modal -->
+		<Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }">
+			<div class="flex flex-col gap-4 h-full overflow-hidden">
+				<div class="flex-1 overflow-hidden">
+					<TextArea
+						v-model="editText"
+						placeholder="Enter your message..."
+						class="h-full font-sans text-base custom-textarea-full"
+					/>
+				</div>
+				<div class="flex justify-end gap-3 mt-2">
+					<Button variant="outline" @click="isModalOpen = false">Cancel</Button>
+					<Button variant="primary" @click="handleSaveEdit">Save Changes</Button>
+				</div>
+			</div>
+		</Modal>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Card, IconButton } from 'pilotui/elements'
+import { Card, IconButton, Button } from 'pilotui/elements'
+import { Modal } from 'pilotui/complex'
+import { TextArea } from 'pilotui/form'
 import { MessageRole, Message, FileType } from '@shared/types'
 import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'
@@ -125,12 +146,31 @@ const emit = defineEmits(['edit', 'save-video', 'scroll-to-reference', 'remove',
 
 const videoStore = useVideoStore()
 const isTimelineExpanded = ref(false)
+const isModalOpen = ref(false)
+const editText = ref('')
+
+const handleStartEdit = () => {
+	editText.value = props.message.content
+	isModalOpen.value = true
+}
+
+const handleSaveEdit = async () => {
+	if (editText.value.trim() === props.message.content) {
+		isModalOpen.value = false
+		return
+	}
+	
+	const success = await videoStore.updateMessageContent(props.message.id, editText.value)
+	if (success) {
+		isModalOpen.value = false
+	}
+}
 
 const handleRemove = async () => {
 	const response = await (window as any).api.showConfirmation({
 		title: 'Remove Message',
 		message: 'Are you sure you want to remove this message?',
-		detail: 'This will permanently remove this message and all its generated videos. This action cannot be undone.',
+		detail: 'This will permanently remove this message and its associated generated artifacts. Subsequent messages in this thread will be preserved.',
 		type: 'warning',
 		buttons: ['Cancel', 'Remove'],
 		defaultId: 1,
@@ -138,6 +178,7 @@ const handleRemove = async () => {
 	})
 
 	if (response === 1) {
+		await videoStore.removeSingleMessage(props.message.id)
 		emit('remove', props.message.id)
 	}
 }

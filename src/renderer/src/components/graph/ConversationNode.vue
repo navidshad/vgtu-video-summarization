@@ -41,9 +41,17 @@
         <div class="flex items-center space-x-2 px-1">
           <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role
           }}</span>
-          <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
-            class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer opacity-0 group-hover:opacity-100 uppercase">
-            Retry</div>
+          <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
+              class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer uppercase">
+              Retry</div>
+            <div v-if="msg.role === 'user' && editingMessageId !== msg.id" @click="startEditing(msg)"
+              class="text-[9px] font-bold text-zinc-400 hover:text-primary cursor-pointer uppercase">
+              Edit</div>
+            <div @click="removeMessage(msg.id)"
+              class="text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer uppercase">
+              Remove</div>
+          </div>
         </div>
 
         <div
@@ -76,9 +84,11 @@
             class="text-zinc-400 italic font-medium flex items-center space-x-2">
             <span>AI is thinking...</span>
           </div>
-          <div v-else v-html="renderMarkdown(msg.content)"
-            class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
-            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
+          <template v-else>
+            <div v-if="editingMessageId !== msg.id" v-html="renderMarkdown(msg.content)"
+              class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+              :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
+          </template>
 
           <!-- Files -->
           <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
@@ -138,6 +148,23 @@
 
     <Handle type="source" :position="Position.Bottom"
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
+
+    <!-- Edit Modal -->
+    <Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }">
+      <div class="flex flex-col gap-4 h-full overflow-hidden">
+        <div class="flex-1 overflow-hidden">
+          <TextArea
+            v-model="editText"
+            placeholder="Edit message..."
+            class="h-full font-sans text-base custom-textarea-full"
+          />
+        </div>
+        <div class="flex justify-end gap-3 mt-2 flex-shrink-0">
+          <Button variant="outline" @click="isModalOpen = false">Cancel</Button>
+          <Button variant="primary" @click="saveEdit">Save Changes</Button>
+        </div>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -145,6 +172,9 @@
 import { ref } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
+import { Button } from 'pilotui/elements'
+import { Modal } from 'pilotui/complex'
+import { TextArea } from 'pilotui/form'
 import { renderMarkdown } from '../../utils/markdown'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
@@ -154,6 +184,48 @@ const input = ref('')
 const showInput = ref(false)
 const copiedId = ref<string | null>(null)
 const attachedImages = ref<string[]>([])
+
+const editingMessageId = ref<string | null>(null)
+const editText = ref('')
+const isModalOpen = ref(false)
+
+const startEditing = (msg: any) => {
+  editingMessageId.value = msg.id
+  editText.value = msg.content
+  isModalOpen.value = true
+}
+
+const cancelEdit = () => {
+  editingMessageId.value = null
+  editText.value = ''
+  isModalOpen.value = false
+}
+
+const saveEdit = async () => {
+  if (!editingMessageId.value) return
+  if (editText.value.trim() === '') return
+  
+  const success = await videoStore.updateMessageContent(editingMessageId.value, editText.value)
+  if (success) {
+    cancelEdit()
+  }
+}
+
+const removeMessage = async (messageId: string) => {
+  const confirmed = await (window as any).api.showConfirmation({
+    title: 'Remove Message',
+    message: 'Are you sure you want to remove this message from the conversation?',
+    detail: 'This will delete the message and its artifacts. Subsequent messages in this node will be preserved.',
+    type: 'warning',
+    buttons: ['Cancel', 'Remove'],
+    defaultId: 1,
+    cancelId: 0
+  })
+  
+  if (confirmed === 1) {
+    await videoStore.removeSingleMessage(messageId)
+  }
+}
 
 const copyMessage = (id: string, content: string) => {
   navigator.clipboard.writeText(content).then(() => {

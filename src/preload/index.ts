@@ -54,6 +54,10 @@ const api = {
 		ipcRenderer.invoke('save-node-positions', { threadId, positions }),
 	removeMessage: (threadId: string, messageId: string) =>
 		ipcRenderer.invoke('remove-message', { threadId, messageId }),
+	removeSingleMessage: (threadId: string, messageId: string) =>
+		ipcRenderer.invoke('remove-single-message', { threadId, messageId }),
+	updateMessage: (threadId: string, messageId: string, updates: any) =>
+		ipcRenderer.invoke('update-message', { threadId, messageId, updates }),
 	showConfirmation: (options: { title: string, message: string, detail?: string, type?: string, buttons?: string[], defaultId?: number, cancelId?: number }) =>
 		ipcRenderer.invoke('show-confirmation', options),
 	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),

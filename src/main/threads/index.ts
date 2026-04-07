@@ -615,6 +615,44 @@ class ThreadManager {
 
 		return !!result
 	}
+
+	// NEW: Remove a single message from a thread and re-chain its children
+	async removeSingleMessage(threadId: string, messageId: string): Promise<boolean> {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const msg = thread.messages.find(m => m.id === messageId)
+		if (!msg) return false
+
+		// 1. Delete associated files for THIS message only (except original and protected reference/analysis files)
+		if (msg.files) {
+			for (const file of msg.files) {
+				if (file.type !== FileType.Original) {
+					const cleanPath = file.url.replace('file://', '').replace('media://', '')
+					
+					// Only allow deletion if it belongs to generated directories
+					const isGenerated = cleanPath.includes(`/${THREAD_DIRS.GENERATED_IMAGES}/`) || 
+										cleanPath.includes(`/${THREAD_DIRS.GENERATED_VIDEOS}/`)
+					
+					if (isGenerated) {
+						this.deleteFile(file.url)
+					}
+				}
+			}
+		}
+
+		// 2. Re-chain children to point to this message's parent (editRefId)
+		const parentId = msg.editRefId
+		const updatedMessages = thread.messages
+			.filter(m => m.id !== messageId)
+			.map(m => m.editRefId === messageId ? { ...m, editRefId: parentId } : m)
+
+		const result = await this.updateThread(threadId, {
+			messages: updatedMessages
+		})
+
+		return !!result
+	}
 }
 
 export const threadManager = new ThreadManager()

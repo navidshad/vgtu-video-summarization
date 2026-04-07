@@ -3,12 +3,12 @@
     <!-- Ambient Backgrounds -->
     <div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/20 dark:bg-primary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
     <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary/20 dark:bg-secondary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
-    <div class="px-5 py-3 z-10 w-full flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm">
+    <div class="px-5 py-3 z-20 w-full flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex-shrink-0">
       <div class="flex items-center gap-4 flex-1 min-w-0">
         <button @click="router.push('/home')" class="flex items-center justify-center w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition text-zinc-600 dark:text-zinc-300 flex-shrink-0">
           <svg class="w-4 h-4 ml-[-2px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
         </button>
-        <h1 class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight max-w-[40%]">
+        <h1 class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight min-w-[200px] max-w-[50%]">
           {{ videoStore.currentVideoName || 'Graph Task Manager' }}
         </h1>
 
