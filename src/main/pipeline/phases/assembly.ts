@@ -3,6 +3,7 @@ import { PipelineFunction } from '../index'
 import { assembleVideo } from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
+import { THREAD_DIRS } from '../../constants/paths'
 
 export const assembleVideoFromTimeline: PipelineFunction = async (data, context) => {
 	const timeline = data.timeline as EnrichedTimelineSegment[]
@@ -21,7 +22,7 @@ export const assembleVideoFromTimeline: PipelineFunction = async (data, context)
 	context.updateStatus('Assembling video from timeline...')
 
 	try {
-		const resultsDir = path.join(context.tempDir, 'generated-videos')
+		const resultsDir = path.join(context.tempDir, THREAD_DIRS.GENERATED_VIDEOS)
 		if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true })
 
 		const outputPath = await assembleVideo(

@@ -3,6 +3,7 @@ import { GeminiAdapter } from '../../gemini/adapter'
 import fs from 'fs'
 import path from 'path'
 import { settingsManager } from '../../settings'
+import { THREAD_DIRS } from '../../constants/paths'
 
 export const extractImageData: PipelineFunction = async (_data, context) => {
 	const sourceImages = context.preprocessing.sourceImages || []
@@ -80,7 +81,7 @@ Return the results as a JSON object with a 'data' array of objects, each contain
 		}
 	}
 
-	const analysisDir = path.join(context.tempDir, 'analysis')
+	const analysisDir = path.join(context.tempDir, THREAD_DIRS.ANALYSIS)
 	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
 
 	const imageTextPath = path.join(analysisDir, 'image_data.json')

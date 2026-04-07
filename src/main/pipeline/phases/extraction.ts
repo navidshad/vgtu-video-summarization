@@ -8,6 +8,7 @@ import { GeminiAdapter } from '../../gemini/adapter'
 import { Scene } from '../../scenedetect/types'
 import { GEMINI_MODEL_2_5_FLASH_LITE } from '../../constants/gemini'
 import { settingsManager } from '../../settings'
+import { THREAD_DIRS } from '../../constants/paths'
 
 
 export const ensureLowResolution: PipelineFunction = async (_data, context) => {
@@ -22,7 +23,7 @@ export const ensureLowResolution: PipelineFunction = async (_data, context) => {
 	}
 
 	context.updateStatus('Downscaling video to 480p for faster processing...')
-	const videoDir = path.join(context.tempDir, 'video')
+	const videoDir = path.join(context.tempDir, THREAD_DIRS.VIDEO)
 	if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
 
 	const lowResPath = await ffmpegAdapter.toLowResolution(videoPath, videoDir, (percent) => {
@@ -38,7 +39,7 @@ export const convertToAudio: PipelineFunction = async (data, context) => {
 	const videoPath = context.preprocessing.lowResVideoPath! || context.videoPath;
 	context.updateStatus('Converting video to audio...')
 
-	const audioDir = path.join(context.tempDir, 'audio')
+	const audioDir = path.join(context.tempDir, THREAD_DIRS.AUDIO)
 	if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true })
 
 	const audioPath = await ffmpegAdapter.toAudio(videoPath, audioDir, (percent) => {
@@ -67,7 +68,7 @@ export const extractRawTranscript: PipelineFunction = async (data, context) => {
 
 	if (context.signal.aborted) return;
 
-	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	const transcriptsDir = path.join(context.tempDir, THREAD_DIRS.TRANSCRIPTS)
 	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
 
 	const rawResponsePath = path.join(transcriptsDir, `raw_transcript_response.txt`)
@@ -104,7 +105,7 @@ export const extractCorrectedTranscript: PipelineFunction = async (data, context
 
 	if (context.signal.aborted) return;
 
-	const transcriptsDir = path.join(context.tempDir, 'transcripts')
+	const transcriptsDir = path.join(context.tempDir, THREAD_DIRS.TRANSCRIPTS)
 	if (!fs.existsSync(transcriptsDir)) fs.mkdirSync(transcriptsDir, { recursive: true })
 
 	const rawResponsePath = path.join(transcriptsDir, `corrected_transcript_response.txt`)
@@ -144,7 +145,7 @@ export const extractSceneTiming: PipelineFunction = async (data, context) => {
 		return
 	}
 
-	const analysisDir = path.join(context.tempDir, 'analysis')
+	const analysisDir = path.join(context.tempDir, THREAD_DIRS.ANALYSIS)
 	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
 
 	const sceneTimesPath = path.join(analysisDir, `scenes.json`)
@@ -176,7 +177,7 @@ export const generateSceneDescription: PipelineFunction = async (data, context) 
 	const modelName = modelSettings.selection['scene-description'] || GEMINI_MODEL_2_5_FLASH_LITE
 
 	const descriptions: { index: number, startTime: number, description: string, framePath: string }[] = []
-	let framesDir = path.join(tempDir, 'frames')
+	let framesDir = path.join(tempDir, THREAD_DIRS.FRAMES)
 	if (!fs.existsSync(framesDir)) {
 		fs.mkdirSync(framesDir)
 	}
@@ -288,14 +289,14 @@ Return the descriptions as an array of strings in the exact same order as the im
 		}
 	}
 
-	const analysisDir = path.join(tempDir, 'analysis')
+	const analysisDir = path.join(tempDir, THREAD_DIRS.ANALYSIS)
 	if (!fs.existsSync(analysisDir)) fs.mkdirSync(analysisDir, { recursive: true })
 
 	const sceneDescriptionsPath = path.join(analysisDir, `scene_descriptions.json`)
 	fs.writeFileSync(sceneDescriptionsPath, JSON.stringify(descriptions, null, 2))
 
 	// Collect all retained frames from the frames directory
-	framesDir = path.join(tempDir, 'frames')
+	framesDir = path.join(tempDir, THREAD_DIRS.FRAMES)
 	let allFrames: string[] = []
 	if (fs.existsSync(framesDir)) {
 		allFrames = fs.readdirSync(framesDir)

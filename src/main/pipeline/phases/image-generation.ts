@@ -5,6 +5,7 @@ import { threadManager } from '../../threads'
 import path from 'path'
 import fs from 'fs'
 import { FileType, MessageRole } from '../../../shared/types'
+import { THREAD_DIRS } from '../../constants/paths'
 
 export const generateOutputImage: PipelineFunction = async (data, context) => {
 	context.updateStatus('Generating final image...')
@@ -62,7 +63,7 @@ CRITICAL RULES:
 3. OUTPUT: DO NOT output ANY text or explanation—ONLY raw image data.`
 
 	try {
-		const resultsDir = path.join(context.tempDir, 'results')
+		const resultsDir = path.join(context.tempDir, THREAD_DIRS.GENERATED_IMAGES)
 		if (!fs.existsSync(resultsDir)) fs.mkdirSync(resultsDir, { recursive: true })
 
 		const fileName = `generated_image_${Date.now()}.png`

@@ -5,6 +5,7 @@ import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
 import path from 'path'
 import { FileType, MessageRole, EnrichedTimelineSegment } from '../../../shared/types'
+import { THREAD_DIRS } from '../../constants/paths'
 
 
 export const generateThumbnail: PipelineFunction = async (data, context) => {
@@ -59,7 +60,7 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 	const currentModelSettings = (await import('../../settings')).settingsManager.getModelSettings()
 	const modelName = currentModelSettings.selection['thumbnail']
 
-	const resultPath = path.join(context.tempDir, 'generated-images', `thumbnail_${context.messageId}.png`)
+	const resultPath = path.join(context.tempDir, THREAD_DIRS.GENERATED_IMAGES, `thumbnail_${context.messageId}.png`)
 	context.updateStatus(`Generating thumbnail image with Gemini...`)
 
 	const systemInstruction = `You are a professional video thumbnail designer.

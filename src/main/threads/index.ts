@@ -6,6 +6,7 @@ import { MessageRole, FileType } from '@shared/types'
 import type { Message, Thread, Usage, UsageRecord, VideoMetadata } from '@shared/types'
 import { settingsManager } from '../settings'
 import { getVideoMetadata } from '../ffmpeg'
+import { THREAD_DIRS } from '../constants/paths'
 
 // Re-export needed types for consumers (if any, though shared is better)
 export { MessageRole, FileType }
@@ -71,7 +72,7 @@ class ThreadManager {
 
 			if (videoPath.startsWith(systemTempDir)) {
 				try {
-					const videoDir = path.join(tempDir, 'video')
+					const videoDir = path.join(tempDir, THREAD_DIRS.VIDEO)
 					if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
 					
 					// Sanitize the name for the filesystem
@@ -95,7 +96,7 @@ class ThreadManager {
 
 		const sourceImages: string[] = []
 		if (imagePaths && imagePaths.length > 0) {
-			const imagesDir = path.join(tempDir, 'images')
+			const imagesDir = path.join(tempDir, THREAD_DIRS.IMAGES)
 			if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true })
 			
 			for (const imgPath of imagePaths) {
@@ -586,13 +587,23 @@ class ThreadManager {
 
 		collect(messageId)
 
-		// Delete associated files for all messages in the branch (except original)
+		// Delete associated files for all messages in the branch (except original and protected reference/analysis files)
 		for (const id of toRemove) {
 			const msg = thread.messages.find(m => m.id === id)
 			if (msg && msg.files) {
 				for (const file of msg.files) {
 					if (file.type !== FileType.Original) {
-						this.deleteFile(file.url)
+						const cleanPath = file.url.replace('file://', '').replace('media://', '')
+						
+						// Only allow deletion if it belongs to generated directories
+						const isGenerated = cleanPath.includes(`/${THREAD_DIRS.GENERATED_IMAGES}/`) || 
+						                    cleanPath.includes(`/${THREAD_DIRS.GENERATED_VIDEOS}/`)
+						
+						if (isGenerated) {
+							this.deleteFile(file.url)
+						} else {
+							console.log(`[ThreadManager] Skipping deletion of reference/analysis file during node removal: ${cleanPath}`)
+						}
 					}
 				}
 			}
