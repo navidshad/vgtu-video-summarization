@@ -59,7 +59,9 @@ const api = {
 	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),
 	openThreadDir: (threadId: string) => ipcRenderer.invoke('open-thread-dir', threadId),
 	getVideoMetadata: (filePath: string) => ipcRenderer.invoke('get-video-metadata', filePath),
-	showOpenDialog: (options: any) => ipcRenderer.invoke('show-open-dialog', options)
+	showOpenDialog: (options: any) => ipcRenderer.invoke('show-open-dialog', options),
+	upscaleImage: (data: { threadId: string, messageId: string, imagePath: string, upscaleFactor: string }) => 
+		ipcRenderer.invoke('upscale-image', data)
 }
 
 if (process.contextIsolated) {

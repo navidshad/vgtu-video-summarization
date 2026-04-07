@@ -12,7 +12,7 @@
         <button @click="showDetails = !showDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}" title="Toggle Details">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </button>
-        <button @click="handleSave" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Save Image">
+        <button @click="() => handleSave()" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Save Image">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
         <button @click="data.onDelete" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-red-500/80 text-white transition-all shadow-lg" title="Delete node and branches">
@@ -105,6 +105,53 @@
           </div>
         </template>
       </div>
+
+      <!-- High-Res Upscaling Section -->
+      <div v-if="!isMetadataLoading" class="pt-4 border-t border-white/5 space-y-3">
+          <div class="flex items-center justify-between">
+              <span class="text-[9px] font-black uppercase tracking-widest text-primary-light">High-Res Upscaling</span>
+              <span class="text-[8px] font-bold text-zinc-500 italic">Nano Banana</span>
+          </div>
+          <div class="flex gap-2">
+            <!-- Upscale x2 or Download 2K -->
+            <button 
+                v-if="!isAtLeast2K"
+                @click="handleUpscale('x2')" 
+                :disabled="!!isUpscaling"
+                class="flex-1 px-3 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-[10px] font-bold text-primary-light transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+                <div v-if="isUpscaling === 'x2'" class="w-3 h-3 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
+                {{ isUpscaling === 'x2' ? 'Upscaling...' : 'Upscale x2' }}
+            </button>
+            <button 
+                v-else
+                @click="() => handleSave(mediaUrl(actualFile.upscale2k))"
+                class="flex-1 px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-[10px] font-bold text-green-500 transition-all flex items-center justify-center gap-2"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Download 2K
+            </button>
+
+            <!-- Upscale x4 or Download 4K -->
+            <button 
+                v-if="!isAtLeast4K"
+                @click="handleUpscale('x4')" 
+                :disabled="!!isUpscaling"
+                class="flex-1 px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 border border-accent/20 text-[10px] font-bold text-accent-light transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+                <div v-if="isUpscaling === 'x4'" class="w-3 h-3 border-2 border-accent border-t-transparent animate-spin rounded-full"></div>
+                {{ isUpscaling === 'x4' ? 'Upscaling...' : 'Upscale x4' }}
+            </button>
+            <button 
+                v-else
+                @click="() => handleSave(mediaUrl(actualFile.upscale4k))"
+                class="flex-1 px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 text-[10px] font-bold text-green-500 transition-all flex items-center justify-center gap-2"
+            >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Download 4K
+            </button>
+          </div>
+      </div>
     </div>
     
     <BaseMessageInput 
@@ -136,6 +183,7 @@ import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 import { renderMarkdown } from '../../utils/markdown'
+import { useVideoStore } from '../../stores/videoStore'
 
 const props = defineProps<{ data: any }>()
 const isFullScreen = ref(false)
@@ -145,6 +193,8 @@ const attachedImages = ref<string[]>([])
 const metadata = ref<any>(null)
 const isMetadataLoading = ref(false)
 const previewUrl = ref<string | null>(null)
+const videoStore = useVideoStore()
+const isUpscaling = ref<string | null>(null)
 
 const files = computed(() => props.data.files || [])
 const actualFile = computed(() => files.value.find((f: any) => f.type === 'actual'))
@@ -157,8 +207,11 @@ const mediaUrl = (url?: string) => {
 
 const mediaContentUrl = computed(() => {
   if (previewUrl.value) return previewUrl.value
-  const file = actualFile.value || referenceFrames.value[0]
-  return mediaUrl(file?.url)
+  const file = actualFile.value
+  if (file?.upscale4k) return mediaUrl(file.upscale4k)
+  if (file?.upscale2k) return mediaUrl(file.upscale2k)
+  const fallback = file || referenceFrames.value[0]
+  return mediaUrl(fallback?.url)
 })
 
 const activeFileType = computed(() => {
@@ -187,6 +240,16 @@ const versionedTitle = computed(() => {
   return 'AI Generated Thumbnail'
 })
 
+const isAtLeast2K = computed(() => {
+  if (actualFile.value?.upscale2k) return true
+  return (metadata.value?.width || 0) >= 2000
+})
+
+const isAtLeast4K = computed(() => {
+  if (actualFile.value?.upscale4k) return true
+  return (metadata.value?.width || 0) >= 3800
+})
+
 const fetchMetadata = async () => {
   if (!mediaContentUrl.value || metadata.value || isMetadataLoading.value) return
   isMetadataLoading.value = true
@@ -204,10 +267,39 @@ watch(showDetails, (newVal) => {
   if (newVal) fetchMetadata()
 }, { immediate: true })
 
-const handleSave = async () => {
-  const url = previewUrl.value || mediaUrl(actualFile.value?.url)
+const handleSave = async (specificUrl?: string) => {
+  const url = specificUrl || mediaContentUrl.value
   if (url && (window as any).api) {
     await (window as any).api.saveVideo(url.replace('media://', ''))
+  }
+}
+
+const handleUpscale = async (factor: string) => {
+  const currentPath = mediaContentUrl.value.replace('media://', '')
+  if (!currentPath) return
+
+  isUpscaling.value = factor
+  try {
+    const threadId = videoStore.currentThreadId
+    if (!threadId) throw new Error('No active thread found')
+
+    const resultPath = await (window as any).api.upscaleImage({
+      threadId,
+      messageId: props.data.id,
+      imagePath: currentPath,
+      upscaleFactor: factor
+    })
+    
+    if (resultPath) {
+      previewUrl.value = `media://${resultPath}`
+      // Clear metadata and re-fetch to show new resolution
+      metadata.value = null
+      await fetchMetadata()
+    }
+  } catch (e) {
+    console.error('Upscaling failed:', e)
+  } finally {
+    isUpscaling.value = null
   }
 }
 

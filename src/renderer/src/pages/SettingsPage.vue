@@ -110,7 +110,7 @@
                   getOpLabel(op) }}</span>
                 <select v-model="modelSettings.selection[op]" @change="handleSaveModelSettings"
                   class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all cursor-pointer font-medium hover:border-purple-500/50">
-                  <option v-for="mName in availableModels" :key="mName" :value="mName">{{ mName }}
+                  <option v-for="mName in getModelsForOp(op)" :key="mName" :value="mName">{{ mName }}
                   </option>
                 </select>
               </div>
@@ -265,17 +265,35 @@ const modelSettings = ref<ModelSettings>({
 
 const orderedOperations = computed(() => {
   const allOps = Object.keys(modelSettings.value.selection)
-  const priority = ['raw-transcript', 'corrected-transcript', 'intent', 'timeline-new', 'timeline-edit', 'thumbnail', 'scene-description']
-  return priority.filter(p => allOps.includes(p))
+  const priority = [
+    'raw-transcript', 'corrected-transcript', 'intent', 
+    'timeline-new', 'timeline-edit', 'thumbnail', 
+    'scene-description', 'image-extraction', 'image-intent', 
+    'image-generation', 'image-upscale'
+  ]
+  return priority.filter(op => allOps.includes(op))
 })
 
 const getOpLabel = (op: string) => {
   if (op === 'thumbnail') return 'Thumbnail Generation'
   if (op === 'scene-description') return 'Scene Description'
+  if (op === 'image-extraction') return 'Image Analysis'
+  if (op === 'image-intent') return 'Image Instruction'
+  if (op === 'image-generation') return 'Image Generation'
+  if (op === 'image-upscale') return 'Image Upscaling'
   return String(op).replace('-', ' ')
 }
 
 const availableModels = computed(() => Object.keys(modelSettings.value.pricing))
+
+const getModelsForOp = (op: string) => {
+  const all = availableModels.value
+  if (op === 'image-upscale' || op === 'image-generation' || op === 'thumbnail') {
+    // Only show models that support image output (based on whether image pricing is defined)
+    return all.filter(m => modelSettings.value.pricing[m]?.output?.image !== undefined)
+  }
+  return all
+}
 
 const fetchSettings = async () => {
   tempDir.value = await (window as any).api.getTempDir()

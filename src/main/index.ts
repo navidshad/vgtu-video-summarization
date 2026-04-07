@@ -12,13 +12,16 @@ import * as intent from './pipeline/phases/intent'
 import * as supply from './pipeline/phases/supply'
 import * as assembly from './pipeline/phases/assembly'
 import * as thumbnail from './pipeline/phases/thumbnail'
-import * as imageExtraction from './pipeline/phases/image-extraction'
+
 import * as imageIntent from './pipeline/phases/image-intent'
 import * as imageGeneration from './pipeline/phases/image-generation'
 import { backgroundTaskManager } from './tasks'
+import { GeminiAdapter } from './gemini/adapter'
+
 import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
+import { THREAD_DIRS } from './constants/paths'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -69,11 +72,11 @@ app.whenReady().then(() => {
 	// Set correct appId before any path resolution if possible, 
 	// though getPath might already have been called/cached.
 	electronApp.setAppUserModelId('com.frameflow.app')
-	
+
 	// Initialize managers that depend on app paths
 	settingsManager.init()
 	threadManager.init()
-	
+
 	backgroundTaskManager.init()
 
 	app.on('browser-window-created', (_, window) => {
@@ -129,9 +132,9 @@ app.whenReady().then(() => {
 			checkScenedetectAvailability(),
 			checkYtDlpAvailability()
 		])
-		return { 
-			ffmpegAvailable, 
-			scenedetectAvailable, 
+		return {
+			ffmpegAvailable,
+			scenedetectAvailable,
 			ytDlpAvailable,
 			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
 		}
@@ -226,7 +229,7 @@ app.whenReady().then(() => {
 
 		console.log(`[DEBUG IPC] pipeline configured. Calling pipeline.start() in background...`)
 		activePipelines.set(newAiMessageId, pipeline)
-		
+
 		pipeline.start({})
 			.then(() => {
 				console.log(`[DEBUG IPC] pipeline.start() completed successfully!`)
@@ -266,7 +269,7 @@ app.whenReady().then(() => {
 
 		const selectedPath = result.filePaths[0]
 		const newPath = join(selectedPath, 'FrameFlow')
-		
+
 		if (!fs.existsSync(newPath)) {
 			fs.mkdirSync(newPath, { recursive: true })
 		}
@@ -355,11 +358,11 @@ app.whenReady().then(() => {
 	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
 		return await threadManager.removeMessageBranchFromThread(threadId, messageId)
 	})
- 
+
 	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
 		return await threadManager.updateThreadNodePositions(threadId, positions)
 	})
- 
+
 	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
 		if (!focusedWindow) return cancelId
@@ -397,6 +400,49 @@ app.whenReady().then(() => {
 			console.error('Failed to save video:', error)
 			throw error
 		}
+	})
+
+	ipcMain.handle('upscale-image', async (_event, { threadId, messageId, imagePath, upscaleFactor }) => {
+		console.log(`[DEBUG IPC] upscale-image called: threadId=${threadId}, messageId=${messageId}, upscaleFactor=${upscaleFactor}`)
+		const adapter = GeminiAdapter.create()
+		const thread = threadManager.getThread(threadId)
+		if (!thread) throw new Error('Thread not found')
+
+		const filename = basename(imagePath, extname(imagePath))
+		const outputFilename = `${filename}_upscale_${upscaleFactor.replace('x', '')}x_${Date.now()}.png`
+		const outputPath = join(thread.tempDir, THREAD_DIRS.GENERATED_IMAGES, outputFilename)
+
+		const modelSettings = settingsManager.getModelSettings()
+		const modelName = modelSettings.selection['image-upscale']
+
+		const result = await adapter.upscaleImage(modelName, imagePath, upscaleFactor as any, outputPath)
+
+		// Update message metadata for persistence
+		const message = thread.messages.find((m) => m.id === messageId)
+		if (message && message.files) {
+			const actualFile = message.files.find((f) => f.type === 'actual')
+			if (actualFile) {
+				console.log(`[DEBUG] Updating message ${messageId} with upscale factor ${upscaleFactor}`)
+				if (upscaleFactor === 'x2') actualFile.upscale2k = result.path
+				if (upscaleFactor === 'x4') actualFile.upscale4k = result.path
+
+				await threadManager.updateMessageInThread(threadId, messageId, {
+					files: message.files
+				})
+
+				// Track usage and cost
+				if (result.record) {
+					console.log(`[DEBUG] Tracking upscale usage for ${messageId}, cost: ${result.record.cost}`)
+					await threadManager.updateMessageUsage(threadId, messageId, result.record)
+				}
+			} else {
+				console.warn(`[DEBUG] No actual file found for message ${messageId}`)
+			}
+		} else {
+			console.warn(`[DEBUG] Message ${messageId} not found or has no files. Looking for ID: ${messageId}`)
+		}
+
+		return result.path
 	})
 
 	app.on('activate', function () {

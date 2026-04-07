@@ -319,6 +319,7 @@ watch(() => videoStore.messages, (messages) => {
         else nodeType = 'summary' // Default fallback
 
         data = { 
+          id: msg.id,
           type, 
           content: msg.content, 
           files: msg.files, 

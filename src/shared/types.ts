@@ -35,6 +35,8 @@ export interface BackgroundTask {
 export interface Attachment {
 	url: string;
 	type: FileType;
+	upscale2k?: string; // High-res 2K path
+	upscale4k?: string; // High-res 4K path
 }
 
 export interface Usage {
@@ -184,7 +186,9 @@ export interface ModelPricing {
 	}
 }
 
-export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description' | 'image-extraction' | 'image-intent' | 'image-generation'
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description' | 'image-extraction' | 'image-intent' | 'image-generation' | 'image-upscale'
+
+export type UpscaleFactor = 'x2' | 'x4'
 
 export interface ModelSelection {
 	[key: string]: string // operation -> model name

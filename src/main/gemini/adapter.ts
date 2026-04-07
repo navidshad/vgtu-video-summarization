@@ -1,5 +1,5 @@
 import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
-import { Usage, UsageRecord } from '../../shared/types';
+import { Usage, UsageRecord, UpscaleFactor } from '../../shared/types';
 import { settingsManager } from '../settings';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -587,6 +587,96 @@ export class GeminiAdapter {
 				message = `Gemini Error: ${rawError}`;
 			}
 
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Upscales an image using the Imagen Upscale API.
+	 */
+	async upscaleImage(
+		modelName: string,
+		inputPath: string,
+		upscaleFactor: UpscaleFactor,
+		outputPath: string,
+		signal?: AbortSignal
+	): Promise<{ path: string, record: UsageRecord }> {
+		try {
+			if (!fs.existsSync(inputPath)) {
+				throw new Error(`Input image file not found: ${inputPath}`);
+			}
+
+			const data = fs.readFileSync(inputPath).toString('base64');
+			const mimeType = 'image/jpeg'; // Default for our snapshots
+
+			// Creative Upscaling using generateContent (AI Studio compatible)
+			// This uses the existing image as a reference and reconstructs it at higher resolution.
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent({
+					model: modelName,
+					contents: [
+						{
+							role: 'user',
+							parts: [
+								{ text: "Regenerate this image at high resolution, preserving all details, textures, and composition exactly as shown. Output the result as an image." },
+								{ inlineData: { data, mimeType } }
+							]
+						}
+					],
+					config: {
+						responseModalities: ['IMAGE'],
+						imageConfig: {
+							imageSize: upscaleFactor === 'x2' ? '2K' : '4K'
+						}
+					}
+				}, { signal }) as Promise<any>,
+				signal
+			);
+
+			if (!response.candidates || response.candidates.length === 0) {
+				throw new Error('No candidates returned from the model.');
+			}
+
+			// Extract the image from candidates (inlineData part)
+			let base64Data: string | undefined;
+			for (const part of response.candidates[0].content?.parts || []) {
+				if (part.inlineData) {
+					base64Data = part.inlineData.data;
+					break;
+				}
+			}
+
+			if (!base64Data) {
+				const candidate = response.candidates[0];
+				const finishReason = candidate.finishReason || 'UNKNOWN';
+				throw new Error(`Image Model did not generate high-res image. Reason: ${finishReason}`);
+			}
+
+			const buffer = Buffer.from(base64Data, 'base64');
+
+			// Ensure directory exists
+			const dir = path.dirname(outputPath);
+			if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+			// Save to specified path
+			fs.writeFileSync(outputPath, buffer);
+
+			// Calculate cost - using 1 image count since it's an image generation task
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, 1);
+
+			return {
+				path: outputPath,
+				record: { usage, cost }
+			};
+		} catch (error: any) {
+			if (signal?.aborted) throw error;
+			console.error('Gemini creative upscaling failed:', error);
+			// Wrap and re-throw with clearer message
+			let message = error.message || 'Creative upscaling failed.';
+			if (message.includes('supported by the Vertex AI')) {
+				message = 'The native upscaling method is Vertex-only. Retrying with Creative Re-rendering... (Something went wrong with the fallback)';
+			}
 			throw new Error(message);
 		}
 	}
