@@ -88,7 +88,7 @@ Please update the previous result based on the Refinement Request while maintain
 
 	// Use a maximum of 5 reference images to keep prompt complexity low
 	const allReferenceImages = [...previousFiles, ...selectedFromSupply].slice(0, 5)
-	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
+	const { record, text } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
 
 	// Record usage immediately
 	await context.recordUsage(record)
@@ -96,7 +96,7 @@ Please update the previous result based on the Refinement Request while maintain
 	if (context.signal.aborted) return;
 
 	// Determine title/content for the final message
-	const messageContent = intent.content
+	const messageContent = text || intent.content
 
 	// Finish pipeline
 	// Pass the thumbnail as the main file, and ALL reference images (old and new) in the carousel

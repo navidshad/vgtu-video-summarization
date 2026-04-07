@@ -459,7 +459,7 @@ export class GeminiAdapter {
 		imagePaths: string[] = [],
 		systemInstruction?: string,
 		signal?: AbortSignal
-	): Promise<{ path: string, record: UsageRecord }> {
+	): Promise<{ path: string, text?: string, record: UsageRecord }> {
 		try {
 			// Prepare parts: Image parts FIRST, then text prompt
 			const parts: any[] = []
@@ -492,12 +492,14 @@ export class GeminiAdapter {
 				throw new Error('No candidates returned from the model.');
 			}
 
-			// Extract the image from candidates (inlineData part)
+			// Extract the image from candidates (inlineData part) and text part
 			let base64Data: string | undefined;
+			let modelText: string | undefined;
 			for (const part of response.candidates[0].content?.parts || []) {
 				if (part.inlineData) {
 					base64Data = part.inlineData.data;
-					break;
+				} else if (part.text) {
+					modelText = part.text;
 				}
 			}
 
@@ -510,7 +512,7 @@ export class GeminiAdapter {
 					throw new Error(text);
 				}
 
-				throw new Error(`Image Model did not generate image. Reason: ${finishReason}`);
+				throw new Error(`Image Model did not generate image. Reason: ${finishReason}, Prompt: ${prompt}`);
 			}
 
 			const buffer = Buffer.from(base64Data, 'base64');
@@ -528,6 +530,7 @@ export class GeminiAdapter {
 
 			return {
 				path: outputPath,
+				text: modelText,
 				record: { usage, cost }
 			};
 		} catch (error: any) {

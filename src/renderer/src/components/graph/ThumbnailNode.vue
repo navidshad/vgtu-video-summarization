@@ -76,6 +76,15 @@
 
     <!-- Details Metadata Section -->
     <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
+      <!-- Model Content / Explanation -->
+      <div v-if="data.content" class="pb-4 border-b border-white/5">
+          <div class="text-[8px] font-black uppercase tracking-widest text-primary-light mb-2">Model Feedback</div>
+          <div 
+              class="prose prose-xs dark:prose-invert prose-p:my-0 prose-pre:my-2 prose-ul:my-1 text-zinc-800 dark:text-zinc-300/90 leading-relaxed font-medium"
+              v-html="renderMarkdown(data.content)"
+          ></div>
+      </div>
+      
       <div v-if="metadata || isMetadataLoading" class="grid grid-cols-2 gap-3 pb-4">
         <div v-if="isMetadataLoading" class="col-span-2 py-4 flex items-center justify-center space-x-2">
            <div class="w-3 h-3 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
@@ -126,6 +135,7 @@
 import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
+import { renderMarkdown } from '../../utils/markdown'
 
 const props = defineProps<{ data: any }>()
 const isFullScreen = ref(false)
