@@ -33,7 +33,7 @@
     </div>
 
     <!-- Messages List -->
-    <div class="p-4 space-y-4 nowheel">
+    <div class="p-4 space-y-4">
       <div v-for="msg in data.messages" :key="msg.id"
         class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
         :class="msg.role === 'user' ? 'items-end' : 'items-start'">

@@ -66,10 +66,10 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 Your goal is to create a high-impact, cinematic thumbnail for a video based on a user's request and provided reference frames.
 
 CRITICAL RULES:
-1. VISUAL FIDELITY: You must maintain the identity of the people, objects, and locations shown in the reference frames. Do not generate generic characters if specific people are visible in the source images.
-2. SOURCE MATERIAL: Treat the provided images as your primary palette. Your output should look like it was created by professionally editing and combining elements from the video, not like a standalone AI image.
+1. VISUAL CONSISTENCY: Maintain a consistent appearance for the subjects, objects, and locations shown in the reference frames. Avoid generating generic characters if the source images show clear subjects.
+2. SOURCE MATERIAL: The provided reference frames are your primary baseline. Your output should look like it was professionally edited from these actual video frames.
 3. COMPOSITION: Use principles of good graphic design (Rule of Thirds, leading lines, high contrast) to make the thumbnail "pop".
-4. NO HALLUCINATIONS: Do not add major elements unless explicitly requested by the user.
+4. USER CONTEXT: You are editing material provided by the personal user. Focus on creative enhancement rather than autonomous generation.
 
 When provided with a "previous result" and "original reference frames":
 - PRIORITIZE CONSISTENCY with the previous result unless the user request explicitly asks for a change.
@@ -86,7 +86,8 @@ The provided images include:
 Please update the previous result based on the Refinement Request while maintaining strict visual consistency with the original video content.`
 	}
 
-	const allReferenceImages = [...previousFiles, ...selectedFromSupply]
+	// Use a maximum of 5 reference images to keep prompt complexity low
+	const allReferenceImages = [...previousFiles, ...selectedFromSupply].slice(0, 5)
 	const { record } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal)
 
 	// Record usage immediately

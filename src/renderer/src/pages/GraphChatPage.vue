@@ -139,8 +139,8 @@ watch(() => videoStore.messages, (messages) => {
     childMap[pId].push(m.id)
   })
 
-  // Folding Constants
-  const V_SPACING = 600
+  // Layout Constants
+  const MIN_V_GAP = 150
   const H_SPACING = 600
 
   const strandGroups: Array<{ id: string, messageIds: string[], parentId: string, isResult: boolean }> = []
@@ -226,35 +226,63 @@ watch(() => videoStore.messages, (messages) => {
     }
   })
 
-  // Layout strands
-  strandGroups.forEach((strand) => {
-    const parentNodeId = msgToNodeId[strand.parentId] || strand.parentId
-    const parentPos = nodePositions[parentNodeId] || { x: 0, y: 0 }
-    
-    // IF we have a saved position, USE IT. Otherwise calculate.
-    if (videoStore.currentThread?.nodePositions?.[strand.id]) {
-      nodePositions[strand.id] = videoStore.currentThread.nodePositions[strand.id]
-    } else {
-      const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
-      const index = siblings.indexOf(strand)
-
-      let x = parentPos.x
-      let y = parentPos.y
-      
-      if (strand.parentId === 'root-media') {
-         // Media -> Horizontally offset branches
-         x = parentPos.x + H_SPACING
-         y = parentPos.y + (V_SPACING * index)
-      } else {
-         // Sequential children vertical, branches horizontal
-         if (index === 0) {
-           y = parentPos.y + V_SPACING
-         } else {
-           x = parentPos.x + (H_SPACING * index)
-         }
+    // Helper to estimate node height for layout calculations
+    const getEstimatedHeight = (s: any) => {
+      if (s.isResult) {
+         const m = messageLookup[s.id]
+         if (m?.isPending) return 200
+         return 500 // Typical result node height
       }
-      nodePositions[strand.id] = { x, y }
+      
+      let h = 80 // Base header + padding
+      s.messageIds.forEach((mId: string) => {
+         const m = messageLookup[mId]
+         const text = m.content || ""
+         const lines = Math.max(1, Math.ceil(text.length / 45))
+         h += (lines * 24) + 60
+         if (m.files?.length) h += m.files.length * 160
+      })
+      const lastId = s.messageIds[s.messageIds.length-1]
+      const hasInput = (childMap[lastId] || []).length === 0
+      if (hasInput) h += 100
+      return h
     }
+
+    const strandHeights: Record<string, number> = { 'root-media': isImageThread ? 300 : 350 }
+
+    // Layout strands
+    strandGroups.forEach((strand) => {
+      const parentNodeId = msgToNodeId[strand.parentId] || strand.parentId
+      const parentPos = nodePositions[parentNodeId] || { x: 0, y: 0 }
+      const parentHeight = strandHeights[parentNodeId] || 400
+      
+      // IF we have a saved position, USE IT. Otherwise calculate.
+      if (videoStore.currentThread?.nodePositions?.[strand.id]) {
+        nodePositions[strand.id] = videoStore.currentThread.nodePositions[strand.id]
+      } else {
+        const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
+        const index = siblings.indexOf(strand)
+
+        let x = parentPos.x
+        let y = parentPos.y
+        
+        if (strand.parentId === 'root-media') {
+           // Media -> Horizontally offset branches
+           x = parentPos.x + H_SPACING
+           y = parentPos.y + (index * 600) // Keep horizontal branches separated vertically
+        } else {
+           // Sequential children vertical, branches horizontal
+           if (index === 0) {
+             y = parentPos.y + parentHeight + MIN_V_GAP
+           } else {
+             x = parentPos.x + (H_SPACING * index)
+           }
+        }
+        nodePositions[strand.id] = { x, y }
+      }
+      
+      // Store height for children positioning
+      strandHeights[strand.id] = getEstimatedHeight(strand)
 
     if (strand.isResult) {
       const msg = messageLookup[strand.id]

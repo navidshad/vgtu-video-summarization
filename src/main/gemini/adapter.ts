@@ -55,7 +55,7 @@ export class GeminiAdapter {
 
 				const delay = Math.pow(2, attempt) * 1000;
 				console.warn(`[GEMINI ADAPTER] Attempt ${attempt} failed. Retrying in ${delay}ms... Status: ${error.status || 'Unknown'}. Message: ${error.message}`);
-				
+
 				await new Promise(resolve => {
 					const timer = setTimeout(resolve, delay);
 					if (signal) {
@@ -150,7 +150,7 @@ export class GeminiAdapter {
 		imagePaths?: string[]
 	): Promise<{ data: T, record: UsageRecord }> {
 		const parts: any[] = []
-		
+
 		// Add image parts if provided
 		const validImagePaths: string[] = []
 		if (imagePaths && imagePaths.length > 0) {
@@ -463,7 +463,7 @@ export class GeminiAdapter {
 		try {
 			// Prepare parts: Image parts FIRST, then text prompt
 			const parts: any[] = []
-			
+
 			for (const imgPath of imagePaths) {
 				if (fs.existsSync(imgPath)) {
 					const data = fs.readFileSync(imgPath).toString('base64')
@@ -475,7 +475,7 @@ export class GeminiAdapter {
 					})
 				}
 			}
-			
+
 			parts.push({ text: prompt })
 
 			// For gemini-3.1-flash-image-preview, we use generateContent
@@ -505,20 +505,16 @@ export class GeminiAdapter {
 				const candidate = response.candidates[0];
 				const finishReason = candidate.finishReason || 'UNKNOWN';
 				const text = candidate.content?.parts?.[0]?.text;
-				
-				if (finishReason === 'SAFETY') {
-					throw new Error('Image generation blocked by safety filters. Try a different prompt.');
-				}
 
 				if (text) {
-					throw new Error(`Model returned explanation instead of image: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+					throw new Error(text);
 				}
-				
-				throw new Error(`No image data found (Finish Reason: ${finishReason}). The prompt may be too complex or outside model capabilities.`);
+
+				throw new Error(`Image Model did not generate image. Reason: ${finishReason}`);
 			}
 
 			const buffer = Buffer.from(base64Data, 'base64');
-			
+
 			// Ensure directory exists
 			const dir = path.dirname(outputPath);
 			if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
