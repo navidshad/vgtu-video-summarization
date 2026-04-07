@@ -41,6 +41,17 @@ Leverage multimodal prompts to transform existing images or generate new ones fr
 
 ---
 
+## 🧩 Supported Inputs
+
+FrameFlow handles a wide range of media formats and sources:
+
+- **Video Formats**: Native support for `.mp4`, `.avi`, `.mov`, and `.webm`.
+- **Online Sources**: YouTube, Google Drive, and direct media URLs (via `yt-dlp`).
+- **Images**: High-fidelity `.jpg`, `.png`, and `.webp` for structural reference and multimodal generation.
+- **Optimization**: High-res videos are automatically downscaled (480p) to ensure lightning-fast AI analysis without losing metadata.
+
+---
+
 ## 🎨 Premium Experience (UX)
 
 FrameFlow isn't just a tool; it's an iterative workspace:
