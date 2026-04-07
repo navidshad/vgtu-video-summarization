@@ -41,31 +41,6 @@ Leverage multimodal prompts to transform existing images or generate new ones fr
 
 ---
 
-## 🧠 The "Brain" Pipeline
-
-Our unique **4-Phase Engine** ensures that every output is contextually grounded:
-
-```mermaid
-graph TD
-    A[Input: Video/Link/Image] --> B{Intent Engine}
-    B -- Summarize --> C[Video to Short Video]
-    B -- Extract --> D[Video to Thumbnail]
-    B -- Synthesis --> E[Images to Image]
-    C --> F[Final Multimedia Output]
-    D --> F
-    E --> F
-    
-    subgraph "Core Intelligence"
-    G[Gemini Multimodal]
-    H[FFmpeg Precision]
-    I[PySceneDetect]
-    end
-    
-    B -. Feedback .-> G
-```
-
----
-
 ## 🎨 Premium Experience (UX)
 
 FrameFlow isn't just a tool; it's an iterative workspace:
@@ -84,7 +59,6 @@ FrameFlow isn't just a tool; it's an iterative workspace:
 | 🏗 **Architecture** | [**Deep-Dive**](./docs/architecture.md) | Pipeline logic, intent nodes, and iterative generation. |
 | 🚀 **Installation** | [**Setup Guide**](./docs/setup.md) | Node.js, Gemini API, FFmpeg, and yt-dlp setup. |
 | 🎨 **UI/UX** | [**Design Overview**](./docs/ui_ux.md) | Frontend components and interaction flow. |
-| 🛠 **Reproducibility** | [**Sample Data**](https://drive.google.com/drive/folders/1g2Cp533NPQPtngLvnCuP5T8PZNc-FTZK?usp=sharing) | Testing datasets for consistent verification. |
 
 ---
 
