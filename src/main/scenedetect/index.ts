@@ -10,13 +10,101 @@ const CONTENT_THRESHOLD = 27.0
 const CSV_FILENAME = 'scenes.csv'
 const DURATION_TOLERANCE = 0.1
 
+let resolvedPathCache: string | null = null
+
 /**
- * Checks whether the scenedetect CLI is available on PATH.
- * Returns true if the version command succeeds, false otherwise.
+ * Locate the scenedetect binary across common OS-specific paths.
+ * Returns the command to use (either absolute path or 'scenedetect').
  */
-export function checkScenedetectAvailability(): Promise<boolean> {
+async function resolveScenedetectPath(): Promise<string> {
+    if (resolvedPathCache) return resolvedPathCache
+
+    // 1. Try default PATH first
+    const isAvailable = await new Promise<boolean>((resolve) => {
+        execFile('scenedetect', ['version'], (error) => resolve(!error))
+    })
+    if (isAvailable) {
+        resolvedPathCache = 'scenedetect'
+        return 'scenedetect'
+    }
+
+    const home = tmpdir().split(/[\\/]/).slice(0, 3).join('/') // Rough home dir for cross-platform? No, use os.homedir
+    const { homedir, platform } = await import('os')
+    const userHome = homedir()
+    const isWin = platform() === 'win32'
+    const isMac = platform() === 'darwin'
+
+    const candidates: string[] = []
+
+    if (isMac) {
+        candidates.push(
+            join(userHome, '.pyenv/shims/scenedetect'),
+            join(userHome, 'Library/Python/3.9/bin/scenedetect'), // Specific versions the user has
+            join(userHome, 'Library/Python/3.11/bin/scenedetect'),
+            join(userHome, 'Library/Python/3.12/bin/scenedetect'),
+            '/usr/local/bin/scenedetect',
+            '/opt/homebrew/bin/scenedetect'
+        )
+        // Also check pyenv versions
+        try {
+            const pyenvVersionsDir = join(userHome, '.pyenv/versions')
+            const versions = await fs.readdir(pyenvVersionsDir)
+            for (const v of versions) {
+                candidates.push(join(pyenvVersionsDir, v, 'bin/scenedetect'))
+            }
+        } catch { /* ignore */ }
+    } else if (isWin) {
+        const appData = process.env.APPDATA || join(userHome, 'AppData/Roaming')
+        const localAppData = process.env.LOCALAPPDATA || join(userHome, 'AppData/Local')
+        candidates.push(
+            join(appData, 'Python/Python39/Scripts/scenedetect.exe'),
+            join(appData, 'Python/Python310/Scripts/scenedetect.exe'),
+            join(appData, 'Python/Python311/Scripts/scenedetect.exe'),
+            join(appData, 'Python/Python312/Scripts/scenedetect.exe'),
+            join(localAppData, 'Programs/Python/Python39/Scripts/scenedetect.exe'),
+            join(localAppData, 'Programs/Python/Python311/Scripts/scenedetect.exe'),
+            join(localAppData, 'Programs/Python/Python312/Scripts/scenedetect.exe'),
+            join(userHome, '.pyenv/pyenv-win/bin/scenedetect.bat')
+        )
+    } else {
+        // Linux
+        candidates.push(
+            join(userHome, '.local/bin/scenedetect'),
+            join(userHome, '.pyenv/shims/scenedetect'),
+            '/usr/bin/scenedetect',
+            '/usr/local/bin/scenedetect'
+        )
+    }
+
+    for (const cand of candidates) {
+        try {
+            await fs.access(cand)
+            resolvedPathCache = cand
+            return cand
+        } catch { /* ignore */ }
+    }
+
+    // Last resort: try python3 -m scenedetect
+    const isPythonModuleAvailable = await new Promise<boolean>((resolve) => {
+        execFile('python3', ['-m', 'scenedetect', 'version'], (error) => resolve(!error))
+    })
+    if (isPythonModuleAvailable) {
+        resolvedPathCache = 'PYTHON_MODULE'
+        return 'PYTHON_MODULE'
+    }
+
+    return 'scenedetect' // Final fallback, even if it fails later
+}
+
+/**
+ * Checks whether the scenedetect CLI is available.
+ */
+export async function checkScenedetectAvailability(): Promise<boolean> {
+    const pathOrRef = await resolveScenedetectPath()
+    if (pathOrRef === 'PYTHON_MODULE') return true
+    
     return new Promise((resolve) => {
-        execFile('scenedetect', ['version'], (error) => {
+        execFile(pathOrRef, ['version'], (error) => {
             resolve(!error)
         })
     })
@@ -85,11 +173,11 @@ export class SceneDetector {
      * @returns Array of detected scenes sorted by start time.
      * @throws If the CLI exits non-zero, the CSV is missing, or values cannot be parsed.
      */
-    async detectScenes(videoPath: string): Promise<Scene[]> {
+    async detectScenes(videoPath: string, signal?: AbortSignal): Promise<Scene[]> {
         const tempDir = await fs.mkdtemp(join(tmpdir(), 'scenedetect-'))
 
         try {
-            await this.runScenedetect(videoPath, tempDir)
+            await this.runScenedetect(videoPath, tempDir, signal)
             const csvPath = await this.locateCsvFile(tempDir, videoPath)
             const csvContent = await fs.readFile(csvPath, 'utf-8')
             return this.parseCsv(csvContent)
@@ -106,9 +194,11 @@ export class SceneDetector {
     /**
      * Execute the scenedetect CLI process.
      */
-    private runScenedetect(videoPath: string, outputDir: string): Promise<void> {
+    private async runScenedetect(videoPath: string, outputDir: string, signal?: AbortSignal): Promise<void> {
+        const pathOrRef = await resolveScenedetectPath()
+        
         return new Promise((resolve, reject) => {
-            const args = [
+            const scenedetectArgs = [
                 '-i', videoPath,
                 'detect-content',
                 '-t', String(CONTENT_THRESHOLD),
@@ -118,8 +208,22 @@ export class SceneDetector {
                 '--skip-cuts'
             ]
 
-            execFile('scenedetect', args, (error, _stdout, stderr) => {
+            let cmd: string
+            let args: string[]
+
+            if (pathOrRef === 'PYTHON_MODULE') {
+                cmd = 'python3'
+                args = ['-m', 'scenedetect', ...scenedetectArgs]
+            } else {
+                cmd = pathOrRef
+                args = scenedetectArgs
+            }
+
+            const child = execFile(cmd, args, (error, _stdout, stderr) => {
                 if (error) {
+                    if (signal?.aborted) {
+                        return reject(new Error('Scene detection aborted by user'))
+                    }
                     const code = error.code ?? (error as any).status ?? 'unknown'
                     const stderrMsg = stderr?.trim() || '(no stderr)'
                     console.error(`scenedetect CLI failed for "${videoPath}":`, stderrMsg)
@@ -130,6 +234,13 @@ export class SceneDetector {
                 }
                 resolve()
             })
+
+            if (signal) {
+                signal.addEventListener('abort', () => {
+                    console.log('scenedetect process killed by signal')
+                    child.kill('SIGKILL')
+                })
+            }
         })
     }
 

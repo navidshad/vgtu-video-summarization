@@ -1,5 +1,5 @@
 import { GoogleGenAI, type GenerateContentParameters } from '@google/genai';
-import { Usage, UsageRecord } from '../../shared/types';
+import { Usage, UsageRecord, UpscaleFactor } from '../../shared/types';
 import { settingsManager } from '../settings';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,7 +12,7 @@ export class GeminiAdapter {
 	constructor(apiKey: string) {
 		this.client = new GoogleGenAI({
 			apiKey,
-			apiVersion: 'v1alpha' // Using v1alpha for latest features like thinking
+			apiVersion: 'v1beta' // required for gemini-3.1-flash-image-preview
 		});
 	}
 
@@ -37,13 +37,96 @@ export class GeminiAdapter {
 		};
 	}
 
+	private extractResultText(response: any): string {
+		const candidate = response.candidates?.[0];
+		if (!candidate || !candidate.content || !candidate.content.parts) {
+			return '';
+		}
+
+		// Filter out parts that are explicitly marked as thoughts
+		const resultParts = candidate.content.parts.filter((p: any) => !p.thought && p.text);
+		
+		// If no non-thought text parts found, but there are text parts, 
+		// it might be that the SDK didn't mark them but we have multiple.
+		// Usually the last text part is the result.
+		if (resultParts.length === 0) {
+			const allTextParts = candidate.content.parts.filter((p: any) => p.text);
+			return allTextParts.length > 0 ? allTextParts[allTextParts.length - 1].text : '';
+		}
+
+		return resultParts.map((p: any) => p.text).join('\n');
+	}
+
+	private async withRetry<T>(
+		operation: () => Promise<T>,
+		signal?: AbortSignal,
+		maxRetries: number = 3
+	): Promise<T> {
+		for (let attempt = 1; attempt <= maxRetries; attempt++) {
+			try {
+				return await operation();
+			} catch (error: any) {
+				if (signal?.aborted) throw error;
+
+				const isTransient = this.isTransientError(error);
+				if (!isTransient || attempt === maxRetries) {
+					throw error;
+				}
+
+				const delay = Math.pow(2, attempt) * 1000;
+				console.warn(`[GEMINI ADAPTER] Attempt ${attempt} failed. Retrying in ${delay}ms... Status: ${error.status || 'Unknown'}. Message: ${error.message}`);
+
+				await new Promise(resolve => {
+					const timer = setTimeout(resolve, delay);
+					if (signal) {
+						signal.addEventListener('abort', () => {
+							clearTimeout(timer);
+							resolve(null);
+						}, { once: true });
+					}
+				});
+
+				if (signal?.aborted) throw new Error('Operation aborted during retry backoff');
+			}
+		}
+		throw new Error('Unexpected fallback in withRetry');
+	}
+
+	private isTransientError(error: any): boolean {
+		const message = (error.message || '').toLowerCase();
+		const status = (error.status || (error.error && error.error.code) || '').toString();
+		const code = (error.code || error.cause?.code || '').toString();
+
+		const transientStatuses = ['503', '429', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'DEADLINE_EXCEEDED'];
+		if (transientStatuses.includes(status)) return true;
+
+		const transientCodes = ['UND_ERR_HEADERS_TIMEOUT', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'];
+		if (transientCodes.includes(code)) return true;
+
+		if (
+			message.includes('503') ||
+			message.includes('429') ||
+			message.includes('high demand') ||
+			message.includes('too many requests') ||
+			message.includes('service unavailable') ||
+			message.includes('deadline exceeded') ||
+			message.includes('fetch failed') ||
+			message.includes('timeout')
+		) {
+			return true;
+		}
+
+		return false;
+	}
+
 	/**
 	 * Generates a non-structured result from Gemini.
 	 */
 	async generateText(
 		modelName: string,
 		userPrompt: string,
-		systemInstruction?: string
+		systemInstruction?: string,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const request: GenerateContentParameters = {
 			model: modelName,
@@ -56,14 +139,23 @@ export class GeminiAdapter {
 			};
 		}
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		try {
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
+			return {
+				text: this.extractResultText(response),
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateText failed:`, error);
+			throw error;
+		}
 	}
 
 	/**
@@ -73,11 +165,36 @@ export class GeminiAdapter {
 		modelName: string,
 		userPrompt: string,
 		schema: any,
-		systemInstruction?: string
+		systemInstruction?: string,
+		signal?: AbortSignal,
+		imagePaths?: string[],
+		options?: { includeThinking?: boolean }
 	): Promise<{ data: T, record: UsageRecord }> {
+		const parts: any[] = []
+
+		// Add image parts if provided
+		const validImagePaths: string[] = []
+		if (imagePaths && imagePaths.length > 0) {
+			for (const imgPath of imagePaths) {
+				if (fs.existsSync(imgPath)) {
+					const data = fs.readFileSync(imgPath).toString('base64')
+					parts.push({
+						inlineData: {
+							data,
+							mimeType: 'image/jpeg'
+						}
+					})
+					validImagePaths.push(imgPath)
+				}
+			}
+		}
+
+		// Add text part LAST
+		parts.push({ text: userPrompt })
+
 		const request: GenerateContentParameters = {
 			model: modelName,
-			contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+			contents: [{ role: 'user', parts }],
 			config: {
 				responseMimeType: 'application/json',
 				responseSchema: schema
@@ -88,36 +205,30 @@ export class GeminiAdapter {
 			request.config!.systemInstruction = systemInstruction;
 		}
 
-		const totalUsage: Usage = { promptTokens: 0, candidatesTokens: 0, thinkingTokens: 0, totalTokens: 0 };
-		let totalCost = 0;
-		const MAX_RETRIES = 3;
+		if (options?.includeThinking) {
+			(request.config as any).thinkingConfig = {
+				includeThoughts: true,
+				thinkingBudget: 8000
+			};
+		}
 
-		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			const response = await this.client.models.generateContent(request);
-			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage);
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
 
-			// Accumulate usage and cost
-			totalUsage.promptTokens += usage.promptTokens;
-			totalUsage.candidatesTokens += usage.candidatesTokens;
-			totalUsage.thinkingTokens = (totalUsage.thinkingTokens || 0) + (usage.thinkingTokens || 0);
-			totalUsage.totalTokens += usage.totalTokens;
-			totalCost += cost;
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, validImagePaths.length);
+		const text = this.extractResultText(response);
 
-			const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-			try {
-				return {
-					data: JSON.parse(text) as T,
-					record: { usage: totalUsage, cost: totalCost }
-				};
-			} catch (error) {
-				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
-				if (attempt === MAX_RETRIES) {
-					throw new Error('Invalid JSON response from Gemini after multiple attempts');
-				}
-				// Optional: add a small delay or log the retry
-			}
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
 		}
 
 		throw new Error('Unexpected fallthrough in generateStructuredText');
@@ -147,13 +258,16 @@ export class GeminiAdapter {
 		const sanitizedName = sanitizeFilename(rawName);
 
 		try {
-			const response = await this.client.files.upload({
-				file: uploadPath,
-				config: {
-					mimeType,
-					displayName: sanitizedName
-				}
-			});
+			const response = await this.withRetry(
+				() => this.client.files.upload({
+					file: uploadPath,
+					config: {
+						mimeType,
+						displayName: sanitizedName
+					}
+				}),
+				undefined // upload doesn't support signal directly in our usage context here, but we could add it if needed
+			);
 			return response.uri || '';
 		} finally {
 			if (isTemp && fs.existsSync(uploadPath)) {
@@ -171,7 +285,8 @@ export class GeminiAdapter {
 		userPrompt: string,
 		fileUris: string[],
 		systemInstruction?: string,
-		audioDuration: number = 0
+		audioDuration: number = 0,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const contents = [
 			{
@@ -194,14 +309,23 @@ export class GeminiAdapter {
 			};
 		}
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		try {
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
-		};
+			return {
+				text: this.extractResultText(response),
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateTextFromFiles failed:`, error);
+			throw error;
+		}
 	}
 
 	/**
@@ -213,7 +337,8 @@ export class GeminiAdapter {
 		fileUris: string[],
 		schema: any,
 		systemInstruction?: string,
-		audioDuration: number = 0
+		audioDuration: number = 0,
+		signal?: AbortSignal
 	): Promise<{ data: T, record: UsageRecord }> {
 		const contents = [
 			{
@@ -238,35 +363,23 @@ export class GeminiAdapter {
 			request.config!.systemInstruction = systemInstruction;
 		}
 
-		const totalUsage: Usage = { promptTokens: 0, candidatesTokens: 0, thinkingTokens: 0, totalTokens: 0 };
-		let totalCost = 0;
-		const MAX_RETRIES = 3;
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
 
-		for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-			const response = await this.client.models.generateContent(request);
-			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
+		const text = this.extractResultText(response);
 
-			// Accumulate usage and cost
-			totalUsage.promptTokens += usage.promptTokens;
-			totalUsage.candidatesTokens += usage.candidatesTokens;
-			totalUsage.thinkingTokens = (totalUsage.thinkingTokens || 0) + (usage.thinkingTokens || 0);
-			totalUsage.totalTokens += usage.totalTokens;
-			totalCost += cost;
-
-			const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-			try {
-				return {
-					data: JSON.parse(text) as T,
-					record: { usage: totalUsage, cost: totalCost }
-				};
-			} catch (error) {
-				console.error(`Attempt ${attempt} - Failed to parse Gemini structured response:`, text);
-				if (attempt === MAX_RETRIES) {
-					throw new Error('Invalid JSON response from Gemini after multiple attempts');
-				}
-			}
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
 		}
 
 		throw new Error('Unexpected fallthrough in generateStructuredFromFiles');
@@ -278,7 +391,8 @@ export class GeminiAdapter {
 	async generateDescriptionFromImage(
 		modelName: string,
 		prompt: string,
-		imageUri: string
+		imageUri: string,
+		signal?: AbortSignal
 	): Promise<{ text: string, record: UsageRecord }> {
 		const contents = [
 			{
@@ -295,21 +409,295 @@ export class GeminiAdapter {
 			contents
 		};
 
-		const response = await this.client.models.generateContent(request);
-		const usage = this.extractUsage(response);
-		const cost = GeminiAdapter.calculateCost(modelName, usage);
+		try {
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				signal
+			);
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, 1);
 
-		return {
-			text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
-			record: { usage, cost }
+			return {
+				text: this.extractResultText(response),
+				record: { usage, cost }
+			};
+		} catch (error) {
+			if (signal?.aborted) throw error;
+			console.error(`[GEMINI ADAPTER] generateDescriptionFromImage failed:`, error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Generates a structured result (JSON) from Gemini based on multiple images and a prompt.
+	 */
+	async generateStructuredFromImages<T>(
+		modelName: string,
+		userPrompt: string,
+		imageUris: string[],
+		schema: any,
+		signal?: AbortSignal,
+		options?: { includeThinking?: boolean }
+	): Promise<{ data: T, record: UsageRecord }> {
+		const parts: any[] = imageUris.map(uri => ({
+			fileData: { fileUri: uri, mimeType: 'image/jpeg' }
+		}));
+		parts.push({ text: userPrompt });
+
+		const contents = [{ role: 'user', parts }];
+
+		const request: GenerateContentParameters = {
+			model: modelName,
+			contents,
+			config: {
+				responseMimeType: 'application/json',
+				responseSchema: schema
+			}
 		};
+
+		const response = await this.withRetry(
+			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+			signal
+		);
+
+		const usage = this.extractUsage(response);
+		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, imageUris.length);
+		const text = this.extractResultText(response);
+
+		try {
+			return {
+				data: JSON.parse(text) as T,
+				record: { usage, cost }
+			};
+		} catch (parseError) {
+			console.error(`[GEMINI ADAPTER] Failed to parse structured response:`, text);
+			throw parseError;
+		}
+
+		throw new Error('Unexpected fallthrough in generateStructuredFromImages');
+	}
+
+	/**
+	 * MOCK: Generates an image based on a prompt.
+	 * In a real scenario, this would call the Imagen/Gemini V6 API.
+	 */
+	async generateImage(
+		modelName: string,
+		prompt: string,
+		outputPath: string,
+		imagePaths: string[] = [],
+		systemInstruction?: string,
+		signal?: AbortSignal,
+		options?: { includeThinking?: boolean }
+	): Promise<{ path: string, text?: string, record: UsageRecord }> {
+		try {
+			// Prepare parts: Image parts FIRST, then text prompt
+			const parts: any[] = []
+
+			for (const imgPath of imagePaths) {
+				if (fs.existsSync(imgPath)) {
+					const data = fs.readFileSync(imgPath).toString('base64')
+					parts.push({
+						inlineData: {
+							data,
+							mimeType: 'image/jpeg'
+						}
+					})
+				}
+			}
+
+			parts.push({ text: prompt })
+
+			// For gemini-3.1-flash-image-preview, we use generateContent
+			const requestConfig: any = systemInstruction ? { systemInstruction: systemInstruction } : {};
+			
+			if (options?.includeThinking) {
+				requestConfig.thinkingConfig = {
+					includeThoughts: true,
+					thinkingBudget: 8000
+				};
+			}
+
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent({
+					model: modelName,
+					contents: [{ role: 'user', parts }],
+					config: requestConfig
+				}, { signal }) as Promise<any>,
+				signal
+			);
+
+			if (!response.candidates || response.candidates.length === 0) {
+				throw new Error('No candidates returned from the model.');
+			}
+
+			// Extract the image from candidates (inlineData part) and text part
+			let base64Data: string | undefined;
+			let modelText: string | undefined;
+			
+			for (const part of response.candidates[0].content?.parts || []) {
+				if (part.inlineData) {
+					base64Data = part.inlineData.data;
+				} else if (part.text && !part.thought) {
+					modelText = part.text;
+				}
+			}
+
+			if (!base64Data) {
+				const candidate = response.candidates[0];
+				const finishReason = candidate.finishReason || 'UNKNOWN';
+				const text = this.extractResultText(response);
+
+				if (text) {
+					throw new Error(text);
+				}
+
+				throw new Error(`Image Model did not generate image. Reason: ${finishReason}, Prompt: ${prompt}`);
+			}
+
+			const buffer = Buffer.from(base64Data, 'base64');
+
+			// Ensure directory exists
+			const dir = path.dirname(outputPath);
+			if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+			// Save to specified path
+			fs.writeFileSync(outputPath, buffer);
+
+			// Calculate cost
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage);
+
+			return {
+				path: outputPath,
+				text: modelText,
+				record: { usage, cost }
+			};
+		} catch (error: any) {
+			if (signal?.aborted) throw error;
+			console.error('Gemini image generation failed:', error);
+			// ... existing error parsing logic ...
+			let message = 'Image generation failed.';
+
+			// Try to extract a clean message from common error formats
+			let rawError = error.message;
+			if (typeof rawError === 'string' && rawError.startsWith('{')) {
+				try {
+					const parsed = JSON.parse(rawError);
+					if (parsed.error && parsed.error.message) {
+						rawError = parsed.error.message;
+					} else if (parsed.message) {
+						rawError = parsed.message;
+					}
+				} catch (e) { /* ignore parse error */ }
+			}
+
+			if (error.status === 'NOT_FOUND' || (rawError && rawError.toLowerCase().includes('not found'))) {
+				message = `Model '${modelName}' not found. Please verify your Imagen model settings. Note: 'gemini-3.1-flash-image-preview' is recommended for Gemini 3.`;
+			} else if (rawError) {
+				message = `Gemini Error: ${rawError}`;
+			}
+
+			throw new Error(message);
+		}
+	}
+
+	/**
+	 * Upscales an image using the Imagen Upscale API.
+	 */
+	async upscaleImage(
+		modelName: string,
+		inputPath: string,
+		upscaleFactor: UpscaleFactor,
+		outputPath: string,
+		signal?: AbortSignal
+	): Promise<{ path: string, record: UsageRecord }> {
+		try {
+			if (!fs.existsSync(inputPath)) {
+				throw new Error(`Input image file not found: ${inputPath}`);
+			}
+
+			const data = fs.readFileSync(inputPath).toString('base64');
+			const mimeType = 'image/jpeg'; // Default for our snapshots
+
+			// Creative Upscaling using generateContent (AI Studio compatible)
+			// This uses the existing image as a reference and reconstructs it at higher resolution.
+			const response = await this.withRetry(
+				() => (this.client.models as any).generateContent({
+					model: modelName,
+					contents: [
+						{
+							role: 'user',
+							parts: [
+								{ text: "Regenerate this image at high resolution, preserving all details, textures, and composition exactly as shown. Output the result as an image." },
+								{ inlineData: { data, mimeType } }
+							]
+						}
+					],
+					config: {
+						responseModalities: ['IMAGE'],
+						imageConfig: {
+							imageSize: upscaleFactor === 'x2' ? '2K' : '4K'
+						}
+					}
+				}, { signal }) as Promise<any>,
+				signal
+			);
+
+			if (!response.candidates || response.candidates.length === 0) {
+				throw new Error('No candidates returned from the model.');
+			}
+
+			// Extract the image from candidates (inlineData part)
+			let base64Data: string | undefined;
+			for (const part of response.candidates[0].content?.parts || []) {
+				if (part.inlineData) {
+					base64Data = part.inlineData.data;
+					break;
+				}
+			}
+
+			if (!base64Data) {
+				const candidate = response.candidates[0];
+				const finishReason = candidate.finishReason || 'UNKNOWN';
+				throw new Error(`Image Model did not generate high-res image. Reason: ${finishReason}`);
+			}
+
+			const buffer = Buffer.from(base64Data, 'base64');
+
+			// Ensure directory exists
+			const dir = path.dirname(outputPath);
+			if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+			// Save to specified path
+			fs.writeFileSync(outputPath, buffer);
+
+			// Calculate cost - using 1 image count since it's an image generation task
+			const usage = this.extractUsage(response);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, 1);
+
+			return {
+				path: outputPath,
+				record: { usage, cost }
+			};
+		} catch (error: any) {
+			if (signal?.aborted) throw error;
+			console.error('Gemini creative upscaling failed:', error);
+			// Wrap and re-throw with clearer message
+			let message = error.message || 'Creative upscaling failed.';
+			if (message.includes('supported by the Vertex AI')) {
+				message = 'The native upscaling method is Vertex-only. Retrying with Creative Re-rendering... (Something went wrong with the fallback)';
+			}
+			throw new Error(message);
+		}
 	}
 
 	/**
 	 * Calculates the cost of a request based on usage and model.
 	 * @param audioDuration Duration of audio in seconds if multimodal call.
+	 * @param imageCount Number of images if multimodal call.
 	 */
-	static calculateCost(model: string, usage: Usage, audioDuration: number = 0): number {
+	static calculateCost(model: string, usage: Usage, audioDuration: number = 0, imageCount: number = 0): number {
 		const modelSettings = settingsManager.getModelSettings();
 		const pricing = modelSettings.pricing[model];
 		if (!pricing) return 0;
@@ -346,6 +734,11 @@ export class GeminiAdapter {
 			// Output price applies to both candidates and thinking tokens
 			const totalOutputTokens = usage.candidatesTokens + (usage.thinkingTokens || 0);
 			outputCost = (totalOutputTokens / 1000000) * pricing.output.standard;
+
+			// Handle per-image cost if applicable
+			if (pricing.output.image) {
+				outputCost += pricing.output.image * Math.max(1, imageCount);
+			}
 		}
 
 		return inputCost + outputCost;

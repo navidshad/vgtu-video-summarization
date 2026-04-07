@@ -9,10 +9,17 @@ const IS_MAC = process.platform === 'darwin'
 
 
 
-// Set path to ffmpeg and ffprobe binaries
-if (ffmpegPath) {
+/**
+ * Returns the absolute path to the unpacked ffmpeg binary.
+ */
+export function getFFmpegBinaryPath(): string {
 	const p = typeof ffmpegPath === 'string' ? ffmpegPath : (ffmpegPath as any).path
-	ffmpeg.setFfmpegPath(p.replace('app.asar', 'app.asar.unpacked'))
+	return p.replace('app.asar', 'app.asar.unpacked')
+}
+
+// Initializing ffmpeg and ffprobe paths
+if (ffmpegPath) {
+	ffmpeg.setFfmpegPath(getFFmpegBinaryPath())
 }
 if (ffprobePath) {
 	const p = typeof ffprobePath === 'string' ? ffprobePath : (ffprobePath as any).path
@@ -89,6 +96,41 @@ export async function getVideoDuration(filePath: string): Promise<number> {
 }
 
 /**
+ * Gets comprehensive metadata for a video file.
+ */
+export async function getVideoMetadata(filePath: string): Promise<import('../../shared/types').VideoMetadata> {
+	return new Promise((resolve, reject) => {
+		ffmpeg.ffprobe(filePath, (err, metadata) => {
+			if (err) return reject(err)
+			const videoStream = metadata.streams.find((s) => s.codec_type === 'video')
+			const audioStream = metadata.streams.find((s) => s.codec_type === 'audio')
+			
+			if (!videoStream) {
+				return reject(new Error('No video stream found'))
+			}
+
+			// Parse FPS
+			let fps = 0
+			if (videoStream.r_frame_rate) {
+				const [num, den] = videoStream.r_frame_rate.split('/').map(Number)
+				fps = num / den
+			}
+
+			resolve({
+				duration: metadata.format.duration || 0,
+				width: videoStream.width || 0,
+				height: videoStream.height || 0,
+				size: metadata.format.size || 0,
+				codec: videoStream.codec_name || 'unknown',
+				fps: Math.round(fps * 100) / 100,
+				format: metadata.format.format_name || 'unknown',
+				hasAudio: !!audioStream
+			})
+		})
+	})
+}
+
+/**
  * Returns true if the video resolution is 480p or lower.
  */
 export async function isVideoLowResolution(filePath: string): Promise<boolean> {
@@ -107,13 +149,17 @@ export async function isVideoLowResolution(filePath: string): Promise<boolean> {
 export async function toLowResolution(
 	filePath: string,
 	outputDir: string,
-	onProgress?: (percent: number) => void
+	onProgress?: (percent: number) => void,
+	signal?: AbortSignal
 ): Promise<string> {
 	const ext = extname(filePath).toLowerCase()
 	const rawFilename = basename(filePath, extname(filePath))
 	const filename = sanitizeFilename(rawFilename)
 	const outputPath = join(outputDir, `${filename}_480p${ext}`)
 
+	if (signal?.aborted) {
+		throw new Error('FFmpeg downscaling aborted by user before start')
+	}
 
 	return new Promise((resolve, reject) => {
 		const isWebm = ext === '.webm'
@@ -152,6 +198,13 @@ export async function toLowResolution(
 			])
 		}
 
+		if (signal) {
+			signal.addEventListener('abort', () => {
+				console.log('FFmpeg toLowResolution aborted by signal')
+				command.kill('SIGKILL')
+			})
+		}
+
 		command
 			.output(outputPath)
 			.on('progress', (progress) => {
@@ -161,6 +214,9 @@ export async function toLowResolution(
 			})
 			.on('end', () => resolve(outputPath))
 			.on('error', (err, stdout, stderr) => {
+				if (signal?.aborted) {
+					return reject(new Error('FFmpeg downscaling aborted by user'))
+				}
 				console.error('FFmpeg toLowResolution error:', err)
 				console.error('FFmpeg stderr:', stderr)
 				reject(new Error(`FFmpeg failed: ${err.message}. ${stderr}`))
@@ -175,15 +231,19 @@ export async function toLowResolution(
 export async function toAudio(
 	filePath: string,
 	outputDir: string,
-	onProgress?: (percent: number) => void
+	onProgress?: (percent: number) => void,
+	signal?: AbortSignal
 ): Promise<string> {
 	const rawFilename = basename(filePath, extname(filePath))
 	const filename = sanitizeFilename(rawFilename)
 	const outputPath = join(outputDir, `${filename}.mp3`)
 
+	if (signal?.aborted) {
+		throw new Error('FFmpeg audio extraction aborted by user before start')
+	}
 
 	return new Promise((resolve, reject) => {
-		ffmpeg(filePath)
+		const command = ffmpeg(filePath)
 			.toFormat('mp3')
 			.output(outputPath)
 			.on('progress', (progress) => {
@@ -192,8 +252,21 @@ export async function toAudio(
 				}
 			})
 			.on('end', () => resolve(outputPath))
-			.on('error', (err) => reject(err))
-			.run()
+			.on('error', (err) => {
+				if (signal?.aborted) {
+					return reject(new Error('FFmpeg audio extraction aborted by user'))
+				}
+				reject(err)
+			})
+
+		if (signal) {
+			signal.addEventListener('abort', () => {
+				console.log('FFmpeg toAudio aborted by signal')
+				command.kill('SIGKILL')
+			})
+		}
+
+		command.run()
 	})
 }
 
@@ -206,7 +279,8 @@ export async function assembleVideo(
 	segments: TimelineSegment[],
 	outputDir: string,
 	messageId: string,
-	onProgress?: (percent: number) => void
+	onProgress?: (percent: number) => void,
+	signal?: AbortSignal
 ): Promise<string> {
 	const ext = extname(videoPath)
 	const rawFilename = basename(videoPath, ext)
@@ -216,6 +290,10 @@ export async function assembleVideo(
 
 	if (segments.length === 0) {
 		throw new Error('No segments provided for assembly')
+	}
+
+	if (signal?.aborted) {
+		throw new Error('FFmpeg video assembly aborted by user before start')
 	}
 
 	// Helper to parse SRT-style time string or simplified HH:MM:SS to seconds
@@ -308,6 +386,13 @@ export async function assembleVideo(
 				outputOptions.push('-movflags', '+faststart')
 			}
 
+			if (signal) {
+				signal.addEventListener('abort', () => {
+					console.log('FFmpeg assembleVideo aborted by signal')
+					command.kill('SIGKILL')
+				})
+			}
+
 			command
 				.output(outputPath)
 				.outputOptions(outputOptions)
@@ -324,6 +409,9 @@ export async function assembleVideo(
 					resolve(outputPath)
 				})
 				.on('error', (err, stdout, stderr) => {
+					if (signal?.aborted) {
+						return reject(new Error('FFmpeg video assembly aborted by user'))
+					}
 					console.error('FFmpeg assembly error:', err)
 					console.error('FFmpeg stderr:', stderr)
 					reject(new Error(`FFmpeg assembly failed: ${err.message}. ${stderr}`))
@@ -340,15 +428,20 @@ export async function assembleVideo(
 export async function extractFrame(
 	videoPath: string,
 	timestamp: number,
-	outputDir: string
+	outputDir: string,
+	signal?: AbortSignal
 ): Promise<string> {
 	const ext = extname(videoPath)
 	const rawFilename = basename(videoPath, ext)
 	const filename = sanitizeFilename(rawFilename)
 	const outputPath = join(outputDir, `${filename}_frame_${timestamp.toFixed(2)}.jpg`)
 
+	if (signal?.aborted) {
+		throw new Error('FFmpeg frame extraction aborted by user before start')
+	}
+
 	return new Promise((resolve, reject) => {
-		ffmpeg(videoPath)
+		const command = ffmpeg(videoPath)
 			.seekInput(timestamp)
 			.outputOptions([
 				'-vframes', '1',
@@ -358,9 +451,20 @@ export async function extractFrame(
 			.output(outputPath)
 			.on('end', () => resolve(outputPath))
 			.on('error', (err) => {
+				if (signal?.aborted) {
+					return reject(new Error('FFmpeg frame extraction aborted by user'))
+				}
 				console.error(`Error extracting frame at ${timestamp}:`, err)
 				reject(err)
 			})
-			.run()
+
+		if (signal) {
+			signal.addEventListener('abort', () => {
+				console.log('FFmpeg extractFrame aborted by signal')
+				command.kill('SIGKILL')
+			})
+		}
+
+		command.run()
 	})
 }

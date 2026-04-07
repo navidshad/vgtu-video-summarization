@@ -1,19 +1,21 @@
-import { TimelineSegment, UsageRecord } from '../../shared/types'
-import { TranscriptItem, generateSRT } from '../gemini/utils'
+import { TimelineSegment, EnrichedTimelineSegment, UsageRecord } from '../../shared/types'
+import { TranscriptItem } from '../gemini/utils'
 import { GeminiAdapter } from '../gemini/adapter'
 
 export interface GenerateTimelineOptions {
     userExpectation: string;
-    allSegments: TranscriptItem[];
+    allSegments: EnrichedTimelineSegment[];
     targetDuration: number;
-    baseTimeline?: TimelineSegment[];
+    baseTimeline?: EnrichedTimelineSegment[];
     modelName: string;
     mode: 'new' | 'edit';
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
+    signal?: AbortSignal;
 }
 
-export async function generateTimeline(options: GenerateTimelineOptions): Promise<TimelineSegment[]> {
+
+export async function generateTimeline(options: GenerateTimelineOptions): Promise<EnrichedTimelineSegment[]> {
     const {
         userExpectation,
         allSegments,
@@ -22,60 +24,67 @@ export async function generateTimeline(options: GenerateTimelineOptions): Promis
         onRecordUsage,
         baseTimeline = [],
         modelName,
-        mode
+        mode,
+        signal
     } = options;
 
-    const fullTimelineSRT = generateSRT(allSegments);
+    const fullTranscriptText = formatEnrichedTranscript(allSegments);
     const geminiAdapter = GeminiAdapter.create();
+
 
     if (mode === 'edit') {
         return editTimeline({
             userExpectation,
             allSegments,
-            fullTimelineSRT,
+            fullTranscriptText,
             targetDuration,
             baseTimeline,
             geminiAdapter,
             modelName,
             onUpdateStatus,
-            onRecordUsage
+            onRecordUsage,
+            signal
         });
     } else {
         return generateNewTimeline({
             userExpectation,
             allSegments,
-            fullTimelineSRT,
+            fullTranscriptText,
             targetDuration,
             geminiAdapter,
             modelName,
             onUpdateStatus,
             onRecordUsage,
-            baseTimeline
+            baseTimeline,
+            signal
         });
     }
 }
 
 async function editTimeline(options: {
     userExpectation: string;
-    allSegments: TranscriptItem[];
-    fullTimelineSRT: string;
+    allSegments: EnrichedTimelineSegment[];
+    fullTranscriptText: string;
     targetDuration: number;
-    baseTimeline: TimelineSegment[];
+    baseTimeline: EnrichedTimelineSegment[];
     geminiAdapter: GeminiAdapter;
     modelName: string;
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
-}): Promise<TimelineSegment[]> {
+    signal?: AbortSignal;
+}): Promise<EnrichedTimelineSegment[]> {
+
     const {
         userExpectation,
         allSegments,
-        fullTimelineSRT,
+        fullTranscriptText,
         targetDuration,
         baseTimeline,
         geminiAdapter,
         modelName,
         onUpdateStatus,
-        onRecordUsage
+        onRecordUsage,
+        signal
     } = options;
 
     onUpdateStatus?.(`Editing timeline in one-shot...`);
@@ -87,20 +96,27 @@ async function editTimeline(options: {
     const systemInstruction = `
 You are a video editor assistant.
 Your task is to EDIT an existing video timeline based on the user's technical request.
-You are provided with the FULL transcript (SRT) and the CURRENT timeline.
+You are provided with the FULL transcript and the CURRENT timeline.
 
-The transcript includes [Visual Scene] and [Audio] segments. Use them if they help fulfill the request (e.g. "show more action" -> pick visual scenes).
+The transcript includes BOTH visual descriptions and audio captions for each segment.
+Each segment is exactly one index (starting from 1).
+
+Format per segment:
+INDEX: [START - END] | Visual: Scene description | Audio: Transcript text
 
 Strict Rules for Editing:
 1. MAXIMAL CONSISTENCY: Do NOT change segments from the CURRENT timeline unless the user's request explicitly requires it.
 2. PRESERVE ORDER: Maintain the existing sequence of segments as much as possible.
 3. MINIMAL CHANGES: If a user asks to add something, keep the rest of the timeline identical. If they ask to remove something, only remove that specific part.
 4. ONE-SHOT RESULT: Return the COMPLETE list of indices for the NEW version of the timeline.
-5. RESPECT DURATION: The total duration of the NEW timeline must be close to the Target Duration if specified. If the user asks for a specific length (e.g., "30 seconds"), ensure the selected segments' durations sum up to approximately that value.
+5. RESPECT DURATION: The total duration of the NEW timeline must be close to the Target Duration if specified.
+6. VISUAL CONTEXT: Use the "Visual" part to understand the scene content even if the "Audio" is [Silence].
+7. AVOID HUGE SEGMENTS: If a single segment is longer than 30s and doesn't contain essential audio, avoid picking it unless necessary.
 
 Return ONLY a JSON array of indices (integers) of the segments that should make up the NEW timeline, e.g. [1, 5, 8].
-Indices must refer to the indices in the FULL transcript (SRT).
+Indices refer to the line numbers (starting at 1) of the FULL transcript.
 Do not include any other text.
+
 `;
 
     const prompt = `
@@ -108,8 +124,8 @@ User Editing Request: ${userExpectation}
 Target Duration: ${targetDuration} seconds
 
 -----------------
-FULL transcript (SRT):
-${fullTimelineSRT}
+FULL transcript:
+${fullTranscriptText}
 -----------------
 
 CURRENT timeline:
@@ -120,14 +136,14 @@ Task: Provide a list of indices representing the new timeline after applying the
 `;
 
     try {
-        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
+        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
         console.log(`Gemini response (Edit Mode):`, responseText);
 
         // Record usage for the edit call
         onRecordUsage?.(record);
 
         const indices = parseIndicesFromResponse(responseText);
-        const newTimeline: TimelineSegment[] = [];
+        const newTimeline: EnrichedTimelineSegment[] = [];
 
         for (const idx of indices) {
             const segmentIndex = idx - 1;
@@ -139,6 +155,7 @@ Task: Provide a list of indices representing the new timeline after applying the
                     start: originalSegment.start,
                     end: originalSegment.end,
                     text: originalSegment.text,
+                    visual: originalSegment.visual,
                     duration: duration
                 });
             }
@@ -153,28 +170,31 @@ Task: Provide a list of indices representing the new timeline after applying the
 
 async function generateNewTimeline(options: {
     userExpectation: string;
-    allSegments: TranscriptItem[];
-    fullTimelineSRT: string;
+    allSegments: EnrichedTimelineSegment[];
+    fullTranscriptText: string;
     targetDuration: number;
     geminiAdapter: GeminiAdapter;
     modelName: string;
     onUpdateStatus?: (status: string) => void;
     onRecordUsage?: (record: UsageRecord) => void;
-    baseTimeline?: TimelineSegment[];
-}): Promise<TimelineSegment[]> {
+    baseTimeline?: EnrichedTimelineSegment[];
+    signal?: AbortSignal;
+}): Promise<EnrichedTimelineSegment[]> {
+
     const {
         userExpectation,
         allSegments,
-        fullTimelineSRT,
+        fullTranscriptText,
         targetDuration,
         geminiAdapter,
         modelName,
         onUpdateStatus,
         onRecordUsage,
-        baseTimeline = []
+        baseTimeline = [],
+        signal
     } = options;
 
-    const currentShorterTimeline: TimelineSegment[] = [...baseTimeline];
+    const currentShorterTimeline: EnrichedTimelineSegment[] = [...baseTimeline];
     let currentDuration = calculateTotalDuration(currentShorterTimeline);
 
     let iterationCount = 0;
@@ -184,20 +204,29 @@ async function generateNewTimeline(options: {
 You are a video editor assistant.
 Your task is to select the next best segments from the full transcript to build a shorter video timeline based on the user's request.
 
-You will see segments that are spoken text, and segments in brackets like [Visual Scene: ...] or [Music].
-- [Visual Scene] segments describe what is happening visually when no one is speaking. USE THESE to show relevant actions or set the scene.
-- [Music] or [Applause] can be used for impact or transitions.
+The transcript includes BOTH visual descriptions and audio captions for each segment.
+Each segment is exactly one index (starting from 1).
+
+Format per segment:
+INDEX: [START - END] | Visual: Scene description | Audio: Transcript text
 
 IMPORTANT: Selection Logic
 1. CHRONOLOGICAL ORDER: Unless the user explicitly asks for a non-linear narrative (e.g. "start with the ending", "flashback"), you MUST select segments that appear later in the timeline than the previous ones.
 2. GRADUAL PROGRESSION: The story line should be kept based on timing, and do not mix times. Ideally select the next best segment that continues the flow naturally.
-   - Example: If the timeline has a segment at 00:10:10, do NOT select a segment at 00:08:05. The time must always move forward.
+3. VISUAL CONTEXT: Use the "Visual" part to understand the scene content even if the "Audio" is [Silence]. Use these segments to bridge gaps or set the scene.
+4. AVOID HUGE SEGMENTS: Do NOT pick a single segment that is longer than the Target Duration or consumes most of it (e.g. >30s) unless strictly required by the user's request.
 
 Return ONLY a JSON array of indices (integers) of the selected segments, e.g. [1, 5, 8].
+Indices refer to the line numbers (starting at 1) of the FULL transcript.
 Do not include any other text.
+
 `;
 
     while (currentDuration < targetDuration && iterationCount < MAX_ITERATIONS) {
+        if (signal?.aborted) {
+            console.log('[TIMELINE] Aborting generation loop - signal triggered.')
+            throw new Error('Timeline generation aborted by user')
+        }
         iterationCount++;
         onUpdateStatus?.(`Iteration ${iterationCount} - Duration: ${currentDuration.toFixed(1)}s / ${targetDuration}s`);
 
@@ -210,8 +239,8 @@ User Request: ${userExpectation}
 Target Duration: ${targetDuration} seconds
 
 -----------------
-Full transcript (SRT):
-${fullTimelineSRT}
+Full transcript:
+${fullTranscriptText}
 -----------------
 
 Current built timeline (${currentDuration.toFixed(1)}s):
@@ -222,11 +251,12 @@ Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
-            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction);
-            console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
-
-            // Record usage for each iteration
+            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
+            
+            // Record usage IMMEDIATELY after call finishes, before any abort checks
             onRecordUsage?.(record);
+
+            console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
 
             const indices = parseIndicesFromResponse(responseText);
 
@@ -249,6 +279,7 @@ Task: Pick the next 3 segments to add to the timeline.
                             start: originalSegment.start,
                             end: originalSegment.end,
                             text: originalSegment.text,
+                            visual: originalSegment.visual,
                             duration: duration
                         });
                         addedCount++;
@@ -264,6 +295,7 @@ Task: Pick the next 3 segments to add to the timeline.
             currentDuration = calculateTotalDuration(currentShorterTimeline);
 
         } catch (error) {
+            if (signal?.aborted) throw new Error('Timeline generation aborted by user')
             console.error("Error in generateNewTimeline iteration:", error);
             onUpdateStatus?.(`Error in AI generation: ${error instanceof Error ? error.message : String(error)}`);
             break;
@@ -297,6 +329,14 @@ function calculateDuration(start: string, end: string): number {
 function calculateTotalDuration(segments: TimelineSegment[]): number {
     return segments.reduce((acc, curr) => acc + curr.duration, 0);
 }
+
+function formatEnrichedTranscript(items: EnrichedTimelineSegment[]): string {
+    return items.map((item) => {
+        const duration = item.duration.toFixed(1);
+        return `${item.index}: [${item.start} - ${item.end}] (${duration}s) | Visual: ${item.visual} | Audio: ${item.text}`
+    }).join('\n')
+}
+
 
 function parseIndicesFromResponse(text: string): number[] {
     const jsonMatch = text.match(/\[([\d,\s]+)\]/);

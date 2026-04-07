@@ -1,39 +1,29 @@
 import { PipelineFunction } from '../index'
 import { generateTimeline } from '../../timeline'
-import { enrichTranscriptWithScenes, SceneDescription } from '../../timeline/enrichment'
-import * as ffmpegAdapter from '../../ffmpeg'
 import fs from 'fs'
-import { TranscriptItem } from 'src/main/gemini/utils'
+import { EnrichedTimelineSegment } from '../../../shared/types'
+
+
+export const waitForEnrichTranscript: PipelineFunction = async (data, context) => {
+  console.log(`[GENERATION PHASE] Entering waitForEnrichTranscript`)
+  await context.updateStatus('Waiting for visual and text unification...')
+  await context.waitForTask('enrichment')
+  console.log(`[GENERATION PHASE] Leaving waitForEnrichTranscript`)
+  context.next(data)
+}
 
 export const buildShorterTimeline: PipelineFunction = async (data, context) => {
   context.updateStatus('Preparing for timeline generation...')
 
-  const transcriptPath = context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
+  const transcriptPath = context.preprocessing?.enrichedTranscriptPath || context.preprocessing?.correctedTranscriptPath || context.preprocessing?.transcriptPath || context.preprocessing?.rawTranscriptPath
+  
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
     throw new Error('Transcript file not found. Cannot generate timeline.')
   }
 
   const transcriptJson = fs.readFileSync(transcriptPath, 'utf-8')
-  let transcript = JSON.parse(transcriptJson) as TranscriptItem[]
+  const transcript = JSON.parse(transcriptJson) as EnrichedTimelineSegment[]
 
-  // Enrich with scenes if available
-  if (context.preprocessing.sceneDescriptionsPath && fs.existsSync(context.preprocessing.sceneDescriptionsPath)) {
-    try {
-      const scenesJson = fs.readFileSync(context.preprocessing.sceneDescriptionsPath, 'utf-8')
-      const sceneDescriptions: SceneDescription[] = JSON.parse(scenesJson)
-
-      // We need total duration to close the last gap
-      // Ideally we get it from context or ffmpeg, but for now we can infer or use a large number
-      // Actually we can get it from ffmpegAdapter if we want, or just rely on the last timestamp of transcript
-      // Let's try to get it from metadata if possible, or just use the last transcript end time + gap
-      const videoDuration = await ffmpegAdapter.getVideoDuration(context.preprocessing.audioPath!)
-
-      transcript = enrichTranscriptWithScenes(transcript, sceneDescriptions, videoDuration)
-      context.updateStatus(`Enriched transcript with visual scene data.`)
-    } catch (e) {
-      console.warn("Failed to enrich transcript:", e)
-    }
-  }
 
   const userExpectation = context.intentResult?.content || context.context || "Create a highlight reel."
   const targetDuration = context.intentResult?.duration || 30 // Default 30 seconds
@@ -53,7 +43,8 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
       modelName,
       mode,
       onUpdateStatus: (status) => context.updateStatus(status),
-      onRecordUsage: (record) => context.recordUsage(record)
+      onRecordUsage: (record) => context.recordUsage(record),
+      signal: context.signal
     })
 
     if (shorterTimeline.length === 0) {
@@ -64,11 +55,18 @@ export const buildShorterTimeline: PipelineFunction = async (data, context) => {
     // Finish Pipeline with the generated timeline
     context.updateStatus('Processing complete. Short timeline generated.')
 
+    if (context.signal.aborted) {
+      console.log(`[GENERATION PHASE] Generation aborted before next step.`)
+      return;
+    }
+
     // Ready for the assembly phase (pass timeline in data)
     context.next({ ...data, timeline: shorterTimeline })
 
   } catch (error) {
-    console.error('Error in buildShorterTimeline:', error)
+    if (!context.signal.aborted) {
+      console.error('Error in buildShorterTimeline:', error)
+    }
     // We should probably rely on pipeline error handling, but here we can add context
     throw error
   }

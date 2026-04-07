@@ -3,15 +3,56 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --primary: 59, 130, 246;
+    --secondary: 139, 92, 246;
+    --accent: 16, 185, 129;
+    --zinc-50: 250, 250, 251;
+    --zinc-100: 244, 244, 245;
+  }
+
   html {
     scroll-behavior: smooth;
   }
   
   body {
-    @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 font-sans transition-colors duration-300 antialiased;
+    @apply bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50 font-sans transition-colors duration-700 antialiased;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-heading tracking-tight;
+  }
+
+  ::selection {
+    @apply bg-primary/20 text-primary-dark;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 dark:bg-zinc-900/80 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-premium;
+  }
+  
+  .glass-card-hover {
+    @apply hover:shadow-premium-hover hover:border-primary/30 transition-all duration-500;
+  }
+
+  .input-focus-ring {
+    @apply border-zinc-200 dark:border-zinc-700/50 transition-all duration-300;
+  }
+  
+  .input-focus-ring:focus-within {
+    @apply border-primary/50 ring-4 ring-primary/20 shadow-[0_0_20px_rgba(var(--primary),0.15)] dark:shadow-[0_0_25px_rgba(var(--primary),0.25)];
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-zinc-300/50 dark:bg-zinc-700/50 rounded-full hover:bg-zinc-400/50 dark:hover:bg-zinc-600/50 transition-colors;
   }
 }

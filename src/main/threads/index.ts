@@ -1,10 +1,12 @@
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import { MessageRole, FileType } from '@shared/types'
-import type { Message, Thread, Usage, UsageRecord } from '@shared/types'
+import type { Message, Thread, Usage, UsageRecord, VideoMetadata } from '@shared/types'
 import { settingsManager } from '../settings'
+import { getVideoMetadata } from '../ffmpeg'
+import { THREAD_DIRS } from '../constants/paths'
 
 // Re-export needed types for consumers (if any, though shared is better)
 export { MessageRole, FileType }
@@ -13,10 +15,20 @@ export type { Message }
 
 class ThreadManager {
 	private threadsDir: string
+	private updateQueues: Map<string, Promise<any>> = new Map()
 
 	constructor() {
-		this.threadsDir = path.join(app.getPath('userData'), 'threads')
-		this.ensureThreadsDir()
+		this.threadsDir = ''
+	}
+
+	public init() {
+		try {
+			this.threadsDir = path.join(app.getPath('userData'), 'threads')
+			this.ensureThreadsDir()
+			console.log(`[ThreadManager] Initialized with threadsDir: ${this.threadsDir}`)
+		} catch (error) {
+			console.error('[ThreadManager] Failed to initialize:', error)
+		}
 	}
 
 	private ensureThreadsDir() {
@@ -44,16 +56,78 @@ class ThreadManager {
 	}
 
 	// Create a new thread
-	createThread(videoPath: string, videoName: string): Thread {
+	async createThread(videoPath: string | undefined, videoName: string, imagePaths?: string[]): Promise<Thread> {
 		const id = uuidv4()
+		const tempDir = settingsManager.getThreadTempDir(id)
+		const type = videoPath ? 'video' : 'image'
+		
+		let finalVideoPath = videoPath
+		if (videoPath) {
+			const systemTempDir = settingsManager.getTempDir()
+			
+			// Strict check: No directories allowed as video source
+			if (fs.existsSync(videoPath) && fs.statSync(videoPath).isDirectory()) {
+				throw new Error(`Invalid video source: "${videoPath}" is a directory. Please provide a valid video file.`)
+			}
+
+			if (videoPath.startsWith(systemTempDir)) {
+				try {
+					const videoDir = path.join(tempDir, THREAD_DIRS.VIDEO)
+					if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true })
+					
+					// Sanitize the name for the filesystem
+					const sanitizedName = videoName.replace(/[^\x00-\x7F]/g, '').replace(/[^a-zA-Z0-9.-]/g, '_').trim()
+					const targetPath = path.join(videoDir, sanitizedName)
+					
+					fs.renameSync(videoPath, targetPath)
+					finalVideoPath = targetPath
+					
+					// Cleanup empty source download folder
+					const sourceDir = path.dirname(videoPath)
+					if (sourceDir !== systemTempDir && fs.existsSync(sourceDir) && fs.readdirSync(sourceDir).length === 0) {
+						fs.rmdirSync(sourceDir)
+					}
+				} catch (error) {
+					console.error(`Failed to move video to thread directory:`, error)
+					// Fallback to original path if move fails
+				}
+			}
+		}
+
+		const sourceImages: string[] = []
+		if (imagePaths && imagePaths.length > 0) {
+			const imagesDir = path.join(tempDir, THREAD_DIRS.IMAGES)
+			if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true })
+			
+			for (const imgPath of imagePaths) {
+				const destPath = path.join(imagesDir, path.basename(imgPath))
+				fs.copyFileSync(imgPath, destPath)
+				sourceImages.push(destPath)
+			}
+		}
+
+
+		let videoMetadata: VideoMetadata | undefined
+		if (finalVideoPath) {
+			try {
+				videoMetadata = await getVideoMetadata(finalVideoPath)
+			} catch (error) {
+				console.error(`Failed to extract metadata for ${finalVideoPath}:`, error)
+			}
+		}
+
 		const thread: Thread = {
 			id,
 			title: videoName,
-			videoPath,
-			preprocessing: {},
-			tempDir: settingsManager.getThreadTempDir(id),
+			type,
+			videoPath: finalVideoPath,
+			preprocessing: {
+				sourceImages: sourceImages.length > 0 ? sourceImages : undefined
+			},
+			tempDir,
 			messages: [],
 			versionCounter: 0,
+			videoMetadata,
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
@@ -62,16 +136,151 @@ class ThreadManager {
 		return thread
 	}
 
+
+	// Helper to normalize paths (handles symlinks like /var vs /private/var on macOS)
+	private normalize(p: string | undefined): string | undefined {
+		if (!p) return p
+		try {
+			if (fs.existsSync(p)) return fs.realpathSync(p)
+		} catch (e) {
+			// Fallback to absolute path if realpath fails
+		}
+		return path.resolve(p)
+	}
+
+	// Helper to repair paths in a thread if it was moved
+	private repairThreadPaths(thread: Thread): Thread {
+		const currentArtifactDir = settingsManager.getTempDir()
+		const threadId = thread.id
+		const expectedTempDir = path.join(currentArtifactDir, threadId)
+
+		// Robust comparison using normalized paths
+		const normalizedCurrent = this.normalize(thread.tempDir)
+		const normalizedExpected = this.normalize(expectedTempDir)
+
+		if (normalizedCurrent !== normalizedExpected) {
+			if (fs.existsSync(expectedTempDir)) {
+				console.log(`[ThreadManager] Repairing paths for thread ${threadId}: ${thread.tempDir} -> ${expectedTempDir}`)
+
+				const oldRoot = thread.tempDir
+				const newRoot = expectedTempDir
+
+				const fixPath = (p: string | undefined) => {
+					if (!p) return p
+					if (p.startsWith(oldRoot)) {
+						return p.replace(oldRoot, newRoot)
+					}
+					return p
+				}
+
+				// Update root tempDir
+				thread.tempDir = newRoot
+
+				// Update video path
+				thread.videoPath = fixPath(thread.videoPath)
+
+				// Update preprocessing paths
+				if (thread.preprocessing) {
+					thread.preprocessing.audioPath = fixPath(thread.preprocessing.audioPath)
+					thread.preprocessing.lowResVideoPath = fixPath(thread.preprocessing.lowResVideoPath)
+					thread.preprocessing.transcriptPath = fixPath(thread.preprocessing.transcriptPath)
+					thread.preprocessing.sceneTimesPath = fixPath(thread.preprocessing.sceneTimesPath)
+					thread.preprocessing.rawTranscriptPath = fixPath(thread.preprocessing.rawTranscriptPath)
+					thread.preprocessing.sceneDescriptionsPath = fixPath(thread.preprocessing.sceneDescriptionsPath)
+					thread.preprocessing.enrichedTranscriptPath = fixPath(thread.preprocessing.enrichedTranscriptPath)
+
+					if (thread.preprocessing.sourceImages) {
+						thread.preprocessing.sourceImages = thread.preprocessing.sourceImages.map(fixPath) as string[]
+					}
+				}
+
+				// Update message file paths
+				thread.messages = thread.messages.map(msg => {
+					if (msg.files) {
+						msg.files = msg.files.map(f => ({
+							...f,
+							url: fixPath(f.url) || ''
+						}))
+					}
+					if (msg.attachedImages) {
+						msg.attachedImages = msg.attachedImages.map(fixPath) as string[]
+					}
+					return msg
+				})
+
+				// Save the repaired thread back to metadata and mirror it
+				this.saveThread(thread)
+			}
+		}
+
+		return thread
+	}
+
+	// Sync threads between userData and artifact directory
+	syncWithArtifactDir() {
+		this.ensureThreadsDir()
+		const currentArtifactDir = settingsManager.getTempDir()
+
+		if (!fs.existsSync(currentArtifactDir)) return
+
+		const projectFolders = fs.readdirSync(currentArtifactDir).filter(f => {
+			const fullPath = path.join(currentArtifactDir, f)
+			return fs.statSync(fullPath).isDirectory() && fs.existsSync(path.join(fullPath, 'thread.json'))
+		})
+
+		for (const folder of projectFolders) {
+			const metadataPath = this.getThreadPath(folder)
+			const hasMetadata = fs.existsSync(metadataPath)
+
+			if (!hasMetadata) {
+				console.log(`[ThreadManager] Recovering project metadata for ${folder} from artifact directory...`)
+				try {
+					const mirrorPath = path.join(currentArtifactDir, folder, 'thread.json')
+					const content = fs.readFileSync(mirrorPath, 'utf-8')
+					const thread = JSON.parse(content) as Thread
+
+					// Force path repair upon recovery to ensure it matches current setup
+					const repairedThread = this.repairThreadPaths(thread)
+					this.saveThread(repairedThread)
+					console.log(`[ThreadManager] Successfully recovered project ${folder}`)
+				} catch (error) {
+					console.error(`[ThreadManager] Failed to recover project ${folder}:`, error)
+				}
+			} else {
+				// Even if metadata exists, we trigger a repair check to be safe
+				try {
+					const content = fs.readFileSync(metadataPath, 'utf-8')
+					const thread = JSON.parse(content) as Thread
+					this.repairThreadPaths(thread)
+				} catch (e) {
+					// Ignore parse errors here, getAllThreads will handle them
+				}
+			}
+		}
+	}
+
 	// Get all threads (for the list view)
 	getAllThreads(): Thread[] {
+		// First, sync with the artifact directory to recover any "lost" projects
+		this.syncWithArtifactDir()
+
 		this.ensureThreadsDir()
 		const files = fs.readdirSync(this.threadsDir).filter(file => file.endsWith('.json'))
 		const threads: Thread[] = []
 
 		for (const file of files) {
+			const filePath = path.join(this.threadsDir, file)
 			try {
-				const content = fs.readFileSync(path.join(this.threadsDir, file), 'utf-8')
-				const thread = JSON.parse(content)
+				const content = fs.readFileSync(filePath, 'utf-8')
+				let thread = JSON.parse(content) as Thread
+
+				// Try to repair paths if they seem broken/moved
+				thread = this.repairThreadPaths(thread)
+				
+				// Mark as missing if artifacts directory is not found, but DO NOT DELETE metadata.
+				// This allows the user to repair the path or recover files manually.
+				thread.missing = !!(thread.tempDir && !fs.existsSync(thread.tempDir))
+				
 				threads.push(thread)
 			} catch (error) {
 				console.error(`Failed to parse thread file ${file}:`, error)
@@ -98,19 +307,43 @@ class ThreadManager {
 		}
 	}
 
-	// Update a thread
-	updateThread(id: string, updates: Partial<Thread>): Thread | null {
-		const thread = this.getThread(id)
-		if (!thread) return null
+	// Update a thread atomically
+	updateThread(id: string, updates: Partial<Thread>): Promise<Thread | null> {
+		const existingQueue = this.updateQueues.get(id) || Promise.resolve()
 
-		const updatedThread = {
-			...thread,
-			...updates,
-			updatedAt: Date.now()
-		}
+		const nextUpdate = existingQueue.then(async () => {
+			const thread = this.getThread(id)
+			if (!thread) return null
 
-		this.saveThread(updatedThread)
-		return updatedThread
+			const updatedThread = {
+				...thread,
+				...updates,
+				updatedAt: Date.now()
+			}
+
+			this.saveThread(updatedThread)
+
+			// Broadcast update to all renderer windows
+			BrowserWindow.getAllWindows().forEach(win => {
+				win.webContents.send('thread-updated', updatedThread)
+			})
+
+			return updatedThread
+		}).catch(err => {
+			console.error(`Atomic update failed for thread ${id}:`, err)
+			return null
+		})
+
+		this.updateQueues.set(id, nextUpdate)
+
+		// Optional: clean up map if queue is idle (not strictly necessary for small number of threads)
+		nextUpdate.finally(() => {
+			if (this.updateQueues.get(id) === nextUpdate) {
+				// Don't delete if another update was already queued
+			}
+		})
+
+		return nextUpdate
 	}
 
 	private deleteFile(filePath: string) {
@@ -190,36 +423,30 @@ class ThreadManager {
 	}
 
 	// Helper to add a message to a thread
-	addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Message | null {
-		const thread = this.getThread(threadId)
-		if (!thread) return null
-
+	async addMessageToThread(threadId: string, message: Omit<Message, 'id' | 'createdAt'>): Promise<Message | null> {
+		const id = uuidv4()
+		const createdAt = Date.now()
 		const fullMessage: Message = {
-			id: uuidv4(),
-			createdAt: Date.now(),
+			id,
+			createdAt,
 			...message
 		}
 
-		thread.messages.push(fullMessage)
-		thread.updatedAt = Date.now()
+		await this.updateThread(threadId, {
+			messages: [...(this.getThread(threadId)?.messages || []), fullMessage]
+		})
 
-		this.saveThread(thread)
 		return fullMessage
 	}
 
 	// Update specific message in a thread
-	updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
-
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
-
-		thread.messages[msgIndex] = { ...thread.messages[msgIndex], ...updates }
-		thread.updatedAt = Date.now()
-
-		this.saveThread(thread)
-		return true
+	async updateMessageInThread(threadId: string, messageId: string, updates: Partial<Message>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m =>
+				m.id === messageId ? { ...m, ...updates } : m
+			)
+		})
+		return !!result
 	}
 
 	getNextVersion(threadId: string): number {
@@ -232,32 +459,33 @@ class ThreadManager {
 	}
 
 	// Update usage and cost for a message
-	updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): boolean {
-		const thread = this.getThread(threadId)
-		if (!thread) return false
+	async updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			messages: (this.getThread(threadId)?.messages || []).map(m => {
+				if (m.id !== messageId) return m
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
+				const newUsage: Usage = {
+					promptTokens: (m.usage?.promptTokens || 0) + record.usage.promptTokens,
+					candidatesTokens: (m.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
+					thinkingTokens: (m.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
+					totalTokens: (m.usage?.totalTokens || 0) + record.usage.totalTokens
+				}
 
-		const currentMsg = thread.messages[msgIndex]
-		const newUsage: Usage = {
-			promptTokens: (currentMsg.usage?.promptTokens || 0) + record.usage.promptTokens,
-			candidatesTokens: (currentMsg.usage?.candidatesTokens || 0) + record.usage.candidatesTokens,
-			thinkingTokens: (currentMsg.usage?.thinkingTokens || 0) + (record.usage.thinkingTokens || 0),
-			totalTokens: (currentMsg.usage?.totalTokens || 0) + record.usage.totalTokens
-		}
+				return {
+					...m,
+					usage: newUsage,
+					cost: (m.cost || 0) + record.cost
+				}
+			})
+		})
+		return !!result
+	}
 
-		const newCost = (currentMsg.cost || 0) + record.cost
-
-		thread.messages[msgIndex] = {
-			...currentMsg,
-			usage: newUsage,
-			cost: newCost
-		}
-
-		thread.updatedAt = Date.now()
-		this.saveThread(thread)
-		return true
+	async updateThreadNodePositions(threadId: string, positions: Record<string, { x: number; y: number }>): Promise<boolean> {
+		const result = await this.updateThread(threadId, {
+			nodePositions: positions
+		})
+		return !!result
 	}
 	// Reset all pending messages to non-pending (e.g. on app startup or shutdown)
 	resetPendingMessages(): void {
@@ -293,6 +521,50 @@ class ThreadManager {
 		}).join('\n\n')
 	}
 
+	// Traverse the node tree backwards via editRefId as the parent link to form an isolated branch context
+	getBranchContext(threadId: string, messageId?: string): { text: string, attachedImages: string[] } {
+		const thread = this.getThread(threadId)
+		if (!thread) return { text: '', attachedImages: [] }
+
+		if (!messageId) {
+			const text = this.getThreadContext(threadId)
+			// For full thread context, collect ALL attached images from ALL messages
+			const attachedImages = Array.from(new Set(
+				thread.messages.flatMap(m => m.attachedImages || [])
+			))
+			return { text, attachedImages }
+		}
+
+		const branchMessages: Message[] = []
+		let currentMsgId: string | undefined = messageId
+
+		while (currentMsgId) {
+			const msg = thread.messages.find(m => m.id === currentMsgId)
+			if (!msg) break
+			
+			branchMessages.push(msg)
+			currentMsgId = msg.editRefId
+		}
+
+		// Array is constructed backward (leaf to root), reverse it chronologically
+		branchMessages.reverse()
+
+		const text = branchMessages.map(m => {
+			let content = `${m.role.toUpperCase()}: ${m.content}`
+			if (m.timeline && m.timeline.length > 0) {
+				const timelineText = m.timeline.map(t => `[${t.start} - ${t.end}] ${t.text}`).join('\n')
+				content += `\n(AI Generated Timeline):\n${timelineText}`
+			}
+			return content
+		}).join('\n\n')
+
+		const attachedImages = Array.from(new Set(
+			branchMessages.flatMap(m => m.attachedImages || [])
+		))
+
+		return { text, attachedImages }
+	}
+
 	// Get the last user message in a thread
 	getLatestUserMessage(threadId: string): Message | null {
 		const thread = this.getThread(threadId)
@@ -300,31 +572,48 @@ class ThreadManager {
 		return [...thread.messages].reverse().find(m => m.role === MessageRole.User) || null
 	}
 
-	// Remove a message from a thread and delete its files
-	removeMessageFromThread(threadId: string, messageId: string): boolean {
+	// Remove a message from a thread and all its descendants recursively
+	async removeMessageBranchFromThread(threadId: string, messageId: string): Promise<boolean> {
 		const thread = this.getThread(threadId)
 		if (!thread) return false
 
-		const msgIndex = thread.messages.findIndex(m => m.id === messageId)
-		if (msgIndex === -1) return false
+		const toRemove = new Set<string>()
+		const collect = (id: string) => {
+			if (toRemove.has(id)) return
+			toRemove.add(id)
+			const children = thread.messages.filter(m => m.editRefId === id)
+			children.forEach(c => collect(c.id))
+		}
 
-		const msg = thread.messages[msgIndex]
+		collect(messageId)
 
-		// Delete associated files (except original)
-		if (msg.files) {
-			for (const file of msg.files) {
-				if (file.type !== FileType.Original) {
-					this.deleteFile(file.url)
+		// Delete associated files for all messages in the branch (except original and protected reference/analysis files)
+		for (const id of toRemove) {
+			const msg = thread.messages.find(m => m.id === id)
+			if (msg && msg.files) {
+				for (const file of msg.files) {
+					if (file.type !== FileType.Original) {
+						const cleanPath = file.url.replace('file://', '').replace('media://', '')
+						
+						// Only allow deletion if it belongs to generated directories
+						const isGenerated = cleanPath.includes(`/${THREAD_DIRS.GENERATED_IMAGES}/`) || 
+						                    cleanPath.includes(`/${THREAD_DIRS.GENERATED_VIDEOS}/`)
+						
+						if (isGenerated) {
+							this.deleteFile(file.url)
+						} else {
+							console.log(`[ThreadManager] Skipping deletion of reference/analysis file during node removal: ${cleanPath}`)
+						}
+					}
 				}
 			}
 		}
 
-		// Remove from messages array
-		thread.messages.splice(msgIndex, 1)
-		thread.updatedAt = Date.now()
+		const result = await this.updateThread(threadId, {
+			messages: thread.messages.filter(m => !toRemove.has(m.id))
+		})
 
-		this.saveThread(thread)
-		return true
+		return !!result
 	}
 }
 

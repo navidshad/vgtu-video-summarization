@@ -1,0 +1,206 @@
+<template>
+  <div
+    class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
+    <Handle type="target" :position="Position.Top"
+      class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
+
+    <!-- Header with Actions -->
+    <div
+      class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"></div>
+        <span
+          class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
+      </div>
+      <div class="flex items-center space-x-1">
+        <button v-if="!showInput && !data.hasInputInitially" @click="showInput = true"
+          class="p-1 hover:bg-blue-500/10 rounded-md text-zinc-400 hover:text-blue-500 transition-colors"
+          title="Branch from this node">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+        </button>
+        <button @click="data.onDelete"
+          class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors"
+          title="Delete node and branches">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+            </path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Messages List -->
+    <div class="p-4 space-y-4">
+      <div v-for="msg in data.messages" :key="msg.id"
+        class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        :class="msg.role === 'user' ? 'items-end' : 'items-start'">
+
+        <div class="flex items-center space-x-2 px-1">
+          <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role
+          }}</span>
+          <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
+            class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer opacity-0 group-hover:opacity-100 uppercase">
+            Retry</div>
+        </div>
+
+        <div
+          class="px-4 py-2.5 rounded-[1.25rem] text-sm leading-relaxed max-w-[90%] break-words relative overflow-hidden transition-all duration-300 group/msg"
+          :class="[
+            msg.role === 'user'
+              ? 'bg-gradient-to-br from-primary to-primary-dark text-white rounded-tr-none shadow-lg shadow-primary/20 font-medium'
+              : 'bg-white/60 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 rounded-tl-none border border-black/5 dark:border-white/5 backdrop-blur-sm',
+            msg.isPending ? 'ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10 transition-all duration-1000 animate-pulse' : ''
+          ]">
+
+          <button v-if="msg.content && !msg.isPending" @click="copyMessage(msg.id, msg.content)"
+            class="absolute top-1 right-1 p-1.5 rounded-lg opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-10"
+            :class="[
+              msg.role === 'user'
+                ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                : 'hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
+            ]" title="Copy message">
+            <svg v-if="copiedId !== msg.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+              </path>
+            </svg>
+            <svg v-else class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </button>
+
+          <div v-if="msg.isPending && !msg.content"
+            class="text-zinc-400 italic font-medium flex items-center space-x-2">
+            <span>AI is thinking...</span>
+          </div>
+          <div v-else v-html="renderMarkdown(msg.content)"
+            class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
+
+          <!-- Files -->
+          <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
+            class="mt-3 space-y-2">
+            <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url"
+              class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden">
+              <div v-if="file.url.match(/\.(jpg|jpeg|png|webp)$/i) || file.type === 'preview' || file.type === 'actual'"
+                class="mb-2 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 aspect-video bg-black/20">
+                <img :src="mediaUrl(file.url)"
+                  class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" />
+              </div>
+
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-col min-w-0">
+                  <span class="text-[8px] font-black uppercase tracking-widest text-primary/70">{{ file.type }}</span>
+                  <span class="text-[9px] truncate text-zinc-500 font-mono">{{ file.url.split('/').pop() }}</span>
+                </div>
+                <button @click.stop="handleSave(file.url)"
+                  class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0"
+                  title="Save">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10"
+                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="msg.isPending" class="mt-3 pt-2 border-t border-blue-500/10 flex items-center justify-between">
+            <div class="flex items-center space-x-2 text-[10px] font-bold text-blue-500 uppercase tracking-tighter">
+              <div class="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
+              <span>Active Task</span>
+            </div>
+
+            <button v-if="msg.isPending" @click="videoStore.abortProcessing(msg.id)"
+              class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40 ml-4"
+              title="Stop process">
+              <div class="w-1.5 h-1.5 bg-red-500 rounded-sm"></div>
+              <span class="text-[9px] font-bold tracking-wider uppercase leading-none">Stop</span>
+            </button>
+
+            <div class="flex space-x-1 grayscale opacity-50 ml-auto">
+              <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0s]"></div>
+              <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+              <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Section -->
+    <BaseMessageInput v-if="data.hasInputInitially || showInput" v-model="input" v-model:attachedImages="attachedImages"
+      :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]" @send="submit" />
+
+    <Handle type="source" :position="Position.Bottom"
+      class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import { Handle, Position } from '@vue-flow/core'
+import { useVideoStore } from '../../stores/videoStore'
+import { renderMarkdown } from '../../utils/markdown'
+import BaseMessageInput from '../chat/BaseMessageInput.vue'
+
+const props = defineProps<{ data: any }>()
+const videoStore = useVideoStore()
+const input = ref('')
+const showInput = ref(false)
+const copiedId = ref<string | null>(null)
+const attachedImages = ref<string[]>([])
+
+const copyMessage = (id: string, content: string) => {
+  navigator.clipboard.writeText(content).then(() => {
+    copiedId.value = id
+    setTimeout(() => {
+      if (copiedId.value === id) copiedId.value = null
+    }, 2000)
+  })
+}
+
+const submit = (text: string, images: string[]) => {
+  if ((text.trim() || images.length > 0) && props.data.onSubmit) {
+    props.data.onSubmit(text, images)
+    input.value = ''
+    attachedImages.value = []
+    showInput.value = false
+  }
+}
+
+const mediaUrl = (url: string) => {
+  if (!url) return ''
+  return url.startsWith('media://') ? url : `media://${url}`
+}
+
+const handleSave = async (url: string) => {
+  if (url && (window as any).api) {
+    const cleanPath = url.replace('media://', '')
+    await (window as any).api.saveVideo(cleanPath)
+  }
+}
+</script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.3);
+}
+</style>

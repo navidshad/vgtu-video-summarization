@@ -13,8 +13,25 @@
 				<EmptyState v-else-if="videoStore.threads.length === 0" @create="router.push('/upload')" />
 
 				<div v-else class="grid gap-10 md:grid-cols-2 lg:grid-cols-3 pb-20">
-					<!-- New Edit Card -->
-					<NewThreadCard @click="router.push('/upload')" />
+					<!-- New Video Edit Card -->
+					<NewThreadCard 
+						title="New Video Edit" 
+						description="Transform your video into a concise masterpiece"
+						@click="router.push('/upload')" 
+					/>
+
+					<!-- New Image Edit Card -->
+					<NewThreadCard 
+						title="New Image Edit" 
+						description="Create stunning visuals from your image collection"
+						@click="handleCreateImageEdit"
+					>
+						<template #icon>
+							<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+							</svg>
+						</template>
+					</NewThreadCard>
 
 					<ThreadCard v-for="(thread, index) in videoStore.threads" :key="thread.id" :thread="thread"
 						@open="openThread" @delete="handleDeleteThread" />
@@ -39,6 +56,20 @@ const loading = ref(true)
 
 const openThread = (id: string) => {
 	router.push(`/chat/${id}`)
+}
+
+const handleCreateImageEdit = async () => {
+	const result = await (window as any).api.showOpenDialog({
+		title: 'Select Images for your collection',
+		properties: ['openFile', 'multiSelections'],
+		filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp'] }]
+	})
+
+	if (result && !result.canceled && result.filePaths.length > 0) {
+		const firstFile = result.filePaths[0].split('/').pop() || 'Image Collection'
+		const threadId = await videoStore.createThread(undefined, `Edit: ${firstFile}`, result.filePaths)
+		router.push(`/chat/${threadId}`)
+	}
 }
 
 const handleDeleteThread = async (id: string) => {

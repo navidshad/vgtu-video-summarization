@@ -1,4 +1,5 @@
 import { TranscriptItem } from '../gemini/utils'
+import { EnrichedTimelineSegment } from '../../shared/types'
 
 export interface SceneDescription {
 	index: number
@@ -6,26 +7,24 @@ export interface SceneDescription {
 	description: string
 }
 
-const MIN_GAP_DURATION = 2.0 // Minimum 2 seconds gap to insert a visual scene
+const MIN_GAP_DURATION = 0.5 // Minimum gap to insert a dedicated visual-only segment
+const MAX_GAP_CHUNK_DURATION = 15.0 // Maximum duration for a single silence segment
 
 /**
- * Enriches the transcript by filling gaps with visual scene descriptions.
+ * Enriches the transcript by merging visual scene descriptions into every segment.
+ * Ensures that even audio segments have visual context, and gaps are filled with visual-only segments.
  */
 export function enrichTranscriptWithScenes(
 	transcript: TranscriptItem[],
 	sceneDescriptions: SceneDescription[],
 	totalDuration: number
-): TranscriptItem[] {
-	// 1. Convert transcript times to seconds for easier processing
+): EnrichedTimelineSegment[] {
+	// 1. Convert transcript times to seconds and sort
 	const sortedTranscript = [...transcript].sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start))
-	const enrichedItems: TranscriptItem[] = []
+	const enrichedItems: EnrichedTimelineSegment[] = []
 
 	// 2. Helper to find relevant scene description for a timestamp
-	const getSceneForTime = (time: number): string | null => {
-		// Find the scene that started most recently before this time
-		// or assumes scenes are roughly sequential
-		// sceneDescriptions usually has index, startTime. We assume scenes cover the video.
-		// We find the scene with largest startTime <= time
+	const getSceneForTime = (time: number): string => {
 		let bestScene: SceneDescription | null = null
 		for (const scene of sceneDescriptions) {
 			if (scene.startTime <= time) {
@@ -34,55 +33,63 @@ export function enrichTranscriptWithScenes(
 				}
 			}
 		}
-		return bestScene ? bestScene.description : null
+		return bestScene ? bestScene.description : "No visual description available."
 	}
 
-	// 3. Iterate transcript to find gaps
+	// Helper to add split gap segments
+	const addGapSegments = (gapStart: number, gapEnd: number) => {
+		let currentStart = gapStart
+		while (currentStart < gapEnd) {
+			const currentEnd = Math.min(currentStart + MAX_GAP_CHUNK_DURATION, gapEnd)
+			const midPoint = currentStart + (currentEnd - currentStart) / 2
+			
+			enrichedItems.push({
+				index: currentIndex++,
+				start: secondsToTime(currentStart),
+				end: secondsToTime(currentEnd),
+				duration: currentEnd - currentStart,
+				text: "[Silence]",
+				visual: getSceneForTime(midPoint)
+			})
+			currentStart = currentEnd
+		}
+	}
+
+	// 3. Iterate transcript and merge with scenes
 	let previousEnd = 0.0
+	let currentIndex = 1
 
 	for (const item of sortedTranscript) {
 		const start = timeToSeconds(item.start)
 		const end = timeToSeconds(item.end)
 
-		// Check for gap
+		// Check for significant gap before this transcript item
 		if (start - previousEnd > MIN_GAP_DURATION) {
-			const gapStart = previousEnd
-			const gapEnd = start
-			const gapDuration = gapEnd - gapStart
-			const midPoint = gapStart + (gapDuration / 2)
-
-			const visualDescription = getSceneForTime(midPoint)
-			if (visualDescription) {
-				enrichedItems.push({
-					start: secondsToTime(gapStart),
-					end: secondsToTime(gapEnd),
-					text: `[Visual Scene: ${visualDescription}]`
-				})
-			}
+			addGapSegments(previousEnd, start)
 		}
 
-		enrichedItems.push(item)
+		// Process the transcript item
+		const itemMidPoint = start + (end - start) / 2
+		enrichedItems.push({
+			index: currentIndex++,
+			start: item.start,
+			end: item.end,
+			duration: end - start,
+			text: item.text,
+			visual: getSceneForTime(itemMidPoint)
+		})
+
 		previousEnd = end
 	}
 
 	// 4. Check for trailing gap
 	if (totalDuration - previousEnd > MIN_GAP_DURATION) {
-		const gapStart = previousEnd
-		const gapEnd = totalDuration
-		const midPoint = gapStart + ((gapEnd - gapStart) / 2)
-
-		const visualDescription = getSceneForTime(midPoint)
-		if (visualDescription) {
-			enrichedItems.push({
-				start: secondsToTime(gapStart),
-				end: secondsToTime(gapEnd),
-				text: `[Visual Scene: ${visualDescription}]`
-			})
-		}
+		addGapSegments(previousEnd, totalDuration)
 	}
 
 	return enrichedItems
 }
+
 
 // Helpers
 function timeToSeconds(t: string): number {

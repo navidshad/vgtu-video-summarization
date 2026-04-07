@@ -17,7 +17,7 @@
           </p>
         </div>
 
-        <Button @click="saveKey" :disabled="!apiKey" color="primary" class="w-full" label="Continue" />
+        <Button @click="saveKey" :disabled="!apiKey" class="w-full disabled:!bg-zinc-100 dark:disabled:!bg-zinc-800 disabled:!text-zinc-400 dark:disabled:!text-zinc-600 transition-all" label="Continue" />
       </div>
     </div>
   </div>
@@ -35,14 +35,14 @@ const router = useRouter()
 onMounted(async () => {
   const existingKey = await (window as any).api.getGeminiApiKey()
   if (existingKey) {
-    router.push('/upload')
+    router.push('/home')
   }
 })
 
 const saveKey = async () => {
   if (apiKey.value) {
     await (window as any).api.setGeminiApiKey(apiKey.value)
-    router.push('/upload')
+    router.push('/home')
   }
 }
 </script>

@@ -10,9 +10,33 @@ export enum FileType {
 	Original = 'original'
 }
 
+export type BackgroundTaskState = 'pending' | 'running' | 'completed' | 'error'
+
+export interface VideoMetadata {
+	duration: number
+	width: number
+	height: number
+	size: number
+	codec: string
+	fps: number
+	format: string
+    hasAudio: boolean
+}
+
+export interface BackgroundTask {
+	id: string
+	name: string
+	state: BackgroundTaskState
+	status?: string
+	progress?: number
+	error?: string
+}
+
 export interface Attachment {
 	url: string;
 	type: FileType;
+	upscale2k?: string; // High-res 2K path
+	upscale4k?: string; // High-res 4K path
 }
 
 export interface Usage {
@@ -33,18 +57,21 @@ export interface Message {
 	content: string;
 	isPending: boolean;
 	files?: Attachment[];
-	timeline?: TimelineSegment[];
+	attachedImages?: string[]; // New: base64/paths of attached images
+	timeline?: EnrichedTimelineSegment[];
 	usage?: Usage;
 	cost?: number;
 	version?: number;
 	editRefId?: string;
+	resultType?: 'video' | 'thumbnail' | 'summary' | 'image';
 	createdAt: number;
 }
 
 export interface Thread {
 	id: string
 	title: string
-	videoPath: string
+	type?: 'video' | 'image' // New
+	videoPath?: string // Now optional
 	preprocessing: {
 		/**
 		 * Path to the extracted audio file (MP3/WAV).
@@ -89,10 +116,36 @@ export interface Thread {
 		 * Used to enrich the transcript with visual context.
 		 */
 		sceneDescriptionsPath?: string;
+
+		/**
+		 * Path to the unified enriched transcript JSON.
+		 * Merges text transcript with visual scene descriptions.
+		 * Used as a source of truth for both video and thumbnail pipelines.
+		 */
+		enrichedTranscriptPath?: string;
+
+		/**
+		 * Reference frames extracted from the video or provided by the user.
+		 */
+		'reference-frames'?: string[]; // New
+
+		/**
+		 * Source images for image-based threads.
+		 */
+		sourceImages?: string[]; // New
+
+		/**
+		 * Extracted text data from all images.
+		 */
+		imageTextPath?: string; // New
 	}
 	tempDir: string
 	messages: Message[]
+	backgroundTasks?: Record<string, BackgroundTask>
+	nodePositions?: Record<string, { x: number; y: number }>
 	versionCounter?: number
+	videoMetadata?: VideoMetadata
+	missing?: boolean
 	createdAt: number
 	updatedAt: number
 }
@@ -105,10 +158,16 @@ export interface TimelineSegment {
 	duration: number
 }
 
+export interface EnrichedTimelineSegment extends TimelineSegment {
+	visual: string
+}
+
+
 export interface IntentResult {
-	type: 'text' | 'generate-timeline';
+	type: 'text' | 'generate-timeline' | 'generate-thumbnail' | 'generate-image'; // Added generate-image
 	content: string; // Brief description or the text answer
 	duration?: number; // Duration in seconds
+	selectedIndices?: number[]; // indices for images to use
 }
 
 export interface ModelPricing {
@@ -123,10 +182,13 @@ export interface ModelPricing {
 		standard: number
 		longContext?: number // Only for Pro
 		threshold?: number   // Only for Pro
+		image?: number       // Only for Image Gen
 	}
 }
 
-export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit'
+export type OperationType = 'raw-transcript' | 'corrected-transcript' | 'intent' | 'timeline-new' | 'timeline-edit' | 'thumbnail' | 'scene-description' | 'image-extraction' | 'image-intent' | 'image-generation' | 'image-upscale'
+
+export type UpscaleFactor = 'x2' | 'x4'
 
 export interface ModelSelection {
 	[key: string]: string // operation -> model name
