@@ -1,6 +1,11 @@
 <template>
-  <div
-    class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
+  <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative"
+    :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
+    :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
+    <!-- Resize Handle -->
+    <div class="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/40 transition-colors z-[60] opacity-0 group-hover:opacity-100"
+      @mousedown.stop.prevent="startResizing"></div>
+
     <Handle type="target" :position="Position.Top"
       class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
 
@@ -170,7 +175,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Handle, Position } from '@vue-flow/core'
+import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import { Button } from 'pilotui/elements'
 import { Modal } from 'pilotui/complex'
@@ -179,7 +184,43 @@ import { renderMarkdown } from '../../utils/markdown'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
+const emit = defineEmits(['node-resize-stop'])
+const { viewport } = useVueFlow()
 const videoStore = useVideoStore()
+
+// Resizing logic
+const nodeWidth = ref(props.data.width || 380)
+const isResizing = ref(false)
+
+const startResizing = (e: MouseEvent) => {
+  isResizing.value = true
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+  const startX = e.clientX
+  const startWidth = nodeWidth.value
+
+  const onMouseMove = (moveEvent: MouseEvent) => {
+    if (!isResizing.value) return
+    const zoom = viewport.value.zoom || 1
+    const deltaX = (moveEvent.clientX - startX) / zoom
+    const newWidth = Math.min(800, Math.max(320, startWidth + deltaX))
+    nodeWidth.value = newWidth
+  }
+
+  const onMouseUp = () => {
+    if (isResizing.value) {
+      isResizing.value = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      emit('node-resize-stop', nodeWidth.value)
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
 const input = ref('')
 const showInput = ref(false)
 const copiedId = ref<string | null>(null)

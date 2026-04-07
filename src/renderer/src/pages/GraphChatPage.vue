@@ -45,7 +45,7 @@
         <Controls />
         
         <template #node-conversation="props">
-          <ConversationNode v-bind="props" />
+          <ConversationNode v-bind="props" @node-resize-stop="videoStore.updateNodeMetadata(props.id, { width: $event })" />
         </template>
         <template #node-media="props">
           <MediaNode v-bind="props" />
@@ -355,6 +355,7 @@ watch(() => videoStore.messages, (messages) => {
         data: {
           messages: strand.messageIds.map(id => messageLookup[id]),
           hasInputInitially: (childMap[lastId] || []).length === 0,
+          width: videoStore.currentThread?.nodePositions?.[strand.id]?.width || 380,
           onDelete: async () => {
              const confirmed = await (window as any).api.showConfirmation({
                title: 'Delete Node',

@@ -481,7 +481,7 @@ class ThreadManager {
 		return !!result
 	}
 
-	async updateThreadNodePositions(threadId: string, positions: Record<string, { x: number; y: number }>): Promise<boolean> {
+	async updateThreadNodePositions(threadId: string, positions: Record<string, { x: number; y: number; width?: number }>): Promise<boolean> {
 		const result = await this.updateThread(threadId, {
 			nodePositions: positions
 		})

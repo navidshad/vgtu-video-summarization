@@ -284,6 +284,27 @@ export const useVideoStore = defineStore('video', () => {
 		return success
 	}
 
+	const updateNodeMetadata = async (nodeId: string, metadata: { x?: number, y?: number, width?: number }) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		const currentPositions = currentThread.value.nodePositions || {}
+		const existing = currentPositions[nodeId] || { x: 0, y: 0 }
+		
+		const updatedPositions = {
+			...currentPositions,
+			[nodeId]: {
+				...existing,
+				...metadata
+			}
+		}
+		
+		const success = await (window as any).api.saveNodePositions(currentThreadId.value, updatedPositions)
+		if (success) {
+			currentThread.value.nodePositions = updatedPositions
+		}
+		return success
+	}
+
 	const retryMessage = async (messageId: string) => {
 		if (!currentThreadId.value || !currentThread.value) return
 
@@ -329,6 +350,7 @@ export const useVideoStore = defineStore('video', () => {
 		updateMessage,
 		updateMessageContent,
 		updateNodePositions,
+		updateNodeMetadata,
 		retryPreprocessing
 	}
 })
