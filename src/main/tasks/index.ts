@@ -29,7 +29,7 @@ class BackgroundTaskManager extends EventEmitter {
 		return `${threadId}:${taskId}`
 	}
 
-	private async updateTask(threadId: string, taskId: string, updates: Partial<BackgroundTask>) {
+	public async updateTask(threadId: string, taskId: string, updates: Partial<BackgroundTask>) {
 		const thread = threadManager.getThread(threadId)
 		if (!thread) return
 
@@ -138,7 +138,7 @@ class BackgroundTaskManager extends EventEmitter {
 		if (!thread) return
 
 		// Initialize task if not present
-		await this.updateTask(threadId, taskId, { name, state: 'pending' })
+		await this.updateTask(threadId, taskId, { name, state: 'pending', error: undefined })
 
 		const taskKey = this.getTaskKey(threadId, taskId)
 		if (this.runningTasks.has(taskKey)) return
@@ -223,15 +223,16 @@ class BackgroundTaskManager extends EventEmitter {
 			}
 		}
 
-		// Start both chains concurrently
-		processingChain()
-		visualChain()
-
+		// Start chains
+		processingChain().catch(e => console.error(`[BACKGROUND] processingChain failed for ${threadId}:`, e))
+		visualChain().catch(e => console.error(`[BACKGROUND] visualChain failed for ${threadId}:`, e))
+		
 		// Chain 3: Enrichment (Wait for BOTH)
 		const enrichmentChain = async () => {
+			// Don't catch here - if dependencies fail, this chain should not proceed
 			await Promise.all([
-				this.waitForTask(threadId, 'correctedTranscript').catch(() => { }),
-				this.waitForTask(threadId, 'sceneDescriptions').catch(() => { })
+				this.waitForTask(threadId, 'correctedTranscript'),
+				this.waitForTask(threadId, 'sceneDescriptions')
 			])
 
 			const currentThread = threadManager.getThread(threadId)
@@ -260,7 +261,7 @@ class BackgroundTaskManager extends EventEmitter {
 			}
 		}
 
-		enrichmentChain()
+		enrichmentChain().catch(e => console.error(`[BACKGROUND] enrichmentChain failed for ${threadId}:`, e))
 	}
 
 	public async startImageProcessing(threadId: string) {

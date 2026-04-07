@@ -129,14 +129,7 @@ export class Pipeline {
 				console.log(`[PIPELINE CORE] Caught expected abort error:`, e?.message)
 			} else {
 				console.error(`[PIPELINE CORE] Error in execution loop:`, e)
-				if (!this.isFinished) {
-					const window = this.browserWindow;
-					window.webContents.send('pipeline-update', {
-						id: this.messageId,
-						type: 'status',
-						content: `Error: ${e instanceof Error ? e.message : String(e)}`
-					})
-				}
+				await this.fail(e instanceof Error ? e.message : String(e))
 			}
 		}
 	}

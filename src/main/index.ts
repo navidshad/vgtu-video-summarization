@@ -190,9 +190,17 @@ app.whenReady().then(() => {
 
 		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages)
 
+		// Ensure background processing is running (will resume/retry if tasks are missing/failed)
+		if (thread.type === 'image') {
+			backgroundTaskManager.startImageProcessing(threadId)
+		} else {
+			backgroundTaskManager.startPreprocessing(threadId)
+		}
+
 		if (thread.type === 'image') {
 			pipeline
 				.register(async (data, ctx) => {
+					await backgroundTaskManager.updateTask(threadId, 'imageExtraction', { name: 'Image Analysis', state: 'pending', error: undefined })
 					await ctx.updateStatus('Waiting for image analysis...')
 					await ctx.waitForTask('imageExtraction')
 					ctx.next(data)

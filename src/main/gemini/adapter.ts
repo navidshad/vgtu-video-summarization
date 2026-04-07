@@ -75,9 +75,13 @@ export class GeminiAdapter {
 	private isTransientError(error: any): boolean {
 		const message = (error.message || '').toLowerCase();
 		const status = (error.status || (error.error && error.error.code) || '').toString();
+		const code = (error.code || error.cause?.code || '').toString();
 
 		const transientStatuses = ['503', '429', 'UNAVAILABLE', 'RESOURCE_EXHAUSTED', 'DEADLINE_EXCEEDED'];
 		if (transientStatuses.includes(status)) return true;
+
+		const transientCodes = ['UND_ERR_HEADERS_TIMEOUT', 'ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'];
+		if (transientCodes.includes(code)) return true;
 
 		if (
 			message.includes('503') ||
@@ -85,7 +89,9 @@ export class GeminiAdapter {
 			message.includes('high demand') ||
 			message.includes('too many requests') ||
 			message.includes('service unavailable') ||
-			message.includes('deadline exceeded')
+			message.includes('deadline exceeded') ||
+			message.includes('fetch failed') ||
+			message.includes('timeout')
 		) {
 			return true;
 		}
