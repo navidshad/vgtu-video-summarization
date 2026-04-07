@@ -64,7 +64,7 @@ class BackgroundTaskManager extends EventEmitter {
 
 		const task = thread.backgroundTasks?.[taskId]
 		console.log(`[TASK MANAGER] current task state for '${taskId}': ${task?.state || 'undefined'}`)
-		
+
 		if (task?.state === 'completed') {
 			console.log(`[TASK MANAGER] task '${taskId}' already completed. Returning.`)
 			return
@@ -226,7 +226,7 @@ class BackgroundTaskManager extends EventEmitter {
 		// Start chains
 		processingChain().catch(e => console.error(`[BACKGROUND] processingChain failed for ${threadId}:`, e))
 		visualChain().catch(e => console.error(`[BACKGROUND] visualChain failed for ${threadId}:`, e))
-		
+
 		// Chain 3: Enrichment (Wait for BOTH)
 		const enrichmentChain = async () => {
 			// Don't catch here - if dependencies fail, this chain should not proceed
@@ -271,9 +271,13 @@ class BackgroundTaskManager extends EventEmitter {
 		const run = this.runTask.bind(this, threadId)
 
 		// Task: Extract data from images
-		await run('imageExtraction', 'Analyzing Images', async (ctx) => {
-			await imageExtraction.extractImageData({}, ctx)
-		})
+		if (!thread.preprocessing.imageTextPath) {
+			await run('imageExtraction', 'Analyzing Images', async (ctx) => {
+				await imageExtraction.extractImageData({}, ctx)
+			})
+		} else {
+			await this.updateTask(threadId, 'imageExtraction', { name: 'Analyzing Images', state: 'completed' })
+		}
 	}
 }
 

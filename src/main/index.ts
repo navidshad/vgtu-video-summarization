@@ -200,7 +200,6 @@ app.whenReady().then(() => {
 		if (thread.type === 'image') {
 			pipeline
 				.register(async (data, ctx) => {
-					await backgroundTaskManager.updateTask(threadId, 'imageExtraction', { name: 'Image Analysis', state: 'pending', error: undefined })
 					await ctx.updateStatus('Waiting for image analysis...')
 					await ctx.waitForTask('imageExtraction')
 					ctx.next(data)
