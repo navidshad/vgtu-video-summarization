@@ -65,7 +65,7 @@ FrameFlow isn't just a tool; it's an iterative workspace:
 ## 📸 Interface Preview
 
 <div align="center">
-  <img src="./docs/screenshots/01_dark-theme.jpg" width="90%" alt="FrameFlow Dashboard" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="./docs/screenshots/01_dark-theme.jpg" alt="FrameFlow Dashboard" />
 </div>
 
 ---
