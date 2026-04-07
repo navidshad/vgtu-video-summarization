@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="./docs/imgs/process.jpeg" width="100%" alt="FrameFlow Banner" />
   
   # 🌊 FrameFlow
   ### **The Next-Gen Multimodal Multimedia Platform**
@@ -9,11 +8,13 @@
   [![Framework: Vue 3](https://img.shields.io/badge/Framework-Vue%203-4fc08d.svg)](https://vuejs.org/)
   [![AI: Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-4285F4.svg)](https://deepmind.google/technologies/gemini/)
 
-  ---
+</div>
+
+---
 
   **FrameFlow** is a high-fidelity multimedia platform that bridges the gap between raw video/image assets and creative intelligence. By fusing **Google Gemini's** multimodal brain with precise **FFmpeg** engineering, FrameFlow transforms how you consume, extract, and generate media.
 
-</div>
+  <img src="./docs/screenshots/01_light-theme.jpg" width="100%" alt="FrameFlow Banner" />
 
 ---
 
@@ -91,14 +92,14 @@ FrameFlow isn't just a tool; it's an iterative workspace:
 ## 📸 Interface Preview
 
 <div align="center">
-  <img src="./docs/imgs/screenshot_chatpage.png" width="90%" alt="FrameFlow Dashboard" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  <img src="./docs/screenshots/01_dark-theme.jpg" width="90%" alt="FrameFlow Dashboard" style="border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
 </div>
 
 ---
 
 ## 📜 License & Credits
 
-FrameFlow is licensed under the **MIT License**. Created by [navidshad](https://github.com/navidshad) as part of a high-fidelity AI engineering initiative.
+FrameFlow is licensed under the **MIT License**. Created by [navidshad](https://github.com/navidshad) and his classmates as part of a high-fidelity AI engineering initiative at Vilnius Gediminas Technical University (VGTU).
 
 ---
 
