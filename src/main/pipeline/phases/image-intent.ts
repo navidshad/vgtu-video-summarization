@@ -46,7 +46,7 @@ const IMAGE_INTENT_SCHEMA = {
 			items: { type: 'number' }
 		}
 	},
-	required: ['type', 'content']
+	required: ['type', 'content', 'selectedIndices']
 }
 
 export const determineImageIntent: PipelineFunction = async (_data, context) => {
@@ -64,6 +64,9 @@ export const determineImageIntent: PipelineFunction = async (_data, context) => 
 		.map(([path, text], index) => `Image ${index}: ${text}`)
 		.join('\n\n')
 
+	const contextLines = context.context.trim().split('\n')
+	const lastUserPrompt = contextLines.pop() || ''
+
 	const userPrompt = `
 COLLECTION of Images:
 ${collectionText}
@@ -72,8 +75,9 @@ Conversation History:
 ${context.context}
 
 User Prompt:
-${context.context.split('\n').pop() || ''}
+${lastUserPrompt}
 `
+	console.log(`[IMAGE-INTENT] Sending prompt to AI. User prompt detected as: "${lastUserPrompt}"`)
 
 	const adapter = GeminiAdapter.create()
 	const modelSettings = settingsManager.getModelSettings()
@@ -84,8 +88,12 @@ ${context.context.split('\n').pop() || ''}
 		userPrompt,
 		IMAGE_INTENT_SCHEMA,
 		IMAGE_INTENT_SYSTEM_INSTRUCTION,
-		context.signal
+		context.signal,
+		undefined,
+		{ includeThinking: true }
 	)
+
+	console.log(`[IMAGE-INTENT] AI Result: type=${result.type}, content length=${result.content.length}, selectedIndices=${JSON.stringify(result.selectedIndices)}`)
 
 	await context.recordUsage(record)
 

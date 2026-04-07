@@ -37,6 +37,26 @@ export class GeminiAdapter {
 		};
 	}
 
+	private extractResultText(response: any): string {
+		const candidate = response.candidates?.[0];
+		if (!candidate || !candidate.content || !candidate.content.parts) {
+			return '';
+		}
+
+		// Filter out parts that are explicitly marked as thoughts
+		const resultParts = candidate.content.parts.filter((p: any) => !p.thought && p.text);
+		
+		// If no non-thought text parts found, but there are text parts, 
+		// it might be that the SDK didn't mark them but we have multiple.
+		// Usually the last text part is the result.
+		if (resultParts.length === 0) {
+			const allTextParts = candidate.content.parts.filter((p: any) => p.text);
+			return allTextParts.length > 0 ? allTextParts[allTextParts.length - 1].text : '';
+		}
+
+		return resultParts.map((p: any) => p.text).join('\n');
+	}
+
 	private async withRetry<T>(
 		operation: () => Promise<T>,
 		signal?: AbortSignal,
@@ -128,7 +148,7 @@ export class GeminiAdapter {
 			const cost = GeminiAdapter.calculateCost(modelName, usage);
 
 			return {
-				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				text: this.extractResultText(response),
 				record: { usage, cost }
 			};
 		} catch (error) {
@@ -147,7 +167,8 @@ export class GeminiAdapter {
 		schema: any,
 		systemInstruction?: string,
 		signal?: AbortSignal,
-		imagePaths?: string[]
+		imagePaths?: string[],
+		options?: { includeThinking?: boolean }
 	): Promise<{ data: T, record: UsageRecord }> {
 		const parts: any[] = []
 
@@ -184,6 +205,13 @@ export class GeminiAdapter {
 			request.config!.systemInstruction = systemInstruction;
 		}
 
+		if (options?.includeThinking) {
+			(request.config as any).thinkingConfig = {
+				includeThoughts: true,
+				thinkingBudget: 8000
+			};
+		}
+
 		const response = await this.withRetry(
 			() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
 			signal
@@ -191,7 +219,7 @@ export class GeminiAdapter {
 
 		const usage = this.extractUsage(response);
 		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, validImagePaths.length);
-		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+		const text = this.extractResultText(response);
 
 		try {
 			return {
@@ -290,7 +318,7 @@ export class GeminiAdapter {
 			const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
 
 			return {
-				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				text: this.extractResultText(response),
 				record: { usage, cost }
 			};
 		} catch (error) {
@@ -342,7 +370,7 @@ export class GeminiAdapter {
 
 		const usage = this.extractUsage(response);
 		const cost = GeminiAdapter.calculateCost(modelName, usage, audioDuration);
-		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+		const text = this.extractResultText(response);
 
 		try {
 			return {
@@ -390,7 +418,7 @@ export class GeminiAdapter {
 			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, 1);
 
 			return {
-				text: response.candidates?.[0]?.content?.parts?.[0]?.text || '',
+				text: this.extractResultText(response),
 				record: { usage, cost }
 			};
 		} catch (error) {
@@ -408,7 +436,8 @@ export class GeminiAdapter {
 		userPrompt: string,
 		imageUris: string[],
 		schema: any,
-		signal?: AbortSignal
+		signal?: AbortSignal,
+		options?: { includeThinking?: boolean }
 	): Promise<{ data: T, record: UsageRecord }> {
 		const parts: any[] = imageUris.map(uri => ({
 			fileData: { fileUri: uri, mimeType: 'image/jpeg' }
@@ -433,7 +462,7 @@ export class GeminiAdapter {
 
 		const usage = this.extractUsage(response);
 		const cost = GeminiAdapter.calculateCost(modelName, usage, 0, imageUris.length);
-		const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+		const text = this.extractResultText(response);
 
 		try {
 			return {
@@ -498,7 +527,7 @@ export class GeminiAdapter {
 			for (const part of response.candidates[0].content?.parts || []) {
 				if (part.inlineData) {
 					base64Data = part.inlineData.data;
-				} else if (part.text) {
+				} else if (part.text && !part.thought) {
 					modelText = part.text;
 				}
 			}
@@ -506,7 +535,7 @@ export class GeminiAdapter {
 			if (!base64Data) {
 				const candidate = response.candidates[0];
 				const finishReason = candidate.finishReason || 'UNKNOWN';
-				const text = candidate.content?.parts?.[0]?.text;
+				const text = this.extractResultText(response);
 
 				if (text) {
 					throw new Error(text);

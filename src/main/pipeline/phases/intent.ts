@@ -133,7 +133,8 @@ ${context.context}
 			INTENT_SCHEMA,
 			INTENT_SYSTEM_INSTRUCTION,
 			context.signal,
-			limitedImages
+			limitedImages,
+			{ includeThinking: true }
 		)
 
 		// Record usage immediately

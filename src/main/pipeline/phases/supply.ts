@@ -31,11 +31,12 @@ export const supplyController: PipelineFunction = async (data, context) => {
 	if (selectedIndices.length > 0) {
 		console.log(`[SUPPLY] AI selected ${selectedIndices.length} items for reference.`)
 		
-		if (isImageThread && sourceImages.length > 0) {
+		if (isImageThread) {
+			const allImagesPool = [...sourceImages, ...referenceFrames]
 			const selectedPaths = selectedIndices
-				.map(idx => sourceImages[idx])
+				.map(idx => allImagesPool[idx])
 				.filter(p => p && fs.existsSync(p))
-			console.log(`[SUPPLY] Resolved ${selectedPaths.length} source images from indices.`)
+			console.log(`[SUPPLY] Resolved ${selectedPaths.length} images from pool of ${allImagesPool.length}.`)
 			context.next({ ...data, selectedReferenceImages: selectedPaths })
 			return
 		}
@@ -62,7 +63,7 @@ export const supplyController: PipelineFunction = async (data, context) => {
 
 	// Fallback Case: No attachments and no indices (or missing metadata)
 	// Pick some representative frames/images
-	const pool = isImageThread ? sourceImages : referenceFrames
+	const pool = isImageThread ? [...sourceImages, ...referenceFrames] : referenceFrames
 	console.log(`[SUPPLY] No specific selection. Picking representative items from pool of ${pool.length}.`)
 	const fallbackIndices = pool.length <= 5 
 		? pool.map((_, i) => i)
