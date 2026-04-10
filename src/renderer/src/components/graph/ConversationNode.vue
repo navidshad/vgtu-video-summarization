@@ -103,6 +103,22 @@
               :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
           </template>
 
+          <!-- Attached Images -->
+          <div v-if="msg.attachedImages && msg.attachedImages.length > 0" class="mt-2 mb-1 flex flex-wrap gap-1.5">
+            <div v-for="(img, idx) in msg.attachedImages" :key="idx"
+              class="relative w-10 h-10 rounded-lg overflow-hidden group/img cursor-pointer transition-all duration-300 hover:scale-[1.1] shadow-sm border border-black/5 dark:border-white/10"
+              @click="openPreview(img)">
+              <img :src="mediaUrl(img)" class="w-full h-full object-cover" />
+              <div
+                class="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
           <!-- Files -->
           <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
             class="mt-3 space-y-2">
@@ -183,6 +199,22 @@
         </div>
       </template>
     </Modal>
+
+    <!-- Full Screen Modal -->
+    <Teleport to="body">
+      <div v-if="isFullScreen"
+        class="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-8 backdrop-blur-2xl animate-in fade-in duration-300"
+        @click="isFullScreen = false">
+        <button @click="isFullScreen = false"
+          class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+        <img :src="fullScreenImageUrl"
+          class="max-w-full max-h-full rounded-2xl shadow-2xl ring-1 ring-white/20 object-contain" @click.stop />
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -249,6 +281,14 @@ const attachedImages = ref<string[]>([])
 const editingMessageId = ref<string | null>(null)
 const editText = ref('')
 const isModalOpen = ref(false)
+
+const isFullScreen = ref(false)
+const fullScreenImageUrl = ref('')
+
+const openPreview = (url: string) => {
+  fullScreenImageUrl.value = mediaUrl(url)
+  isFullScreen.value = true
+}
 
 const startEditing = (msg: any) => {
   editingMessageId.value = msg.id
