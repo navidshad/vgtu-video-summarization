@@ -95,14 +95,18 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
     Object.entries(savedMetadata).forEach(([id, meta]: [string, any]) => {
       if (meta.isFrame) {
         frameIds.add(id)
+        const isLocked = !!meta.isLocked
         newNodes.push({
           id,
           type: 'frame',
           position: { x: meta.x, y: meta.y },
+          draggable: !isLocked,
+          selectable: true,
           data: {
             title: meta.title,
             width: meta.width || 400,
             height: meta.height || 300,
+            isLocked,
             onUpdate: (fid: string, updates: any) => videoStore.updateNodeMetadata(fid, updates),
             onDelete: async () => {
               const confirmed = await (window as any).api.showConfirmation({
