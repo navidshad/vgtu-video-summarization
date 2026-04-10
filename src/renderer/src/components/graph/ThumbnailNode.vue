@@ -42,20 +42,24 @@
       />
     </div>
 
-    <!-- Node Info Tags -->
-    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest leading-none">
-      <!-- Version Tag -->
-      <div v-if="data.version" class="px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 text-primary dark:text-primary-light font-mono shadow-sm">
-         V{{ data.version }}
+    <!-- Node Info Tags (Unified Variation) -->
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3">
+      <!-- Version -->
+      <div v-if="data.version" class="text-[10px] font-bold text-primary dark:text-primary-light font-mono leading-none">
+         {{ data.version }}
       </div>
 
-      <!-- Media Type Tag -->
-      <div class="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 ">
+      <div v-if="data.version" class="w-px h-3 bg-black/10 dark:bg-white/10"></div>
+
+      <!-- Media Type -->
+      <div class="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400 leading-none">
         {{ displayType }}
       </div>
       
-      <!-- Preview Type Tag -->
-      <div class="px-2 py-1 rounded-lg bg-accent/10 border border-accent/20 text-accent dark:text-accent-light ">
+      <div class="w-px h-3 bg-black/10 dark:bg-white/10"></div>
+
+      <!-- Preview Type -->
+      <div class="text-[9px] font-black uppercase tracking-widest text-accent dark:text-accent-light leading-none">
         {{ activeFileType }}
       </div>
     </div>
