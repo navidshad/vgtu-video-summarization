@@ -3,7 +3,8 @@
     :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
     :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
     <!-- Resize Handle -->
-    <div class="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/40 transition-colors z-[60] opacity-0 group-hover:opacity-100"
+    <div
+      class="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/40 transition-colors z-[60] opacity-0 group-hover:opacity-100"
       @mousedown.stop.prevent="startResizing"></div>
 
     <Handle type="target" :position="Position.Top"
@@ -43,19 +44,26 @@
         class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
         :class="msg.role === 'user' ? 'items-end' : 'items-start'">
 
-        <div class="flex items-center space-x-2 px-1">
-          <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role
-          }}</span>
+        <div class="flex items-center gap-2 px-1" :class="{ 'flex-row-reverse': msg.role !== 'user' }">
+
+
           <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
+            <div v-if="msg.role === 'user'" @click="confirmRetry(msg.id)"
               class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer uppercase">
-              Retry</div>
+              Retry
+            </div>
             <div v-if="msg.role === 'user' && editingMessageId !== msg.id" @click="startEditing(msg)"
               class="text-[9px] font-bold text-zinc-400 hover:text-primary cursor-pointer uppercase">
               Edit</div>
             <div @click="removeMessage(msg.id)"
               class="text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer uppercase">
               Remove</div>
+          </div>
+
+          <div class="flex items-center">
+            <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">
+              {{ msg.role }}
+            </span>
           </div>
         </div>
 
@@ -155,20 +163,25 @@
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
 
     <!-- Edit Modal -->
-    <Modal v-model="isModalOpen" title="Edit Message" size="xl" :custom-class="{ panel: '!h-[80vh] flex flex-col' }" @close="cancelEdit">
-      <div class="flex flex-col gap-4 h-full overflow-hidden">
-        <div class="flex-1 overflow-hidden">
-          <TextArea
-            v-model="editText"
-            placeholder="Edit message..."
-            class="h-full font-sans text-base custom-textarea-full"
-          />
+    <Modal v-model="isModalOpen" title="Edit Message" size="xl" @close="cancelEdit">
+      <!-- Suppress default trigger as we use custom triggers in parents -->
+      <template #trigger><span class="hidden"></span></template>
+
+      <template #default>
+        <div class="flex flex-col gap-4 overflow-hidden">
+          <div class="flex-1 overflow-hidden">
+            <TextArea v-model="editText" placeholder="Edit message..."
+              class="h-full font-sans text-base custom-textarea-full" />
+          </div>
         </div>
+      </template>
+
+      <template #footer>
         <div class="flex justify-end gap-3 mt-2 flex-shrink-0">
-          <Button variant="outline" @click="cancelEdit">Cancel</Button>
-          <Button variant="primary" @click="saveEdit">Save Changes</Button>
+          <Button outline @click="cancelEdit">Cancel</Button>
+          <Button color="primary" @click="saveEdit">Save Changes</Button>
         </div>
-      </div>
+      </template>
     </Modal>
   </div>
 </template>
@@ -245,10 +258,26 @@ const cancelEdit = () => {
 const saveEdit = async () => {
   if (!editingMessageId.value) return
   if (editText.value.trim() === '') return
-  
+
   const success = await videoStore.updateMessageContent(editingMessageId.value, editText.value)
   if (success) {
     cancelEdit()
+  }
+}
+
+const confirmRetry = async (messageId: string) => {
+  const confirmed = await (window as any).api.showConfirmation({
+    title: 'Retry Generation',
+    message: 'Are you sure you want to retry?',
+    detail: 'All subsequent AI responses in this branch will be removed and the generation will restart from this message.',
+    type: 'question',
+    buttons: ['Cancel', 'Retry'],
+    defaultId: 1,
+    cancelId: 0
+  })
+
+  if (confirmed === 1) {
+    await videoStore.retryMessage(messageId)
   }
 }
 
@@ -262,7 +291,7 @@ const removeMessage = async (messageId: string) => {
     defaultId: 1,
     cancelId: 0
   })
-  
+
   if (confirmed === 1) {
     await videoStore.removeSingleMessage(messageId)
   }
