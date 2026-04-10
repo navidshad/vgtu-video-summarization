@@ -114,13 +114,26 @@ export const useVideoStore = defineStore('video', () => {
 	const updateNodePositions = async (positions: Record<string, { x: number; y: number }>) => {
 		if (!currentThreadId.value || !currentThread.value) return
 		
-		currentThread.value.nodePositions = {
-			...(currentThread.value.nodePositions || {}),
-			...positions
+		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
+		
+		for (const [id, pos] of Object.entries(positions)) {
+			currentPositions[id] = {
+				...(currentPositions[id] || {}),
+				...JSON.parse(JSON.stringify(pos))
+			}
 		}
 		
-		const cleanPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions))
-		await (window as any).api.saveNodePositions(currentThreadId.value, cleanPositions)
+		try {
+			const success = await (window as any).api.saveNodePositions(
+				String(currentThreadId.value), 
+				currentPositions
+			)
+			if (success && currentThread.value) {
+				currentThread.value.nodePositions = currentPositions
+			}
+		} catch (error) {
+			console.error('[videoStore] Failed to save node positions:', error)
+		}
 	}
 
 	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
@@ -287,22 +300,30 @@ export const useVideoStore = defineStore('video', () => {
 	const updateNodeMetadata = async (nodeId: string, metadata: { x?: number, y?: number, width?: number }) => {
 		if (!currentThreadId.value || !currentThread.value) return
 		
-		const currentPositions = currentThread.value.nodePositions || {}
+		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
 		const existing = currentPositions[nodeId] || { x: 0, y: 0 }
 		
 		const updatedPositions = {
 			...currentPositions,
 			[nodeId]: {
 				...existing,
-				...metadata
+				...JSON.parse(JSON.stringify(metadata))
 			}
 		}
 		
-		const success = await (window as any).api.saveNodePositions(currentThreadId.value, updatedPositions)
-		if (success) {
-			currentThread.value.nodePositions = updatedPositions
+		try {
+			const success = await (window as any).api.saveNodePositions(
+				String(currentThreadId.value), 
+				JSON.parse(JSON.stringify(updatedPositions))
+			)
+			if (success && currentThread.value) {
+				currentThread.value.nodePositions = updatedPositions
+			}
+			return success
+		} catch (error) {
+			console.error('[videoStore] Failed to save node positions:', error)
+			return false
 		}
-		return success
 	}
 
 	const retryMessage = async (messageId: string) => {

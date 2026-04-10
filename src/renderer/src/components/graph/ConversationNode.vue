@@ -187,7 +187,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import { Button } from 'pilotui/elements'
@@ -203,6 +203,13 @@ const videoStore = useVideoStore()
 
 // Resizing logic
 const nodeWidth = ref(props.data.width || 380)
+
+// Sync width if it changes from parent/store
+watch(() => props.data.width, (newWidth) => {
+  if (newWidth && !isResizing.value) {
+    nodeWidth.value = newWidth
+  }
+})
 const isResizing = ref(false)
 
 const startResizing = (e: MouseEvent) => {
