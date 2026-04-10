@@ -31,7 +31,7 @@
           <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
         </button>
         <button 
-          @click="showDetails = !showDetails" 
+          @click="toggleDetails" 
           class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all"
           :class="showDetails ? 'text-primary-light' : 'text-white'"
           title="Toggle Metadata"
@@ -114,17 +114,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
+const emit = defineEmits(['toggle-details'])
 const videoStore = useVideoStore()
 const input = ref('')
 const isFullScreen = ref(false)
 const isPlaying = ref(false)
-const showDetails = ref(false)
+const showDetails = ref(props.data.showDetails || false)
+
+watch(() => props.data.showDetails, (newVal) => {
+  if (newVal !== undefined && newVal !== showDetails.value) {
+    showDetails.value = newVal
+  }
+})
+
+const toggleDetails = () => {
+  showDetails.value = !showDetails.value
+  emit('toggle-details', showDetails.value)
+}
+
 const videoRef = ref<HTMLVideoElement | null>(null)
 const attachedImages = ref<string[]>([])
 

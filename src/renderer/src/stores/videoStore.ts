@@ -297,7 +297,7 @@ export const useVideoStore = defineStore('video', () => {
 		return success
 	}
 
-	const updateNodeMetadata = async (nodeId: string, metadata: { x?: number, y?: number, width?: number }) => {
+	const updateNodeMetadata = async (nodeId: string, metadata: Partial<NonNullable<Thread['nodePositions']>[string]>) => {
 		if (!currentThreadId.value || !currentThread.value) return
 		
 		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
@@ -345,6 +345,46 @@ export const useVideoStore = defineStore('video', () => {
 		await startProcessing(currentThreadId.value, message.id)
 	}
 
+	const deleteFrame = async (frameId: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
+		const frameMeta = currentPositions[frameId]
+		if (!frameMeta) return
+
+		// Ungroup children using database-only math for 100% reliability
+		Object.entries(currentPositions).forEach(([id, meta]: [string, any]) => {
+			if (meta.parentNode === frameId) {
+				// Absolute = Frame (Absolute) + Child (Relative)
+				const absoluteX = (frameMeta.x || 0) + (meta.x || 0)
+				const absoluteY = (frameMeta.y || 0) + (meta.y || 0)
+				
+				currentPositions[id] = { 
+					...meta, 
+					x: absoluteX, 
+					y: absoluteY, 
+					parentNode: undefined 
+				}
+			}
+		})
+
+		delete currentPositions[frameId]
+
+		try {
+			const success = await (window as any).api.saveNodePositions(
+				String(currentThreadId.value), 
+				currentPositions
+			)
+			if (success && currentThread.value) {
+				currentThread.value.nodePositions = currentPositions
+			}
+			return success
+		} catch (error) {
+			console.error('[videoStore] Failed to delete frame:', error)
+			return false
+		}
+	}
+
 	return {
 		threads,
 		currentThreadId,
@@ -372,6 +412,7 @@ export const useVideoStore = defineStore('video', () => {
 		updateMessageContent,
 		updateNodePositions,
 		updateNodeMetadata,
+		deleteFrame,
 		retryPreprocessing
 	}
 })

@@ -142,7 +142,15 @@ export interface Thread {
 	tempDir: string
 	messages: Message[]
 	backgroundTasks?: Record<string, BackgroundTask>
-	nodePositions?: Record<string, { x: number; y: number; width?: number }>
+	nodePositions?: Record<string, { 
+		x: number; 
+		y: number; 
+		width?: number; 
+		height?: number; 
+		title?: string; 
+		isFrame?: boolean; 
+		parentNode?: string 
+	}>
 	versionCounter?: number
 	videoMetadata?: VideoMetadata
 	missing?: boolean

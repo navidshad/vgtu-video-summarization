@@ -1,63 +1,54 @@
 <template>
   <div class="h-full w-full flex flex-col relative bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
     <!-- Ambient Backgrounds -->
-    <div class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/20 dark:bg-primary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary/20 dark:bg-secondary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft"></div>
-    <div class="px-5 py-3 z-20 w-full flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 shadow-sm flex-shrink-0">
-      <div class="flex items-center gap-4 flex-1 min-w-0">
-        <button @click="router.push('/home')" class="flex items-center justify-center w-8 h-8 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition text-zinc-600 dark:text-zinc-300 flex-shrink-0">
-          <svg class="w-4 h-4 ml-[-2px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
-        </button>
-        <h1 class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight min-w-[200px] max-w-[50%]">
-          {{ videoStore.currentVideoName || 'Graph Task Manager' }}
-        </h1>
-
-        <!-- Vertical Separator -->
-        <div v-if="totalCost > 0" class="h-6 w-px bg-zinc-200 dark:bg-zinc-800 mx-1 flex-shrink-0"></div>
-
-        <!-- Project Cost (Left Position) -->
-        <div v-if="totalCost > 0" class="flex items-center px-3 py-1.5 bg-zinc-100 dark:bg-zinc-900/40 rounded-xl border border-zinc-200 dark:border-zinc-800/40 transition-all hover:border-green-500/30 group flex-shrink-0">
-          <div class="flex flex-col items-start leading-none gap-0.5">
-             <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500 group-hover:text-green-500 transition-colors leading-none">Project Cost</span>
-             <span class="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100 italic transition-transform group-hover:scale-105 leading-none">${{ totalCost.toFixed(4) }}</span>
-          </div>
-          <div class="ml-3 p-1 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-            <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right Action Area (Clear for global App icons) -->
-      <div class="flex items-center justify-end min-w-[120px]">
-         <!-- Space reserved for App.vue absolute elements -->
-      </div>
+    <div
+      class="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/20 dark:bg-primary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft">
     </div>
+    <div
+      class="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-secondary/20 dark:bg-secondary/10 rounded-full blur-[140px] pointer-events-none transition-all duration-1000 animate-pulse-soft">
+    </div>
+
+    <GraphHeader 
+      :title="videoStore.currentVideoName" 
+      :total-cost="totalCost"
+      @back="router.push('/home')"
+    />
     
-    <div class="flex-1 w-full relative">
-      <VueFlow 
-        :nodes="graphStore.nodes" 
-        :edges="graphStore.edges" 
-        class="vue-flow-custom" 
-        @pane-ready="onPaneReady"
-        @node-drag-stop="onNodeDragStop"
-      >
+    <div 
+      ref="containerRef" 
+      class="flex-1 w-full relative"
+      @mousedown="onPaneMouseDown"
+      @mousemove="onPaneMouseMove"
+      @mouseup="onPaneMouseUp"
+    >
+      <GraphToolbar v-model="graphMode" />
+
+      <VueFlow :nodes="graphStore.nodes" :edges="graphStore.edges" class="vue-flow-custom" @pane-ready="onPaneReady"
+        @node-drag-stop="onNodeDragStop" :min-zoom="0.01" :max-zoom="4"
+        :pan-on-drag="graphMode === 'pan'" 
+        :selection-key-code="graphMode === 'select' ? true : null" 
+        :pan-on-scroll="true"
+        :zoom-on-scroll="true"
+        :pan-on-scroll-mode="'all'"
+        :selection-mode="'partial'">
         <Background pattern-color="#888" :gap="20" />
         <Controls />
-        
+
         <template #node-conversation="props">
-          <ConversationNode v-bind="props" @node-resize-stop="videoStore.updateNodeMetadata(props.id, { width: $event })" />
+          <ConversationNode v-bind="props"
+            @node-resize-stop="videoStore.updateNodeMetadata(props.id, { width: $event })" />
         </template>
         <template #node-media="props">
-          <MediaNode v-bind="props" />
+          <MediaNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-task="props">
           <TaskProgressNode v-bind="props" />
         </template>
         <template #node-video="props">
-          <VideoNode v-bind="props" />
+          <VideoNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-thumbnail="props">
-          <ThumbnailNode v-bind="props" />
+          <ThumbnailNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-summary="props">
           <SummaryNode v-bind="props" />
@@ -68,13 +59,27 @@
         <template #node-image-collection="props">
           <ImageCollectionNode v-bind="props" />
         </template>
+        <template #node-frame="props">
+          <FrameNode v-bind="props" />
+        </template>
       </VueFlow>
+
+      <!-- Frame Creation Overlay -->
+      <div v-if="frameCreationRect" class="absolute border-2 border-dashed border-secondary bg-secondary/5 pointer-events-none z-50 rounded-xl"
+        :style="{ 
+          left: `${frameCreationRect.x}px`, 
+          top: `${frameCreationRect.y}px`, 
+          width: `${frameCreationRect.width}px`, 
+          height: `${frameCreationRect.height}px` 
+        }">
+        <div class="absolute -top-6 left-0 text-[10px] font-bold text-secondary uppercase tracking-widest bg-white/80 dark:bg-zinc-900/80 px-2 py-0.5 rounded">Creating Frame...</div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -85,6 +90,7 @@ import '@vue-flow/controls/dist/style.css'
 import { useGraphStore } from '../stores/graphStore'
 import { useTaskStore } from '../stores/taskStore'
 import { useVideoStore } from '../stores/videoStore'
+import { useRoute, useRouter } from 'vue-router'
 
 import ConversationNode from '../components/graph/ConversationNode.vue'
 import MediaNode from '../components/graph/MediaNode.vue'
@@ -94,16 +100,26 @@ import ThumbnailNode from '../components/graph/ThumbnailNode.vue'
 import SummaryNode from '../components/graph/SummaryNode.vue'
 import ChatInputNode from '../components/graph/ChatInputNode.vue'
 import ImageCollectionNode from '../components/graph/ImageCollectionNode.vue'
+import FrameNode from '../components/graph/FrameNode.vue'
 
-import { useRoute, useRouter } from 'vue-router'
-import { MessageRole } from '@shared/types'
+import { useGraphLayout } from '../composables/useGraphLayout'
+import GraphHeader from '../components/graph/GraphHeader.vue'
+import GraphToolbar from '../components/graph/GraphToolbar.vue'
+
+const graphMode = ref<'pan' | 'select' | 'frame'>('pan')
+const containerRef = ref<HTMLElement | null>(null)
+const frameCreationRect = ref<{ x: number, y: number, width: number, height: number } | null>(null)
+const frameCreationStart = ref<{ x: number, y: number } | null>(null)
 
 const graphStore = useGraphStore()
 const taskStore = useTaskStore()
 const videoStore = useVideoStore()
-const { fitView } = useVueFlow()
+const { fitView, project, findNode, getNodes } = useVueFlow()
 const route = useRoute()
 const router = useRouter()
+
+// Use modular layout logic
+useGraphLayout(videoStore, graphStore)
 
 const totalCost = computed(() => {
   return videoStore.messages.reduce((acc, msg) => acc + (msg.cost || 0), 0)
@@ -114,283 +130,195 @@ const onPaneReady = () => {
 }
 
 const onNodeDragStop = (event: any) => {
-  const { node } = event
-  const newPositions = {
-    [node.id]: node.position
-  }
+  const { nodes: draggedNodes } = event
+  const newPositions: any = {}
+
+  // Current graph state
+  const allNodes = getNodes.value
+  const frames = allNodes.filter(n => n.type === 'frame')
+
+  draggedNodes.forEach((node: any) => {
+    // We MUST use computedPosition (absolute) for detection logic
+    const nx = node.computedPosition?.x ?? node.position.x
+    const ny = node.computedPosition?.y ?? node.position.y
+    const nw = node.dimensions?.width || 380
+    const nh = node.dimensions?.height || 200
+
+    const nodeCenter = {
+      x: nx + nw / 2,
+      y: ny + nh / 2
+    }
+
+    // If it's a frame, only update its own absolute position
+    if (node.type === 'frame') {
+      const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+      newPositions[node.id] = { 
+        ...currentMeta,
+        x: nx,
+        y: ny
+      }
+      return
+    }
+
+    let parentFrameId: string | undefined = undefined
+    
+    // Check against all frames using their absolute positions
+    for (const frame of frames) {
+      const fx = frame.computedPosition?.x ?? frame.position.x
+      const fy = frame.computedPosition?.y ?? frame.position.y
+      const fw = frame.data.width || 400
+      const fh = frame.data.height || 300
+
+      if (nodeCenter.x >= fx && nodeCenter.x <= fx + fw &&
+          nodeCenter.y >= fy && nodeCenter.y <= fy + fh) {
+        parentFrameId = frame.id
+        break
+      }
+    }
+
+    const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+    
+    if (parentFrameId) {
+      const frameNode = findNode(parentFrameId)
+      if (frameNode) {
+        // Correct conversion: (Global Node) - (Global Frame) = Local Offset
+        const fx = frameNode.computedPosition?.x ?? frameNode.position.x
+        const fy = frameNode.computedPosition?.y ?? frameNode.position.y
+        
+        newPositions[node.id] = { 
+          ...currentMeta,
+          x: nx - fx, 
+          y: ny - fy, 
+          parentNode: parentFrameId 
+        }
+      }
+    } else {
+      // Return to absolute world coordinates
+      newPositions[node.id] = { 
+        ...currentMeta,
+        x: nx, 
+        y: ny, 
+        parentNode: undefined 
+      }
+    }
+  })
+
   videoStore.updateNodePositions(newPositions)
 }
 
-// Hydrate Graph from active real messages
-watch([() => videoStore.messages, () => videoStore.currentThread?.nodePositions], ([messages]) => {
-  if (!videoStore.currentThreadId) return
-
-  const newNodes: any[] = []
-  const newEdges: any[] = []
+const onPaneMouseDown = (event: MouseEvent) => {
+  if (graphMode.value !== 'frame' || !containerRef.value) return
   
-  // 1. Pre-process mapping
-  const childMap: Record<string, string[]> = { 'root-media': [] }
-  const messageLookup: Record<string, any> = {}
+  // Ensure we are clicking the background, not a node or toolbar
+  const target = event.target as HTMLElement
+  if (target.closest('.vue-flow__node') || target.closest('button')) return
+
+  const rect = containerRef.value.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+
+  frameCreationStart.value = { x, y }
+  frameCreationRect.value = { x, y, width: 0, height: 0 }
+}
+
+const onPaneMouseMove = (event: MouseEvent) => {
+  if (!frameCreationStart.value || graphMode.value !== 'frame' || !containerRef.value) return
+
+  const rect = containerRef.value.getBoundingClientRect()
+  const currentX = event.clientX - rect.left
+  const currentY = event.clientY - rect.top
   
-  messages.forEach(m => {
-    messageLookup[m.id] = m
-    const pId = m.editRefId || 'root-media'
-    if (!childMap[pId]) childMap[pId] = []
-    childMap[pId].push(m.id)
-  })
+  const startX = frameCreationStart.value.x
+  const startY = frameCreationStart.value.y
 
-  // Layout Constants
-  const MIN_V_GAP = 150
-  const H_SPACING = 600
+  frameCreationRect.value = {
+    x: Math.min(startX, currentX),
+    y: Math.min(startY, currentY),
+    width: Math.abs(currentX - startX),
+    height: Math.abs(currentY - startY)
+  }
+}
 
-  const strandGroups: Array<{ id: string, messageIds: string[], parentId: string, isResult: boolean }> = []
-  const processedMessageIds = new Set<string>()
+const uuid = () => Math.random().toString(36).substring(2, 9)
 
-  // Recursive strand building
-  const buildStrands = (pId: string) => {
-    const children = childMap[pId] || []
+const onPaneMouseUp = async (event: MouseEvent) => {
+  if (!frameCreationRect.value || !frameCreationStart.value || graphMode.value !== 'frame') {
+    frameCreationStart.value = null
+    frameCreationRect.value = null
+    return
+  }
+
+  const rect = frameCreationRect.value
+  
+  // Only create if it's large enough
+  if (rect.width > 20 && rect.height > 20) {
+    // Project viewport coordinates to flow coordinates
+    const flowPos = project({ x: rect.x, y: rect.y })
+    const flowDim = project({ x: rect.x + rect.width, y: rect.y + rect.height })
+    const width = flowDim.x - flowPos.x
+    const height = flowDim.y - flowPos.y
+
+    const frameId = `frame-${uuid()}`
     
-      children.forEach((cId) => {
-      if (processedMessageIds.has(cId)) return
-
-      const msg = messageLookup[cId]
-      // A "Result" is anything with real files, or timeline. (Pending text stays in conversation)
-      const hasRealFiles = msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0
-      const isResult = !!(hasRealFiles || (msg.timeline && msg.timeline.length > 0))
-
-      if (isResult) {
-        // Results are always their own node
-        strandGroups.push({ id: cId, messageIds: [cId], parentId: pId, isResult: true })
-        processedMessageIds.add(cId)
-        buildStrands(cId)
-      } else {
-        // It's a text message strand
-        const strand: string[] = [cId]
-        processedMessageIds.add(cId)
-        
-        let currentId = cId
-        while (true) {
-          const nextChildren = childMap[currentId] || []
-          if (nextChildren.length !== 1) break
-          
-          const nextId = nextChildren[0]
-          const nextMsg = messageLookup[nextId]
-          const nextHasRealFiles = nextMsg.files && nextMsg.files.filter((f: any) => f.type !== 'original').length > 0
-          const nextIsResult = !!(nextHasRealFiles || (nextMsg.timeline && nextMsg.timeline.length > 0))
-          
-          if (nextIsResult) break
-          
-          strand.push(nextId)
-          processedMessageIds.add(nextId)
-          currentId = nextId
+    // 1. Create the frame node in store
+    await videoStore.updateNodeMetadata(frameId, {
+      x: flowPos.x,
+      y: flowPos.y,
+      width,
+      height,
+      title: 'New Group',
+      isFrame: true,
+      onDelete: async () => {
+        const confirmed = await (window as any).api.showConfirmation({
+          title: 'Delete Frame',
+          message: 'Are you sure you want to delete this frame?',
+          detail: 'Children nodes will be ungrouped but NOT deleted.',
+          type: 'warning'
+        })
+        if (confirmed === 1) {
+          await videoStore.deleteFrame(frameId)
         }
-        
-        strandGroups.push({ id: strand[0], messageIds: strand, parentId: pId, isResult: false })
-        buildStrands(currentId)
       }
     })
+
+    // 2. Identify nodes inside and group them
+    const allNodes = getNodes.value
+    const nodesToGroup = allNodes.filter(node => {
+      if (node.type === 'frame' || node.id === frameId) return false
+      
+      const nx = node.computedPosition.x
+      const ny = node.computedPosition.y
+      
+      return nx >= flowPos.x && nx <= flowPos.x + width &&
+             ny >= flowPos.y && ny <= flowPos.y + height
+    })
+
+    const groupUpdates: any = {}
+    nodesToGroup.forEach(node => {
+      const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+      groupUpdates[node.id] = {
+        ...currentMeta,
+        x: node.computedPosition.x - flowPos.x,
+        y: node.computedPosition.y - flowPos.y,
+        parentNode: frameId
+      }
+    })
+
+    if (Object.keys(groupUpdates).length > 0) {
+      await videoStore.updateNodePositions(groupUpdates)
+    }
+    
+    // Switch back to pan mode after creation
+    graphMode.value = 'pan'
   }
 
-  buildStrands('root-media')
-
-  // 1.5 Create Message-to-Node mapping
-  const msgToNodeId: Record<string, string> = { 'root-media': 'root-media' }
-  strandGroups.forEach(strand => {
-    strand.messageIds.forEach(mId => {
-      msgToNodeId[mId] = strand.id
-    })
-  })
-
-  // 2. Position Nodes
-  // Initialize from saved positions if available
-  const nodePositions: Record<string, {x: number, y: number}> = { 
-    'root-media': videoStore.currentThread?.nodePositions?.['root-media'] || { x: 0, y: 0 } 
-  }
-  
-  // Root Media Node (Always branching)
-  const isImageThread = videoStore.currentThread?.type === 'image'
-  
-  newNodes.push({
-    id: 'root-media',
-    type: isImageThread ? 'image-collection' : 'media',
-    position: nodePositions['root-media'],
-    data: { 
-      filename: videoStore.currentVideoName, 
-      videoPath: videoStore.currentVideoPath,
-      onSubmit: async (val: string, attachedImages?: string[]) => {
-         const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
-         if (newMsgId && videoStore.currentThreadId) {
-           await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
-         }
-      }
-    }
-  })
-
-    // Helper to estimate node height for layout calculations
-    const getEstimatedHeight = (s: any) => {
-      if (s.isResult) {
-         const m = messageLookup[s.id]
-         if (m?.isPending) return 200
-         return 500 // Typical result node height
-      }
-      
-      let h = 80 // Base header + padding
-      s.messageIds.forEach((mId: string) => {
-         const m = messageLookup[mId]
-         const text = m.content || ""
-         const lines = Math.max(1, Math.ceil(text.length / 45))
-         h += (lines * 24) + 60
-         if (m.files?.length) h += m.files.length * 160
-      })
-      const lastId = s.messageIds[s.messageIds.length-1]
-      const hasInput = (childMap[lastId] || []).length === 0
-      if (hasInput) h += 100
-      return h
-    }
-
-    const strandHeights: Record<string, number> = { 'root-media': isImageThread ? 300 : 350 }
-
-    // Layout strands
-    strandGroups.forEach((strand) => {
-      const parentNodeId = msgToNodeId[strand.parentId] || strand.parentId
-      const parentPos = nodePositions[parentNodeId] || { x: 0, y: 0 }
-      const parentHeight = strandHeights[parentNodeId] || 400
-      
-      // IF we have a saved position, USE IT. Otherwise calculate.
-      if (videoStore.currentThread?.nodePositions?.[strand.id]) {
-        nodePositions[strand.id] = videoStore.currentThread.nodePositions[strand.id]
-      } else {
-        const siblings = strandGroups.filter(s => s.parentId === strand.parentId)
-        const index = siblings.indexOf(strand)
-
-        let x = parentPos.x
-        let y = parentPos.y
-        
-        if (strand.parentId === 'root-media') {
-           // Media -> Horizontally offset branches
-           x = parentPos.x + H_SPACING
-           y = parentPos.y + (index * 600) // Keep horizontal branches separated vertically
-        } else {
-           // Sequential children vertical, branches horizontal
-           if (index === 0) {
-             y = parentPos.y + parentHeight + MIN_V_GAP
-           } else {
-             x = parentPos.x + (H_SPACING * index)
-           }
-        }
-        nodePositions[strand.id] = { x, y }
-      }
-      
-      // Store height for children positioning
-      strandHeights[strand.id] = getEstimatedHeight(strand)
-
-    if (strand.isResult) {
-      const msg = messageLookup[strand.id]
-      let nodeType = 'message'
-      let data: any = { sender: msg.role, text: msg.content }
-
-      if (msg.isPending) {
-        nodeType = 'task'
-        data = { 
-          type: 'processing', 
-          status: 'running', 
-          progress: null, 
-          steps: [{name: msg.content || 'Processing...', status: 'active'}], 
-          onDelete: async () => {
-             const confirmed = await (window as any).api.showConfirmation({
-               title: 'Delete Task Node',
-               message: 'Are you sure you want to delete this running task and all its branches?',
-               type: 'warning'
-             })
-             if (confirmed === 1) {
-               await videoStore.removeMessageBranch(strand.id)
-             }
-          },
-          onStop: async () => {
-             await videoStore.abortProcessing(strand.id)
-          }
-        }
-      } else {
-        const type = msg.resultType || ((msg.files && msg.files.length > 0) ? 'video' : 'summary')
-        // Normalize nodeType to specialized components
-        if (type === 'video') nodeType = 'video'
-        else if (type === 'thumbnail' || type === 'generate-thumbnail' || type === 'image' || type === 'result-image') nodeType = 'thumbnail'
-        else if (type === 'summary' || type === 'cover') nodeType = 'summary'
-        else nodeType = 'summary' // Default fallback
-
-        data = { 
-          id: msg.id,
-          type, 
-          content: msg.content, 
-          files: msg.files, 
-          timeline: msg.timeline,
-          version: msg.version,
-          cost: msg.cost,
-          onDelete: async () => {
-             const confirmed = await (window as any).api.showConfirmation({
-               title: 'Delete Node',
-               message: 'Are you sure you want to delete this result and all its branches?',
-               type: 'warning'
-             })
-             if (confirmed === 1) {
-               await videoStore.removeMessageBranch(strand.id)
-             }
-          },
-          onSubmit: async (val: string, attachedImages?: string[]) => {
-            const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id, attachedImages)
-            if (newMsgId && videoStore.currentThreadId) {
-               await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
-            }
-          }
-        }
-      }
-      newNodes.push({ id: strand.id, type: nodeType, position: nodePositions[strand.id], data })
-    } else {
-      // Conversation
-      const lastId = strand.messageIds[strand.messageIds.length-1]
-      newNodes.push({
-        id: strand.id,
-        type: 'conversation',
-        position: nodePositions[strand.id],
-        data: {
-          messages: strand.messageIds.map(id => messageLookup[id]),
-          hasInputInitially: (childMap[lastId] || []).length === 0,
-          width: videoStore.currentThread?.nodePositions?.[strand.id]?.width || 380,
-          onDelete: async () => {
-             const confirmed = await (window as any).api.showConfirmation({
-               title: 'Delete Node',
-               message: 'Are you sure you want to delete this conversation and all its branches?',
-               type: 'warning'
-             })
-             if (confirmed === 1) {
-               await videoStore.removeMessageBranch(strand.id)
-             }
-          },
-          onSubmit: async (val: string, attachedImages?: string[]) => {
-            const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId, attachedImages)
-            if (newMsgId && videoStore.currentThreadId) {
-               await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
-            }
-          }
-        }
-      })
-    }
-
-    newEdges.push({ 
-      id: `e-${parentNodeId}-${strand.id}`, 
-      source: parentNodeId, 
-      target: strand.id,
-      animated: strand.isResult && messageLookup[strand.id].isPending
-    })
-  })
-
-  graphStore.setNodes(newNodes)
-  graphStore.setEdges(newEdges)
-}, { deep: true, immediate: true })
+  frameCreationStart.value = null
+  frameCreationRect.value = null
+}
 
 onMounted(async () => {
   const videoId = route.params.id as string || 'default'
-  
+
   if (videoId !== 'default') {
     await videoStore.selectThread(videoId)
   }
@@ -401,6 +329,7 @@ onMounted(async () => {
 .vue-flow-custom {
   --vf-bg: transparent;
 }
+
 .vue-flow__node {
   border: none;
   background: transparent;
