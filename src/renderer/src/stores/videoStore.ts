@@ -352,14 +352,19 @@ export const useVideoStore = defineStore('video', () => {
 		const frameMeta = currentPositions[frameId]
 		if (!frameMeta) return
 
-		// Ungroup children
+		// Ungroup children using database-only math for 100% reliability
 		Object.entries(currentPositions).forEach(([id, meta]: [string, any]) => {
 			if (meta.parentNode === frameId) {
-				// We don't have absolute positions here easily without access to VueFlow, 
-				// but GraphChatPage can handle this or we can just leave them at their relative offsets (shifted).
-				// For now, let's just clear the parentNode and keep relative offsets as absolute.
-				// Improved logic: GraphChatPage handles the coords before calling this, or we just clear here.
-				meta.parentNode = undefined
+				// Absolute = Frame (Absolute) + Child (Relative)
+				const absoluteX = (frameMeta.x || 0) + (meta.x || 0)
+				const absoluteY = (frameMeta.y || 0) + (meta.y || 0)
+				
+				currentPositions[id] = { 
+					...meta, 
+					x: absoluteX, 
+					y: absoluteY, 
+					parentNode: undefined 
+				}
 			}
 		})
 

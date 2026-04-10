@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="frame-node rounded-[2rem] border-2 border-dashed transition-all duration-300 relative group"
+    class="frame-node rounded-[2rem] border-2 border-dashed relative group"
     :class="[
       selected ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-zinc-300 dark:border-zinc-700 bg-zinc-400/5 dark:bg-zinc-400/5',
       isResizing ? 'cursor-nwse-resize' : ''

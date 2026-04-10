@@ -138,28 +138,34 @@ const onNodeDragStop = (event: any) => {
   const frames = allNodes.filter(n => n.type === 'frame')
 
   draggedNodes.forEach((node: any) => {
-    // 1. Detect if dropped inside a frame
+    // We MUST use computedPosition (absolute) for detection logic
+    const nx = node.computedPosition?.x ?? node.position.x
+    const ny = node.computedPosition?.y ?? node.position.y
+    const nw = node.dimensions?.width || 380
+    const nh = node.dimensions?.height || 200
+
     const nodeCenter = {
-      x: node.position.x + (node.dimensions?.width || 380) / 2,
-      y: node.position.y + (node.dimensions?.height || 200) / 2
+      x: nx + nw / 2,
+      y: ny + nh / 2
     }
 
-    // If it's a frame, don't nest it in another frame for now
+    // If it's a frame, only update its own absolute position
     if (node.type === 'frame') {
       const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
       newPositions[node.id] = { 
         ...currentMeta,
-        ...node.position 
+        x: nx,
+        y: ny
       }
       return
     }
 
     let parentFrameId: string | undefined = undefined
     
-    // Check against all frames
+    // Check against all frames using their absolute positions
     for (const frame of frames) {
-      const fx = frame.position.x
-      const fy = frame.position.y
+      const fx = frame.computedPosition?.x ?? frame.position.x
+      const fy = frame.computedPosition?.y ?? frame.position.y
       const fw = frame.data.width || 400
       const fh = frame.data.height || 300
 
@@ -173,24 +179,25 @@ const onNodeDragStop = (event: any) => {
     const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
     
     if (parentFrameId) {
-      // Convert to relative coordinates
       const frameNode = findNode(parentFrameId)
       if (frameNode) {
-        const relativeX = node.position.x - frameNode.position.x
-        const relativeY = node.position.y - frameNode.position.y
+        // Correct conversion: (Global Node) - (Global Frame) = Local Offset
+        const fx = frameNode.computedPosition?.x ?? frameNode.position.x
+        const fy = frameNode.computedPosition?.y ?? frameNode.position.y
+        
         newPositions[node.id] = { 
           ...currentMeta,
-          x: relativeX, 
-          y: relativeY, 
+          x: nx - fx, 
+          y: ny - fy, 
           parentNode: parentFrameId 
         }
       }
     } else {
-      // Ensure it's absolute if not in a frame
+      // Return to absolute world coordinates
       newPositions[node.id] = { 
         ...currentMeta,
-        x: node.position.x, 
-        y: node.position.y, 
+        x: nx, 
+        y: ny, 
         parentNode: undefined 
       }
     }
@@ -269,19 +276,7 @@ const onPaneMouseUp = async (event: MouseEvent) => {
           type: 'warning'
         })
         if (confirmed === 1) {
-          const currentPositions = { ...(videoStore.currentThread?.nodePositions || {}) }
-          const frameNode = findNode(frameId)
-          
-          Object.entries(currentPositions).forEach(([id, meta]: [string, any]) => {
-            if (meta.parentNode === frameId) {
-              const absoluteX = (frameNode?.position.x || 0) + meta.x
-              const absoluteY = (frameNode?.position.y || 0) + meta.y
-              currentPositions[id] = { ...meta, x: absoluteX, y: absoluteY, parentNode: undefined }
-            }
-          })
-          
-          delete currentPositions[frameId]
-          await videoStore.updateNodePositions(currentPositions)
+          await videoStore.deleteFrame(frameId)
         }
       }
     })
@@ -291,8 +286,8 @@ const onPaneMouseUp = async (event: MouseEvent) => {
     const nodesToGroup = allNodes.filter(node => {
       if (node.type === 'frame' || node.id === frameId) return false
       
-      const nx = node.position.x
-      const ny = node.position.y
+      const nx = node.computedPosition.x
+      const ny = node.computedPosition.y
       
       return nx >= flowPos.x && nx <= flowPos.x + width &&
              ny >= flowPos.y && ny <= flowPos.y + height
@@ -303,8 +298,8 @@ const onPaneMouseUp = async (event: MouseEvent) => {
       const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
       groupUpdates[node.id] = {
         ...currentMeta,
-        x: node.position.x - flowPos.x,
-        y: node.position.y - flowPos.y,
+        x: node.computedPosition.x - flowPos.x,
+        y: node.computedPosition.y - flowPos.y,
         parentNode: frameId
       }
     })
