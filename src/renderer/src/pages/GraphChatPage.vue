@@ -16,8 +16,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
+
         <h1
-          class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight min-w-[200px] max-w-[50%]">
+          class="text-xl font-bold font-heading text-zinc-900 dark:text-zinc-100 truncate tracking-tight min-w-[200px] max-w-[40%] ml-2">
           {{ videoStore.currentVideoName || 'Graph Task Manager' }}
         </h1>
 
@@ -45,15 +46,47 @@
         </div>
       </div>
 
-      <!-- Right Action Area (Clear for global App icons) -->
-      <div class="flex items-center justify-end min-w-[120px]">
-        <!-- Space reserved for App.vue absolute elements -->
+      <!-- Right Action Area -->
+      <div class="flex items-center justify-end gap-3 min-w-[20px] mr-12">
+        <!-- Space reserved for absolute elements -->
       </div>
     </div>
-
+    
     <div class="flex-1 w-full relative">
+      <!-- Compact Floating Mode Switcher -->
+      <div class="absolute left-6 top-6 z-30 flex items-center bg-zinc-100/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-xl p-1 border border-zinc-200 dark:border-zinc-800 shadow-lg">
+        <button 
+          @click="isSelectMode = false"
+          title="Pan View"
+          class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300"
+          :class="!isSelectMode ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'"
+        >
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"></path>
+          </svg>
+        </button>
+        <div class="w-px h-4 bg-zinc-200 dark:border-zinc-800 mx-1"></div>
+        <button 
+          @click="isSelectMode = true"
+          title="Select Tool"
+          class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300"
+          :class="isSelectMode ? 'bg-primary text-white shadow-md shadow-primary/20 ring-1 ring-primary/20' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'"
+        >
+          <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <rect x="4" y="4" width="16" height="16" rx="2" stroke-width="2.5" stroke="currentColor" fill="none" stroke-dasharray="4 2"></rect>
+            <path d="M7 7h1v1H7zM16 7h1v1h-1zM7 16h1v1H7zM16 16h1v1h-1z" fill="currentColor"></path>
+          </svg>
+        </button>
+      </div>
+
       <VueFlow :nodes="graphStore.nodes" :edges="graphStore.edges" class="vue-flow-custom" @pane-ready="onPaneReady"
-        @node-drag-stop="onNodeDragStop" :min-zoom="0.01" :max-zoom="4">
+        @node-drag-stop="onNodeDragStop" :min-zoom="0.01" :max-zoom="4"
+        :pan-on-drag="!isSelectMode" 
+        :selection-key-code="isSelectMode ? true : 'Shift'" 
+        :pan-on-scroll="true"
+        :zoom-on-scroll="true"
+        :pan-on-scroll-mode="'all'"
+        :selection-mode="'partial'">
         <Background pattern-color="#888" :gap="20" />
         <Controls />
 
@@ -111,6 +144,9 @@ import ImageCollectionNode from '../components/graph/ImageCollectionNode.vue'
 
 import { useRoute, useRouter } from 'vue-router'
 import { MessageRole } from '@shared/types'
+import { ref } from 'vue'
+
+const isSelectMode = ref(false)
 
 const graphStore = useGraphStore()
 const taskStore = useTaskStore()
@@ -128,10 +164,11 @@ const onPaneReady = () => {
 }
 
 const onNodeDragStop = (event: any) => {
-  const { node } = event
-  const newPositions = {
-    [node.id]: node.position
-  }
+  const { nodes } = event
+  const newPositions = nodes.reduce((acc: any, node: any) => {
+    acc[node.id] = node.position
+    return acc
+  }, {})
   videoStore.updateNodePositions(newPositions)
 }
 
