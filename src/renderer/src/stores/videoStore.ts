@@ -297,7 +297,7 @@ export const useVideoStore = defineStore('video', () => {
 		return success
 	}
 
-	const updateNodeMetadata = async (nodeId: string, metadata: { x?: number, y?: number, width?: number }) => {
+	const updateNodeMetadata = async (nodeId: string, metadata: Partial<NonNullable<Thread['nodePositions']>[string]>) => {
 		if (!currentThreadId.value || !currentThread.value) return
 		
 		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
@@ -345,6 +345,41 @@ export const useVideoStore = defineStore('video', () => {
 		await startProcessing(currentThreadId.value, message.id)
 	}
 
+	const deleteFrame = async (frameId: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		const currentPositions = JSON.parse(JSON.stringify(currentThread.value.nodePositions || {}))
+		const frameMeta = currentPositions[frameId]
+		if (!frameMeta) return
+
+		// Ungroup children
+		Object.entries(currentPositions).forEach(([id, meta]: [string, any]) => {
+			if (meta.parentNode === frameId) {
+				// We don't have absolute positions here easily without access to VueFlow, 
+				// but GraphChatPage can handle this or we can just leave them at their relative offsets (shifted).
+				// For now, let's just clear the parentNode and keep relative offsets as absolute.
+				// Improved logic: GraphChatPage handles the coords before calling this, or we just clear here.
+				meta.parentNode = undefined
+			}
+		})
+
+		delete currentPositions[frameId]
+
+		try {
+			const success = await (window as any).api.saveNodePositions(
+				String(currentThreadId.value), 
+				currentPositions
+			)
+			if (success && currentThread.value) {
+				currentThread.value.nodePositions = currentPositions
+			}
+			return success
+		} catch (error) {
+			console.error('[videoStore] Failed to delete frame:', error)
+			return false
+		}
+	}
+
 	return {
 		threads,
 		currentThreadId,
@@ -372,6 +407,7 @@ export const useVideoStore = defineStore('video', () => {
 		updateMessageContent,
 		updateNodePositions,
 		updateNodeMetadata,
+		deleteFrame,
 		retryPreprocessing
 	}
 })

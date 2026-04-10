@@ -14,13 +14,19 @@
       @back="router.push('/home')"
     />
     
-    <div class="flex-1 w-full relative">
-      <GraphToolbar v-model="isSelectMode" />
+    <div 
+      ref="containerRef" 
+      class="flex-1 w-full relative"
+      @mousedown="onPaneMouseDown"
+      @mousemove="onPaneMouseMove"
+      @mouseup="onPaneMouseUp"
+    >
+      <GraphToolbar v-model="graphMode" />
 
       <VueFlow :nodes="graphStore.nodes" :edges="graphStore.edges" class="vue-flow-custom" @pane-ready="onPaneReady"
         @node-drag-stop="onNodeDragStop" :min-zoom="0.01" :max-zoom="4"
-        :pan-on-drag="!isSelectMode" 
-        :selection-key-code="isSelectMode ? true : 'Shift'" 
+        :pan-on-drag="graphMode === 'pan'" 
+        :selection-key-code="graphMode === 'select' ? true : null" 
         :pan-on-scroll="true"
         :zoom-on-scroll="true"
         :pan-on-scroll-mode="'all'"
@@ -53,7 +59,21 @@
         <template #node-image-collection="props">
           <ImageCollectionNode v-bind="props" />
         </template>
+        <template #node-frame="props">
+          <FrameNode v-bind="props" />
+        </template>
       </VueFlow>
+
+      <!-- Frame Creation Overlay -->
+      <div v-if="frameCreationRect" class="absolute border-2 border-dashed border-secondary bg-secondary/5 pointer-events-none z-50 rounded-xl"
+        :style="{ 
+          left: `${frameCreationRect.x}px`, 
+          top: `${frameCreationRect.y}px`, 
+          width: `${frameCreationRect.width}px`, 
+          height: `${frameCreationRect.height}px` 
+        }">
+        <div class="absolute -top-6 left-0 text-[10px] font-bold text-secondary uppercase tracking-widest bg-white/80 dark:bg-zinc-900/80 px-2 py-0.5 rounded">Creating Frame...</div>
+      </div>
     </div>
   </div>
 </template>
@@ -80,17 +100,21 @@ import ThumbnailNode from '../components/graph/ThumbnailNode.vue'
 import SummaryNode from '../components/graph/SummaryNode.vue'
 import ChatInputNode from '../components/graph/ChatInputNode.vue'
 import ImageCollectionNode from '../components/graph/ImageCollectionNode.vue'
+import FrameNode from '../components/graph/FrameNode.vue'
 
 import { useGraphLayout } from '../composables/useGraphLayout'
 import GraphHeader from '../components/graph/GraphHeader.vue'
 import GraphToolbar from '../components/graph/GraphToolbar.vue'
 
-const isSelectMode = ref(false)
+const graphMode = ref<'pan' | 'select' | 'frame'>('pan')
+const containerRef = ref<HTMLElement | null>(null)
+const frameCreationRect = ref<{ x: number, y: number, width: number, height: number } | null>(null)
+const frameCreationStart = ref<{ x: number, y: number } | null>(null)
 
 const graphStore = useGraphStore()
 const taskStore = useTaskStore()
 const videoStore = useVideoStore()
-const { fitView } = useVueFlow()
+const { fitView, project, findNode, getNodes } = useVueFlow()
 const route = useRoute()
 const router = useRouter()
 
@@ -106,12 +130,195 @@ const onPaneReady = () => {
 }
 
 const onNodeDragStop = (event: any) => {
-  const { nodes } = event
-  const newPositions = nodes.reduce((acc: any, node: any) => {
-    acc[node.id] = node.position
-    return acc
-  }, {})
+  const { nodes: draggedNodes } = event
+  const newPositions: any = {}
+
+  // Current graph state
+  const allNodes = getNodes.value
+  const frames = allNodes.filter(n => n.type === 'frame')
+
+  draggedNodes.forEach((node: any) => {
+    // 1. Detect if dropped inside a frame
+    const nodeCenter = {
+      x: node.position.x + (node.dimensions?.width || 380) / 2,
+      y: node.position.y + (node.dimensions?.height || 200) / 2
+    }
+
+    // If it's a frame, don't nest it in another frame for now
+    if (node.type === 'frame') {
+      const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+      newPositions[node.id] = { 
+        ...currentMeta,
+        ...node.position 
+      }
+      return
+    }
+
+    let parentFrameId: string | undefined = undefined
+    
+    // Check against all frames
+    for (const frame of frames) {
+      const fx = frame.position.x
+      const fy = frame.position.y
+      const fw = frame.data.width || 400
+      const fh = frame.data.height || 300
+
+      if (nodeCenter.x >= fx && nodeCenter.x <= fx + fw &&
+          nodeCenter.y >= fy && nodeCenter.y <= fy + fh) {
+        parentFrameId = frame.id
+        break
+      }
+    }
+
+    const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+    
+    if (parentFrameId) {
+      // Convert to relative coordinates
+      const frameNode = findNode(parentFrameId)
+      if (frameNode) {
+        const relativeX = node.position.x - frameNode.position.x
+        const relativeY = node.position.y - frameNode.position.y
+        newPositions[node.id] = { 
+          ...currentMeta,
+          x: relativeX, 
+          y: relativeY, 
+          parentNode: parentFrameId 
+        }
+      }
+    } else {
+      // Ensure it's absolute if not in a frame
+      newPositions[node.id] = { 
+        ...currentMeta,
+        x: node.position.x, 
+        y: node.position.y, 
+        parentNode: undefined 
+      }
+    }
+  })
+
   videoStore.updateNodePositions(newPositions)
+}
+
+const onPaneMouseDown = (event: MouseEvent) => {
+  if (graphMode.value !== 'frame' || !containerRef.value) return
+  
+  // Ensure we are clicking the background, not a node or toolbar
+  const target = event.target as HTMLElement
+  if (target.closest('.vue-flow__node') || target.closest('button')) return
+
+  const rect = containerRef.value.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+
+  frameCreationStart.value = { x, y }
+  frameCreationRect.value = { x, y, width: 0, height: 0 }
+}
+
+const onPaneMouseMove = (event: MouseEvent) => {
+  if (!frameCreationStart.value || graphMode.value !== 'frame' || !containerRef.value) return
+
+  const rect = containerRef.value.getBoundingClientRect()
+  const currentX = event.clientX - rect.left
+  const currentY = event.clientY - rect.top
+  
+  const startX = frameCreationStart.value.x
+  const startY = frameCreationStart.value.y
+
+  frameCreationRect.value = {
+    x: Math.min(startX, currentX),
+    y: Math.min(startY, currentY),
+    width: Math.abs(currentX - startX),
+    height: Math.abs(currentY - startY)
+  }
+}
+
+const uuid = () => Math.random().toString(36).substring(2, 9)
+
+const onPaneMouseUp = async (event: MouseEvent) => {
+  if (!frameCreationRect.value || !frameCreationStart.value || graphMode.value !== 'frame') {
+    frameCreationStart.value = null
+    frameCreationRect.value = null
+    return
+  }
+
+  const rect = frameCreationRect.value
+  
+  // Only create if it's large enough
+  if (rect.width > 20 && rect.height > 20) {
+    // Project viewport coordinates to flow coordinates
+    const flowPos = project({ x: rect.x, y: rect.y })
+    const flowDim = project({ x: rect.x + rect.width, y: rect.y + rect.height })
+    const width = flowDim.x - flowPos.x
+    const height = flowDim.y - flowPos.y
+
+    const frameId = `frame-${uuid()}`
+    
+    // 1. Create the frame node in store
+    await videoStore.updateNodeMetadata(frameId, {
+      x: flowPos.x,
+      y: flowPos.y,
+      width,
+      height,
+      title: 'New Group',
+      isFrame: true,
+      onDelete: async () => {
+        const confirmed = await (window as any).api.showConfirmation({
+          title: 'Delete Frame',
+          message: 'Are you sure you want to delete this frame?',
+          detail: 'Children nodes will be ungrouped but NOT deleted.',
+          type: 'warning'
+        })
+        if (confirmed === 1) {
+          const currentPositions = { ...(videoStore.currentThread?.nodePositions || {}) }
+          const frameNode = findNode(frameId)
+          
+          Object.entries(currentPositions).forEach(([id, meta]: [string, any]) => {
+            if (meta.parentNode === frameId) {
+              const absoluteX = (frameNode?.position.x || 0) + meta.x
+              const absoluteY = (frameNode?.position.y || 0) + meta.y
+              currentPositions[id] = { ...meta, x: absoluteX, y: absoluteY, parentNode: undefined }
+            }
+          })
+          
+          delete currentPositions[frameId]
+          await videoStore.updateNodePositions(currentPositions)
+        }
+      }
+    })
+
+    // 2. Identify nodes inside and group them
+    const allNodes = getNodes.value
+    const nodesToGroup = allNodes.filter(node => {
+      if (node.type === 'frame' || node.id === frameId) return false
+      
+      const nx = node.position.x
+      const ny = node.position.y
+      
+      return nx >= flowPos.x && nx <= flowPos.x + width &&
+             ny >= flowPos.y && ny <= flowPos.y + height
+    })
+
+    const groupUpdates: any = {}
+    nodesToGroup.forEach(node => {
+      const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
+      groupUpdates[node.id] = {
+        ...currentMeta,
+        x: node.position.x - flowPos.x,
+        y: node.position.y - flowPos.y,
+        parentNode: frameId
+      }
+    })
+
+    if (Object.keys(groupUpdates).length > 0) {
+      await videoStore.updateNodePositions(groupUpdates)
+    }
+    
+    // Switch back to pan mode after creation
+    graphMode.value = 'pan'
+  }
+
+  frameCreationStart.value = null
+  frameCreationRect.value = null
 }
 
 onMounted(async () => {

@@ -83,10 +83,43 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
     })
 
     // 2. Position Nodes
+    const savedMetadata = videoStore.currentThread?.nodePositions || {}
+    
     // Initialize from saved positions if available
     const nodePositions: Record<string, { x: number, y: number }> = {
-      'root-media': videoStore.currentThread?.nodePositions?.['root-media'] || { x: 0, y: 0 }
+      'root-media': savedMetadata['root-media'] || { x: 0, y: 0 }
     }
+
+    // 2.1 Add Frame Nodes
+    const frameIds = new Set<string>()
+    Object.entries(savedMetadata).forEach(([id, meta]: [string, any]) => {
+      if (meta.isFrame) {
+        frameIds.add(id)
+        newNodes.push({
+          id,
+          type: 'frame',
+          position: { x: meta.x, y: meta.y },
+          data: {
+            title: meta.title,
+            width: meta.width || 400,
+            height: meta.height || 300,
+            onUpdate: (fid: string, updates: any) => videoStore.updateNodeMetadata(fid, updates),
+            onDelete: async () => {
+              const confirmed = await (window as any).api.showConfirmation({
+                title: 'Delete Frame',
+                message: 'Are you sure you want to delete this frame?',
+                detail: 'Children nodes will be ungrouped but NOT deleted.',
+                type: 'warning'
+              })
+              if (confirmed === 1) {
+                // We use the store method for deletion logic
+                await videoStore.deleteFrame(id)
+              }
+            }
+          }
+        })
+      }
+    })
 
     // Root Media Node (Always branching)
     const isImageThread = videoStore.currentThread?.type === 'image'
@@ -95,10 +128,11 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
       id: 'root-media',
       type: isImageThread ? 'image-collection' : 'media',
       position: nodePositions['root-media'],
+      parentNode: frameIds.has(savedMetadata['root-media']?.parentNode) ? savedMetadata['root-media'].parentNode : undefined,
       data: {
         filename: videoStore.currentVideoName,
         videoPath: videoStore.currentVideoPath,
-        showDetails: videoStore.currentThread?.nodePositions?.['root-media']?.showDetails || false,
+        showDetails: savedMetadata['root-media']?.showDetails || false,
         onSubmit: async (val: string, attachedImages?: string[]) => {
           const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
           if (newMsgId && videoStore.currentThreadId) {
@@ -227,7 +261,13 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
             }
           }
         }
-        newNodes.push({ id: strand.id, type: nodeType, position: nodePositions[strand.id], data })
+        newNodes.push({ 
+          id: strand.id, 
+          type: nodeType, 
+          position: nodePositions[strand.id], 
+          parentNode: frameIds.has(savedMetadata[strand.id]?.parentNode) ? savedMetadata[strand.id].parentNode : undefined,
+          data 
+        })
       } else {
         // Conversation
         const lastId = strand.messageIds[strand.messageIds.length - 1]
@@ -235,6 +275,7 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
           id: strand.id,
           type: 'conversation',
           position: nodePositions[strand.id],
+          parentNode: frameIds.has(savedMetadata[strand.id]?.parentNode) ? savedMetadata[strand.id].parentNode : undefined,
           data: {
             messages: strand.messageIds.map(id => messageLookup[id]),
             hasInputInitially: (childMap[lastId] || []).length === 0,
