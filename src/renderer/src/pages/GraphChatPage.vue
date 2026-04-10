@@ -122,7 +122,7 @@ const onNodeDragStop = (event: any) => {
 }
 
 // Hydrate Graph from active real messages
-watch(() => videoStore.messages, (messages) => {
+watch([() => videoStore.messages, () => videoStore.currentThread?.nodePositions], ([messages]) => {
   if (!videoStore.currentThreadId) return
 
   const newNodes: any[] = []
