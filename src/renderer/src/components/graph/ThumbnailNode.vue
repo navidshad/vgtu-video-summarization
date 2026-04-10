@@ -9,7 +9,7 @@
         <button v-if="mediaContentUrl" @click="isFullScreen = true" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Full Screen View">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
         </button>
-        <button @click="showDetails = !showDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}" title="Toggle Details">
+        <button @click="toggleDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}" title="Toggle Details">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         </button>
         <button @click="() => handleSave()" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Save Image">
@@ -186,8 +186,21 @@ import { renderMarkdown } from '../../utils/markdown'
 import { useVideoStore } from '../../stores/videoStore'
 
 const props = defineProps<{ data: any }>()
+const emit = defineEmits(['toggle-details'])
 const isFullScreen = ref(false)
-const showDetails = ref(false)
+const showDetails = ref(props.data.showDetails || false)
+
+watch(() => props.data.showDetails, (newVal) => {
+  if (newVal !== undefined && newVal !== showDetails.value) {
+    showDetails.value = newVal
+  }
+})
+
+const toggleDetails = () => {
+  showDetails.value = !showDetails.value
+  emit('toggle-details', showDetails.value)
+}
+
 const input = ref('')
 const attachedImages = ref<string[]>([])
 const metadata = ref<any>(null)

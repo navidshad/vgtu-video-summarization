@@ -62,16 +62,16 @@
             @node-resize-stop="videoStore.updateNodeMetadata(props.id, { width: $event })" />
         </template>
         <template #node-media="props">
-          <MediaNode v-bind="props" />
+          <MediaNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-task="props">
           <TaskProgressNode v-bind="props" />
         </template>
         <template #node-video="props">
-          <VideoNode v-bind="props" />
+          <VideoNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-thumbnail="props">
-          <ThumbnailNode v-bind="props" />
+          <ThumbnailNode v-bind="props" @toggle-details="videoStore.updateNodeMetadata(props.id, { showDetails: $event })" />
         </template>
         <template #node-summary="props">
           <SummaryNode v-bind="props" />
@@ -231,6 +231,7 @@ watch([() => videoStore.messages, () => videoStore.currentThread?.nodePositions]
     data: {
       filename: videoStore.currentVideoName,
       videoPath: videoStore.currentVideoPath,
+      showDetails: videoStore.currentThread?.nodePositions?.['root-media']?.showDetails || false,
       onSubmit: async (val: string, attachedImages?: string[]) => {
         const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
         if (newMsgId && videoStore.currentThreadId) {
@@ -340,6 +341,7 @@ watch([() => videoStore.messages, () => videoStore.currentThread?.nodePositions]
           timeline: msg.timeline,
           version: msg.version,
           cost: msg.cost,
+          showDetails: videoStore.currentThread?.nodePositions?.[strand.id]?.showDetails || false,
           onDelete: async () => {
             const confirmed = await (window as any).api.showConfirmation({
               title: 'Delete Node',
