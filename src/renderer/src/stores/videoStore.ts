@@ -385,6 +385,12 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
+	const toggleReferenceFrame = async (filePath: string) => {
+		if (!currentThreadId.value) return false
+		const success = await (window as any).api.toggleReferenceFrame(currentThreadId.value, filePath)
+		return success
+	}
+
 	return {
 		threads,
 		currentThreadId,
@@ -413,6 +419,7 @@ export const useVideoStore = defineStore('video', () => {
 		updateNodePositions,
 		updateNodeMetadata,
 		deleteFrame,
-		retryPreprocessing
+		retryPreprocessing,
+		toggleReferenceFrame
 	}
 })

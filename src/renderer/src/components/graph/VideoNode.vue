@@ -6,34 +6,26 @@
     <div class="relative aspect-video bg-black overflow-hidden group/player">
       <!-- Controls Overlay (Hover) -->
       <div class="absolute top-2 right-2 flex flex-col gap-2 z-20 opacity-0 group-hover/player:opacity-100 transition-opacity">
-        <button v-if="mediaContentUrl" @click="isFullScreen = true" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Full Screen View">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-        </button>
-        <button @click="toggleDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}" title="Toggle Details">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </button>
-        <button @click="handleSave" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg" title="Save Video">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button @click="data.onDelete" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-red-500/80 text-white transition-all shadow-lg" title="Delete node and branches">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-        </button>
-      </div>
-
-      <!-- Text Overlay (Bottom Left) -->
-      <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
-        <div class="flex items-center gap-2 mb-0.5">
-           <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: Synthesized Clip</div>
-           <div v-if="data.version" class="px-1 py-0 rounded bg-primary/30 border border-primary/50 text-[7px] font-black text-white uppercase leading-none mt-[-2px]">
-             V{{ data.version }}
-           </div>
-        </div>
-        <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest text-accent-light">Result: Video</div>
-           <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
-             Actual
-           </div>
-        </div>
+        <SlimTooltip v-if="mediaContentUrl" key="full-screen" text="Full Screen View" placement="left">
+          <button @click="isFullScreen = true" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+          </button>
+        </SlimTooltip>
+        <SlimTooltip key="details" text="Toggle Details" placement="left">
+          <button @click="toggleDetails" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-blue-400': showDetails, 'text-white': !showDetails}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </button>
+        </SlimTooltip>
+        <SlimTooltip key="save" text="Save Video" placement="left">
+          <button @click="handleSave" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 text-white transition-all shadow-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </SlimTooltip>
+        <SlimTooltip key="delete" text="Delete node and branches" placement="left">
+          <button @click="data.onDelete" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-red-500/80 text-white transition-all shadow-lg">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        </SlimTooltip>
       </div>
 
       <!-- Video Content -->
@@ -49,6 +41,28 @@
              <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Node Info Tags (Unified Variation) -->
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3">
+      <!-- Version -->
+      <div v-if="data.version" class="text-[10px] font-bold text-primary dark:text-primary-light font-mono leading-none">
+         {{ data.version }}
+      </div>
+
+      <div v-if="data.version" class="w-px h-3 bg-black/10 dark:bg-white/10"></div>
+
+      <!-- Media Type -->
+      <div class="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400 leading-none">
+        {{ displayType }}
+      </div>
+      
+      <div class="w-px h-3 bg-black/10 dark:bg-white/10"></div>
+
+      <!-- Preview Type -->
+      <div class="text-[9px] font-black uppercase tracking-widest text-accent dark:text-accent-light leading-none">
+        {{ activeFileType }}
       </div>
     </div>
 
@@ -141,8 +155,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import SlimTooltip from '../SlimTooltip.vue'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
@@ -177,6 +192,19 @@ const mediaContentUrl = computed(() => {
   const file = props.data.files?.find((f: any) => f.type === 'actual' || f.type === 'preview')
   if (!file) return undefined
   return mediaUrl(file.url)
+})
+
+const activeFileType = computed(() => {
+    const file = props.data.files?.find((f: any) => f.type === 'actual' || f.type === 'preview')
+    if (file?.type === 'actual') return 'Actual'
+    if (file?.type === 'preview') return 'Preview'
+    return 'Result'
+})
+
+const displayType = computed(() => {
+    const type = props.data.type || 'video'
+    if (type === 'video' || type === 'result-video') return 'Video'
+    return 'Clip'
 })
 
 const togglePlay = () => {
