@@ -257,6 +257,54 @@ export const useVideoStore = defineStore('video', () => {
 		return success
 	}
 
+	const removeSingleMessage = async (messageId: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		const success = await (window as any).api.removeSingleMessage(currentThreadId.value, messageId)
+		if (success && currentThread.value) {
+			const msg = currentThread.value.messages.find(m => m.id === messageId)
+			if (msg) {
+				const parentId = msg.editRefId
+				currentThread.value.messages = currentThread.value.messages
+					.filter((m) => m.id !== messageId)
+					.map(m => m.editRefId === messageId ? { ...m, editRefId: parentId } : m)
+			}
+		}
+		return success
+	}
+
+	const updateMessageContent = async (messageId: string, content: string) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		const success = await (window as any).api.updateMessage(currentThreadId.value, messageId, { content })
+		if (success && currentThread.value) {
+			const index = currentThread.value.messages.findIndex(m => m.id === messageId)
+			if (index !== -1) {
+				currentThread.value.messages[index].content = content
+			}
+		}
+		return success
+	}
+
+	const updateNodeMetadata = async (nodeId: string, metadata: { x?: number, y?: number, width?: number }) => {
+		if (!currentThreadId.value || !currentThread.value) return
+		
+		const currentPositions = currentThread.value.nodePositions || {}
+		const existing = currentPositions[nodeId] || { x: 0, y: 0 }
+		
+		const updatedPositions = {
+			...currentPositions,
+			[nodeId]: {
+				...existing,
+				...metadata
+			}
+		}
+		
+		const success = await (window as any).api.saveNodePositions(currentThreadId.value, updatedPositions)
+		if (success) {
+			currentThread.value.nodePositions = updatedPositions
+		}
+		return success
+	}
+
 	const retryMessage = async (messageId: string) => {
 		if (!currentThreadId.value || !currentThread.value) return
 
@@ -297,9 +345,12 @@ export const useVideoStore = defineStore('video', () => {
 		deleteThread,
 		deleteAllThreads,
 		removeMessageBranch,
+		removeSingleMessage,
 		retryMessage,
 		updateMessage,
+		updateMessageContent,
 		updateNodePositions,
+		updateNodeMetadata,
 		retryPreprocessing
 	}
 })

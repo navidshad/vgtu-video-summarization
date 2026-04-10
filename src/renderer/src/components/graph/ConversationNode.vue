@@ -1,6 +1,12 @@
 <template>
-  <div
-    class="glass-card glass-card-hover p-0 rounded-3xl min-w-[320px] max-w-[420px] overflow-hidden flex flex-col group">
+  <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative"
+    :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
+    :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
+    <!-- Resize Handle -->
+    <div
+      class="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize hover:bg-primary/40 transition-colors z-[60] opacity-0 group-hover:opacity-100"
+      @mousedown.stop.prevent="startResizing"></div>
+
     <Handle type="target" :position="Position.Top"
       class="w-3 h-3 bg-zinc-400 dark:bg-zinc-500 border-2 border-white dark:border-zinc-800" />
 
@@ -38,12 +44,27 @@
         class="flex flex-col space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-300"
         :class="msg.role === 'user' ? 'items-end' : 'items-start'">
 
-        <div class="flex items-center space-x-2 px-1">
-          <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">{{ msg.role
-          }}</span>
-          <div v-if="msg.role === 'user'" @click="videoStore.retryMessage(msg.id)"
-            class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer opacity-0 group-hover:opacity-100 uppercase">
-            Retry</div>
+        <div class="flex items-center gap-2 px-1" :class="{ 'flex-row-reverse': msg.role !== 'user' }">
+
+
+          <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div v-if="msg.role === 'user'" @click="confirmRetry(msg.id)"
+              class="text-[9px] font-bold text-blue-500 hover:underline cursor-pointer uppercase">
+              Retry
+            </div>
+            <div v-if="msg.role === 'user' && editingMessageId !== msg.id" @click="startEditing(msg)"
+              class="text-[9px] font-bold text-zinc-400 hover:text-primary cursor-pointer uppercase">
+              Edit</div>
+            <div @click="removeMessage(msg.id)"
+              class="text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer uppercase">
+              Remove</div>
+          </div>
+
+          <div class="flex items-center">
+            <span class="text-[9px] uppercase font-black tracking-widest text-zinc-500 dark:text-zinc-500">
+              {{ msg.role }}
+            </span>
+          </div>
         </div>
 
         <div
@@ -76,9 +97,11 @@
             class="text-zinc-400 italic font-medium flex items-center space-x-2">
             <span>AI is thinking...</span>
           </div>
-          <div v-else v-html="renderMarkdown(msg.content)"
-            class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
-            :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
+          <template v-else>
+            <div v-html="renderMarkdown(msg.content)"
+              class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+              :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
+          </template>
 
           <!-- Files -->
           <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
@@ -138,22 +161,141 @@
 
     <Handle type="source" :position="Position.Bottom"
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
+
+    <!-- Edit Modal -->
+    <Modal v-model="isModalOpen" title="Edit Message" size="xl" @close="cancelEdit">
+      <!-- Suppress default trigger as we use custom triggers in parents -->
+      <template #trigger><span class="hidden"></span></template>
+
+      <template #default>
+        <div class="flex flex-col gap-4 overflow-hidden">
+          <div class="flex-1 overflow-hidden">
+            <TextArea v-model="editText" placeholder="Edit message..."
+              class="h-full font-sans text-base custom-textarea-full" />
+          </div>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex justify-end gap-3 mt-2 flex-shrink-0">
+          <Button outline @click="cancelEdit">Cancel</Button>
+          <Button color="primary" @click="saveEdit">Save Changes</Button>
+        </div>
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Handle, Position } from '@vue-flow/core'
+import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
+import { Button } from 'pilotui/elements'
+import { Modal } from 'pilotui/complex'
+import { TextArea } from 'pilotui/form'
 import { renderMarkdown } from '../../utils/markdown'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
+const emit = defineEmits(['node-resize-stop'])
+const { viewport } = useVueFlow()
 const videoStore = useVideoStore()
+
+// Resizing logic
+const nodeWidth = ref(props.data.width || 380)
+const isResizing = ref(false)
+
+const startResizing = (e: MouseEvent) => {
+  isResizing.value = true
+  document.body.style.cursor = 'ew-resize'
+  document.body.style.userSelect = 'none'
+  const startX = e.clientX
+  const startWidth = nodeWidth.value
+
+  const onMouseMove = (moveEvent: MouseEvent) => {
+    if (!isResizing.value) return
+    const zoom = viewport.value.zoom || 1
+    const deltaX = (moveEvent.clientX - startX) / zoom
+    const newWidth = Math.min(800, Math.max(320, startWidth + deltaX))
+    nodeWidth.value = newWidth
+  }
+
+  const onMouseUp = () => {
+    if (isResizing.value) {
+      isResizing.value = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      emit('node-resize-stop', nodeWidth.value)
+    }
+  }
+
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
 const input = ref('')
 const showInput = ref(false)
 const copiedId = ref<string | null>(null)
 const attachedImages = ref<string[]>([])
+
+const editingMessageId = ref<string | null>(null)
+const editText = ref('')
+const isModalOpen = ref(false)
+
+const startEditing = (msg: any) => {
+  editingMessageId.value = msg.id
+  editText.value = msg.content
+  isModalOpen.value = true
+}
+
+const cancelEdit = () => {
+  editingMessageId.value = null
+  editText.value = ''
+  isModalOpen.value = false
+}
+
+const saveEdit = async () => {
+  if (!editingMessageId.value) return
+  if (editText.value.trim() === '') return
+
+  const success = await videoStore.updateMessageContent(editingMessageId.value, editText.value)
+  if (success) {
+    cancelEdit()
+  }
+}
+
+const confirmRetry = async (messageId: string) => {
+  const confirmed = await (window as any).api.showConfirmation({
+    title: 'Retry Generation',
+    message: 'Are you sure you want to retry?',
+    detail: 'All subsequent AI responses in this branch will be removed and the generation will restart from this message.',
+    type: 'question',
+    buttons: ['Cancel', 'Retry'],
+    defaultId: 1,
+    cancelId: 0
+  })
+
+  if (confirmed === 1) {
+    await videoStore.retryMessage(messageId)
+  }
+}
+
+const removeMessage = async (messageId: string) => {
+  const confirmed = await (window as any).api.showConfirmation({
+    title: 'Remove Message',
+    message: 'Are you sure you want to remove this message from the conversation?',
+    detail: 'This will delete the message and its artifacts. Subsequent messages in this node will be preserved.',
+    type: 'warning',
+    buttons: ['Cancel', 'Remove'],
+    defaultId: 1,
+    cancelId: 0
+  })
+
+  if (confirmed === 1) {
+    await videoStore.removeSingleMessage(messageId)
+  }
+}
 
 const copyMessage = (id: string, content: string) => {
   navigator.clipboard.writeText(content).then(() => {

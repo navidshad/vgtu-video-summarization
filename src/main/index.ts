@@ -358,6 +358,14 @@ app.whenReady().then(() => {
 	ipcMain.handle('remove-message', async (_event, { threadId, messageId }) => {
 		return await threadManager.removeMessageBranchFromThread(threadId, messageId)
 	})
+	
+	ipcMain.handle('remove-single-message', async (_event, { threadId, messageId }) => {
+		return await threadManager.removeSingleMessage(threadId, messageId)
+	})
+
+	ipcMain.handle('update-message', async (_event, { threadId, messageId, updates }) => {
+		return await threadManager.updateMessageInThread(threadId, messageId, updates)
+	})
 
 	ipcMain.handle('save-node-positions', async (_event, { threadId, positions }) => {
 		return await threadManager.updateThreadNodePositions(threadId, positions)
