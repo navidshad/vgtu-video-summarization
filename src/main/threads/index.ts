@@ -653,6 +653,30 @@ class ThreadManager {
 
 		return !!result
 	}
+
+	async toggleThreadReferenceFrame(threadId: string, filePath: string): Promise<boolean> {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const currentRefs = thread.preprocessing?.['reference-frames'] || []
+		const index = currentRefs.indexOf(filePath)
+		
+		let newRefs: string[]
+		if (index === -1) {
+			newRefs = [...currentRefs, filePath]
+		} else {
+			newRefs = currentRefs.filter(r => r !== filePath)
+		}
+
+		const result = await this.updateThread(threadId, {
+			preprocessing: {
+				...(thread.preprocessing || {}),
+				'reference-frames': newRefs
+			}
+		})
+
+		return !!result
+	}
 }
 
 export const threadManager = new ThreadManager()

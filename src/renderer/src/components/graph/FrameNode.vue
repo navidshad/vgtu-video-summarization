@@ -54,16 +54,16 @@
     </div>
 
     <!-- Delete Button -->
-    <button 
-      v-if="selected"
-      class="absolute top-4 right-4 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 z-50 pointer-events-auto"
-      @click="data.onDelete"
-      title="Delete Frame (ungroup children)"
-    >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
+    <SlimTooltip v-if="selected" text="Delete Frame (ungroup children)" placement="left">
+      <button 
+        class="absolute top-4 right-4 p-1.5 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 z-50 pointer-events-auto"
+        @click="data.onDelete"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </SlimTooltip>
 
     <!-- Resize Handle -->
     <div 
@@ -86,6 +86,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { useVueFlow } from '@vue-flow/core'
+import SlimTooltip from '../SlimTooltip.vue'
 
 const props = defineProps<{
   id: string

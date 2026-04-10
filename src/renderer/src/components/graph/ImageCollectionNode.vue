@@ -55,20 +55,26 @@
     <!-- Lightbox Modal -->
     <Teleport to="body">
       <div v-if="lightboxIdx !== null" class="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-8 backdrop-blur-3xl animate-in fade-in duration-300">
-        <button @click="lightboxIdx = null" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+        <SlimTooltip text="Close Lightbox" placement="bottom">
+          <button @click="lightboxIdx = null" class="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 z-50">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </SlimTooltip>
         
         <img :src="mediaUrl(sourceImages[lightboxIdx])" class="max-w-full max-h-[80vh] rounded-2xl shadow-2xl ring-1 ring-white/20 object-contain" />
         
         <div class="mt-8 flex items-center gap-6">
-          <button @click="prevImg" class="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all active:scale-95 disabled:opacity-20" :disabled="lightboxIdx === 0">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-          </button>
+          <SlimTooltip text="Previous Image" placement="top">
+            <button @click="prevImg" class="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all active:scale-95 disabled:opacity-20" :disabled="lightboxIdx === 0">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+          </SlimTooltip>
           <div class="text-zinc-400 font-mono text-sm tracking-widest">{{ lightboxIdx + 1 }} / {{ sourceImages.length }}</div>
-          <button @click="nextImg" class="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all active:scale-95 disabled:opacity-20" :disabled="lightboxIdx === sourceImages.length - 1">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-          </button>
+          <SlimTooltip text="Next Image" placement="top">
+            <button @click="nextImg" class="p-4 bg-white/5 hover:bg-white/10 rounded-2xl text-white transition-all active:scale-95 disabled:opacity-20" :disabled="lightboxIdx === sourceImages.length - 1">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </SlimTooltip>
         </div>
       </div>
     </Teleport>
@@ -80,6 +86,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import SlimTooltip from '../SlimTooltip.vue'
 import { useVideoStore } from '../../stores/videoStore'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 

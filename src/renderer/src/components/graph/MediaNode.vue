@@ -22,22 +22,23 @@
       
       <!-- Full Screen Toggle Overlay -->
       <div class="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/player:opacity-100 transition-opacity z-20">
-        <button 
-          v-if="videoUrl"
-          @click="isFullScreen = true" 
-          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
-          title="Full Screen"
-        >
-          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-        </button>
-        <button 
-          @click="toggleDetails" 
-          class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all"
-          :class="showDetails ? 'text-primary-light' : 'text-white'"
-          title="Toggle Metadata"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </button>
+        <SlimTooltip v-if="videoUrl" key="full-screen" text="Full Screen" placement="left">
+          <button 
+            @click="isFullScreen = true" 
+            class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80"
+          >
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+          </button>
+        </SlimTooltip>
+        <SlimTooltip key="metadata" text="Toggle Metadata" placement="left">
+          <button 
+            @click="toggleDetails" 
+            class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all"
+            :class="showDetails ? 'text-primary-light' : 'text-white'"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </button>
+        </SlimTooltip>
       </div>
 
       <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
@@ -116,6 +117,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
+import SlimTooltip from '../SlimTooltip.vue'
 import { useVideoStore } from '../../stores/videoStore'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 

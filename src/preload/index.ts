@@ -58,6 +58,8 @@ const api = {
 		ipcRenderer.invoke('remove-single-message', { threadId, messageId }),
 	updateMessage: (threadId: string, messageId: string, updates: any) =>
 		ipcRenderer.invoke('update-message', { threadId, messageId, updates }),
+	toggleReferenceFrame: (threadId: string, filePath: string) =>
+		ipcRenderer.invoke('toggle-reference-frame', { threadId, filePath }),
 	showConfirmation: (options: { title: string, message: string, detail?: string, type?: string, buttons?: string[], defaultId?: number, cancelId?: number }) =>
 		ipcRenderer.invoke('show-confirmation', options),
 	saveVideo: (sourcePath: string) => ipcRenderer.invoke('save-video', sourcePath),

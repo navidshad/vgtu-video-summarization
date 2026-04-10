@@ -19,22 +19,26 @@
           class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
       </div>
       <div class="flex items-center space-x-1">
-        <button v-if="!showInput && !data.hasInputInitially" @click="showInput = true"
-          class="p-1 hover:bg-blue-500/10 rounded-md text-zinc-400 hover:text-blue-500 transition-colors"
-          title="Branch from this node">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-        </button>
-        <button @click="data.onDelete"
-          class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors"
-          title="Delete node and branches">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-            </path>
-          </svg>
-        </button>
+        <SlimTooltip v-if="!showInput && !data.hasInputInitially" text="Branch from this node" placement="bottom">
+          <button @click="showInput = true"
+            class="p-1 hover:bg-blue-500/10 rounded-md text-zinc-400 hover:text-blue-500 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+          </button>
+        </SlimTooltip>
+        <SlimTooltip text="Delete node and branches" placement="bottom">
+          <button @click="data.onDelete"
+            class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+              </path>
+            </svg>
+          </button>
+        </SlimTooltip>
       </div>
     </div>
 
@@ -76,22 +80,24 @@
             msg.isPending ? 'ring-2 ring-primary/20 bg-primary/5 dark:bg-primary/10 transition-all duration-1000 animate-pulse' : ''
           ]">
 
-          <button v-if="msg.content && !msg.isPending" @click="copyMessage(msg.id, msg.content)"
-            class="absolute top-1 right-1 p-1.5 rounded-lg opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-10"
-            :class="[
-              msg.role === 'user'
-                ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                : 'hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
-            ]" title="Copy message">
-            <svg v-if="copiedId !== msg.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
-              </path>
-            </svg>
-            <svg v-else class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-            </svg>
-          </button>
+          <SlimTooltip v-if="msg.content && !msg.isPending" text="Copy message" placement="top">
+            <button @click="copyMessage(msg.id, msg.content)"
+              class="absolute top-1 right-1 p-1.5 rounded-lg opacity-0 group-hover/msg:opacity-100 transition-all duration-200 z-10"
+              :class="[
+                msg.role === 'user'
+                  ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                  : 'hover:bg-black/5 dark:hover:bg-white/5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300'
+              ]">
+              <svg v-if="copiedId !== msg.id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z">
+                </path>
+              </svg>
+              <svg v-else class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </button>
+          </SlimTooltip>
 
           <div v-if="msg.isPending && !msg.content"
             class="text-zinc-400 italic font-medium flex items-center space-x-2">
@@ -135,14 +141,16 @@
                   <span class="text-[8px] font-black uppercase tracking-widest text-primary/70">{{ file.type }}</span>
                   <span class="text-[9px] truncate text-zinc-500 font-mono">{{ file.url.split('/').pop() }}</span>
                 </div>
-                <button @click.stop="handleSave(file.url)"
-                  class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0"
-                  title="Save">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10"
-                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                  </svg>
-                </button>
+                  <SlimTooltip text="Save" placement="top">
+                    <button @click.stop="handleSave(file.url)"
+                      class="p-1 px-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-colors flex-shrink-0"
+                    >
+                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10"
+                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      </svg>
+                    </button>
+                  </SlimTooltip>
               </div>
             </div>
           </div>
@@ -153,12 +161,14 @@
               <span>Active Task</span>
             </div>
 
-            <button v-if="msg.isPending" @click="videoStore.abortProcessing(msg.id)"
-              class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40 ml-4"
-              title="Stop process">
-              <div class="w-1.5 h-1.5 bg-red-500 rounded-sm"></div>
-              <span class="text-[9px] font-bold tracking-wider uppercase leading-none">Stop</span>
-            </button>
+            <SlimTooltip v-if="msg.isPending" text="Stop process" placement="left">
+              <button @click="videoStore.abortProcessing(msg.id)"
+                class="flex items-center space-x-1.5 px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40 ml-4"
+              >
+                <div class="w-1.5 h-1.5 bg-red-500 rounded-sm"></div>
+                <span class="text-[9px] font-bold tracking-wider uppercase leading-none">Stop</span>
+              </button>
+            </SlimTooltip>
 
             <div class="flex space-x-1 grayscale opacity-50 ml-auto">
               <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0s]"></div>
@@ -223,6 +233,7 @@ import { ref, watch } from 'vue'
 import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useVideoStore } from '../../stores/videoStore'
 import { Button } from 'pilotui/elements'
+import SlimTooltip from '../SlimTooltip.vue'
 import { Modal } from 'pilotui/complex'
 import { TextArea } from 'pilotui/form'
 import { renderMarkdown } from '../../utils/markdown'

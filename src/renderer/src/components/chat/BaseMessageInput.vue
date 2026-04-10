@@ -6,15 +6,16 @@
         class="relative rounded-xl overflow-hidden group shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all hover:scale-105"
         :class="compact ? 'w-10 h-10' : 'w-16 h-16'">
         <img :src="normalizeUrl(img)" class="w-full h-full object-cover" />
-        <button 
-          @click.stop="removeAttachment(idx)"
-          class="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-lg"
-          title="Remove attachment"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-          </svg>
-        </button>
+        <SlimTooltip text="Remove attachment" placement="top">
+          <button 
+            @click.stop="removeAttachment(idx)"
+            class="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            </svg>
+          </button>
+        </SlimTooltip>
       </div>
     </div>
 
@@ -25,8 +26,10 @@
         : 'space-x-4 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/20 backdrop-blur-xl shadow-lg focus-within:ring-2 focus-within:ring-primary/20'
     ]">
       <!-- Attachment Toggle -->
-      <IconButton @click="showAttachmentModal = true" icon="IconPlus" :size="compact ? 'sm' : 'md'" rounded="full"
-        variant="ghost" class="mb-0.5 text-zinc-400 hover:text-primary transition-all active:scale-95" />
+      <SlimTooltip text="Add Attachments" :placement="compact ? 'top' : 'bottom'">
+        <IconButton @click="showAttachmentModal = true" icon="IconPlus" :size="compact ? 'sm' : 'md'" rounded="full"
+          variant="ghost" class="mb-0.5 text-zinc-400 hover:text-primary transition-all active:scale-95" />
+      </SlimTooltip>
 
       <div class="flex-1 min-w-0">
         <textarea v-model="internalText" ref="textareaRef" :placeholder="placeholder" :rows="1"
@@ -35,8 +38,10 @@
           @keydown.enter="handleEnter"></textarea>
       </div>
 
-      <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
-        :disabled="!internalText.trim() && attachedImages.length === 0" />
+      <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'" :placement="compact ? 'top' : 'bottom'">
+        <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
+          :disabled="!internalText.trim() && attachedImages.length === 0" />
+      </SlimTooltip>
     </div>
 
     <AttachmentModal v-model="showAttachmentModal" @select="handleImagesSelected" />
@@ -46,6 +51,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { IconButton } from 'pilotui/elements'
+import SlimTooltip from '../SlimTooltip.vue'
 import AttachmentModal from './AttachmentModal.vue'
 
 const props = withDefaults(defineProps<{
