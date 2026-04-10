@@ -34,28 +34,30 @@
         </SlimTooltip>
       </div>
 
-      <!-- Text Overlay (Bottom Left) -->
-      <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
-        <div class="flex items-center gap-2 mb-0.5">
-           <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: {{ versionedTitle }}</div>
-           <div v-if="data.version" class="px-1 py-0 rounded bg-primary/30 border border-primary/50 text-[7px] font-black text-white uppercase leading-none mt-[-2px]">
-             V{{ data.version }}
-           </div>
-        </div>
-        <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest text-primary-light">Result: {{ displayType }}</div>
-           <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
-             {{ activeFileType }}
-           </div>
-        </div>
-      </div>
-
       <!-- Image Content -->
       <img 
         :src="mediaContentUrl" 
         class="w-full h-full object-contain cursor-pointer transition-transform duration-500 hover:scale-105" 
         @click="isFullScreen = true"
       />
+    </div>
+
+    <!-- Node Info Tags -->
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest leading-none">
+      <!-- Version Tag -->
+      <div v-if="data.version" class="px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 text-primary dark:text-primary-light font-mono shadow-sm">
+         V{{ data.version }}
+      </div>
+
+      <!-- Media Type Tag -->
+      <div class="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5 ">
+        {{ displayType }}
+      </div>
+      
+      <!-- Preview Type Tag -->
+      <div class="px-2 py-1 rounded-lg bg-accent/10 border border-accent/20 text-accent dark:text-accent-light ">
+        {{ activeFileType }}
+      </div>
     </div>
 
     <!-- Reference Frames Gallery (Visible by default if present) -->

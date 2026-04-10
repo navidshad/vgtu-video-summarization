@@ -28,22 +28,6 @@
         </SlimTooltip>
       </div>
 
-      <!-- Text Overlay (Bottom Left) -->
-      <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent z-10">
-        <div class="flex items-center gap-2 mb-0.5">
-           <div class="text-xs font-bold text-white truncate max-w-[180px] italic">AI Result: Synthesized Clip</div>
-           <div v-if="data.version" class="px-1 py-0 rounded bg-primary/30 border border-primary/50 text-[7px] font-black text-white uppercase leading-none mt-[-2px]">
-             V{{ data.version }}
-           </div>
-        </div>
-        <div class="flex items-center gap-2">
-           <div class="text-[9px] font-black uppercase tracking-widest text-accent-light">Result: Video</div>
-           <div class="px-1 py-0 rounded text-[7px] font-black uppercase leading-none border bg-accent/20 border-accent/40 text-accent-light">
-             Actual
-           </div>
-        </div>
-      </div>
-
       <!-- Video Content -->
       <div class="w-full h-full relative">
         <video 
@@ -57,6 +41,24 @@
              <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Node Info Tags -->
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex flex-wrap gap-2">
+      <!-- Version Tag -->
+      <div v-if="data.version" class="px-2 py-1 rounded-lg bg-primary/5 border border-primary/10 text-[9px] font-bold text-primary dark:text-primary-light font-mono shadow-sm leading-none">
+         V{{ data.version }}
+      </div>
+
+      <!-- Media Type Tag -->
+      <div class="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-black/5 dark:border-white/5 text-[9px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400 leading-none">
+        {{ displayType }}
+      </div>
+      
+      <!-- Preview Type Tag -->
+      <div class="px-2 py-1 rounded-lg bg-accent/10 border border-accent/20 text-[9px] font-black uppercase text-accent dark:text-accent-light leading-none">
+        {{ activeFileType }}
       </div>
     </div>
 
@@ -186,6 +188,19 @@ const mediaContentUrl = computed(() => {
   const file = props.data.files?.find((f: any) => f.type === 'actual' || f.type === 'preview')
   if (!file) return undefined
   return mediaUrl(file.url)
+})
+
+const activeFileType = computed(() => {
+    const file = props.data.files?.find((f: any) => f.type === 'actual' || f.type === 'preview')
+    if (file?.type === 'actual') return 'Actual'
+    if (file?.type === 'preview') return 'Preview'
+    return 'Result'
+})
+
+const displayType = computed(() => {
+    const type = props.data.type || 'video'
+    if (type === 'video' || type === 'result-video') return 'Video'
+    return 'Clip'
 })
 
 const togglePlay = () => {
