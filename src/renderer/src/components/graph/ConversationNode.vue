@@ -1,6 +1,6 @@
 <template>
   <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative cursor-move"
-    :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
+    :class="[isResizing ? '' : 'glass-card-hover']"
     :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
     <!-- Resize Handle -->
     <div

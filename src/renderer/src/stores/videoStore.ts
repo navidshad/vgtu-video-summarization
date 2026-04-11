@@ -363,7 +363,7 @@ export const useVideoStore = defineStore('video', () => {
 					...meta, 
 					x: absoluteX, 
 					y: absoluteY, 
-					parentNode: undefined 
+					parentNode: null 
 				}
 			}
 		})
