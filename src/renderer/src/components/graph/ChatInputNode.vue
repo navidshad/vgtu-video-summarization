@@ -7,7 +7,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Ask for summary, cover, etc..."
       compact
-      class="nodrag"
+      class="nodrag interactive-in-pan"
       @send="submit"
     />
   </div>

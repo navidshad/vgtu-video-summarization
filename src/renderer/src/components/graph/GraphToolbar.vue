@@ -6,8 +6,12 @@
         class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300"
         :class="modelValue === 'pan' ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-700' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'"
       >
-        <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"></path>
+        <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path d="M7 13v-8a1 1 0 0 1 2 0v8" />
+          <path d="M11 11v-4a1 1 0 0 1 2 0v4" />
+          <path d="M15 11v-2a1 1 0 0 1 2 0v6" />
+          <path d="M5 15v-2a1 1 0 0 1 2 0v7" />
+          <path d="M19 13v4a4 4 0 0 1-4 4h-6a5 5 0 0 1-5-5v-1" />
         </svg>
       </button>
     </SlimTooltip>
@@ -20,9 +24,8 @@
         class="flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-300"
         :class="modelValue === 'select' ? 'bg-primary text-white shadow-md shadow-primary/20 ring-1 ring-primary/20' : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50'"
       >
-        <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <rect x="4" y="4" width="16" height="16" rx="2" stroke-width="2.5" stroke="currentColor" fill="none" stroke-dasharray="4 2"></rect>
-          <path d="M7 7h1v1H7zM16 7h1v1h-1zM7 16h1v1H7zM16 16h1v1h-1z" fill="currentColor"></path>
+        <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"></path>
         </svg>
       </button>
     </SlimTooltip>

@@ -135,7 +135,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Adjust or follow up..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan"
       @send="submit"
     />
 
