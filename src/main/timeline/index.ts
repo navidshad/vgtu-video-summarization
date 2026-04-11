@@ -136,13 +136,17 @@ Task: Provide a list of indices representing the new timeline after applying the
 `;
 
     try {
-        const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
-        console.log(`Gemini response (Edit Mode):`, responseText);
+        const { data: indices, record } = await geminiAdapter.generateStructuredText<number[]>(
+            modelName,
+            prompt,
+            INDICES_SCHEMA,
+            systemInstruction,
+            signal
+        );
+        console.log(`Gemini response (Edit Mode):`, indices);
 
         // Record usage for the edit call
         onRecordUsage?.(record);
-
-        const indices = parseIndicesFromResponse(responseText);
         const newTimeline: EnrichedTimelineSegment[] = [];
 
         for (const idx of indices) {
@@ -251,14 +255,18 @@ Task: Pick the next 3 segments to add to the timeline.
 `;
 
         try {
-            const { text: responseText, record } = await geminiAdapter.generateText(modelName, prompt, systemInstruction, signal);
+            const { data: indices, record } = await geminiAdapter.generateStructuredText<number[]>(
+                modelName,
+                prompt,
+                INDICES_SCHEMA,
+                systemInstruction,
+                signal
+            );
             
             // Record usage IMMEDIATELY after call finishes, before any abort checks
             onRecordUsage?.(record);
 
-            console.log(`Gemini response (Iteration ${iterationCount}):`, responseText);
-
-            const indices = parseIndicesFromResponse(responseText);
+            console.log(`Gemini response (Iteration ${iterationCount}):`, indices);
 
             if (indices.length === 0) {
                 console.warn("No indices returned from Gemini, stopping loop.");
@@ -338,13 +346,10 @@ function formatEnrichedTranscript(items: EnrichedTimelineSegment[]): string {
 }
 
 
-function parseIndicesFromResponse(text: string): number[] {
-    const jsonMatch = text.match(/\[([\d,\s]+)\]/);
-    if (jsonMatch) {
-        return jsonMatch[1]
-            .split(',')
-            .map(s => parseInt(s.trim()))
-            .filter(n => !isNaN(n));
-    }
-    return [];
-}
+/**
+ * JSON schema that forces Gemini to return a plain array of segment indices.
+ */
+const INDICES_SCHEMA = {
+    type: 'ARRAY',
+    items: { type: 'INTEGER' }
+};
