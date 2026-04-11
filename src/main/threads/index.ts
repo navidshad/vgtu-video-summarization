@@ -128,6 +128,7 @@ class ThreadManager {
 			messages: [],
 			versionCounter: 0,
 			videoMetadata,
+			usageHistory: [],
 			createdAt: Date.now(),
 			updatedAt: Date.now()
 		}
@@ -277,6 +278,11 @@ class ThreadManager {
 				// Try to repair paths if they seem broken/moved
 				thread = this.repairThreadPaths(thread)
 				
+				// Migrate usage if needed
+				if (this.migrateThreadUsage(thread)) {
+					this.saveThread(thread)
+				}
+				
 				// Mark as missing if artifacts directory is not found, but DO NOT DELETE metadata.
 				// This allows the user to repair the path or recover files manually.
 				thread.missing = !!(thread.tempDir && !fs.existsSync(thread.tempDir))
@@ -300,7 +306,14 @@ class ThreadManager {
 
 		try {
 			const content = fs.readFileSync(filePath, 'utf-8')
-			return JSON.parse(content)
+			const thread = JSON.parse(content) as Thread
+			
+			// Migrate usage if needed
+			if (this.migrateThreadUsage(thread)) {
+				this.saveThread(thread)
+			}
+			
+			return thread
 		} catch (error) {
 			console.error(`Failed to read thread ${id}:`, error)
 			return null
@@ -460,8 +473,18 @@ class ThreadManager {
 
 	// Update usage and cost for a message
 	async updateMessageUsage(threadId: string, messageId: string, record: UsageRecord): Promise<boolean> {
+		const thread = this.getThread(threadId)
+		if (!thread) return false
+
+		const historyRecord: UsageRecord = {
+			...record,
+			timestamp: Date.now(),
+			messageId
+		}
+
 		const result = await this.updateThread(threadId, {
-			messages: (this.getThread(threadId)?.messages || []).map(m => {
+			usageHistory: [...(thread.usageHistory || []), historyRecord],
+			messages: (thread.messages || []).map(m => {
 				if (m.id !== messageId) return m
 
 				const newUsage: Usage = {
@@ -676,6 +699,32 @@ class ThreadManager {
 		})
 
 		return !!result
+	}
+
+	// Migrate usage from messages to usageHistory if history is empty
+	private migrateThreadUsage(thread: Thread): boolean {
+		// If usageHistory already has data, no migration needed
+		if (thread.usageHistory && thread.usageHistory.length > 0) return false
+
+		const history: UsageRecord[] = []
+		for (const msg of thread.messages) {
+			if (msg.usage && msg.cost && msg.cost > 0) {
+				history.push({
+					usage: msg.usage,
+					cost: msg.cost,
+					timestamp: msg.createdAt,
+					messageId: msg.id
+				})
+			}
+		}
+
+		// Only migrate if we found usage or if usageHistory is missing (to initialize it)
+		if (history.length > 0 || thread.usageHistory === undefined) {
+			thread.usageHistory = history
+			return true
+		}
+
+		return false
 	}
 }
 

@@ -126,7 +126,7 @@ const router = useRouter()
 useGraphLayout(videoStore, graphStore)
 
 const totalCost = computed(() => {
-  return videoStore.messages.reduce((acc, msg) => acc + (msg.cost || 0), 0)
+  return (videoStore.currentThread?.usageHistory || []).reduce((acc, record) => acc + (record.cost || 0), 0)
 })
 
 const onPaneReady = () => {

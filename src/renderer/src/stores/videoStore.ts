@@ -391,6 +391,16 @@ export const useVideoStore = defineStore('video', () => {
 		return success
 	}
 
+	const improviseMessage = async (messageId: string) => {
+		if (!currentThreadId.value) return null
+		try {
+			return await (window as any).api.improviseMessage(currentThreadId.value, messageId)
+		} catch (error) {
+			console.error('[videoStore] Failed to improvise message:', error)
+			return null
+		}
+	}
+
 	return {
 		threads,
 		currentThreadId,
@@ -420,6 +430,7 @@ export const useVideoStore = defineStore('video', () => {
 		updateNodeMetadata,
 		deleteFrame,
 		retryPreprocessing,
-		toggleReferenceFrame
+		toggleReferenceFrame,
+		improviseMessage
 	}
 })

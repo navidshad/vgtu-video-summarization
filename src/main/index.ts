@@ -22,6 +22,7 @@ import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { THREAD_DIRS } from './constants/paths'
+import { GEMINI_MODEL_2_5_FLASH } from './constants/gemini'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -455,6 +456,45 @@ app.whenReady().then(() => {
 		}
 
 		return result.path
+	})
+
+	ipcMain.handle('improvise-message', async (_event, { threadId, messageId }) => {
+		console.log(`[DEBUG IPC] improvise-message called: threadId=${threadId}, messageId=${messageId}`)
+		
+		const thread = threadManager.getThread(threadId)
+		if (!thread) throw new Error('Thread not found')
+
+		const message = thread.messages.find(m => m.id === messageId)
+		if (!message) throw new Error('Message not found')
+
+		// Get the history leading up to this message (including the message itself)
+		const { text: context } = threadManager.getBranchContext(threadId, messageId)
+		
+		// Collect attached images from THIS message only for visual context in improvisation
+		const attachedImages = message.attachedImages || []
+		
+		const modelSettings = settingsManager.getModelSettings()
+		const modelName = modelSettings.selection['intent'] || GEMINI_MODEL_2_5_FLASH
+		const adapter = GeminiAdapter.create()
+
+		const systemInstruction = `You are a prompt improviser. Your goal is to take a user's prompt (potentially with images) and its conversation history, then rewrite the user's LATEST prompt to be more clear, descriptive, and effective for an AI to understand and act upon. 
+- Maintain the original intent exactly.
+- Enhance the wording for better AI performance.
+- Use natural, professional language.
+- Return ONLY the improvised prompt text. 
+- Do NOT include any explanations, tags, or surrounding quotes.
+- The history is provided for context only so you understand the flow.`
+
+		const userPrompt = `History and Prompt:\n${context}`
+
+		const result = await adapter.generateText(modelName, userPrompt, systemInstruction, undefined, attachedImages)
+		
+		// Track usage for the message that initiated it
+		if (result.record) {
+			await threadManager.updateMessageUsage(threadId, messageId, result.record)
+		}
+
+		return result.text
 	})
 
 	app.on('activate', function () {
