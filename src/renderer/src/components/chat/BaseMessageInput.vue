@@ -1,21 +1,22 @@
 <template>
   <div class="flex flex-col space-y-2" :class="[compact ? '' : 'max-w-4xl mx-auto w-full']">
     <!-- Attached Images Preview -->
-    <div v-if="attachedImages.length > 0" class="flex flex-wrap gap-2 px-1 pb-1">
+    <div v-if="attachedImages.length > 0" class="flex flex-wrap gap-2 px-1 mb-1">
       <div v-for="(img, idx) in attachedImages" :key="idx"
-        class="relative rounded-xl overflow-hidden group shadow-sm border border-zinc-200 dark:border-zinc-800 transition-all hover:scale-105"
+        class="relative rounded-xl group shadow-md border border-zinc-200 dark:border-zinc-800 transition-all hover:scale-105 active:scale-95"
         :class="compact ? 'w-10 h-10' : 'w-16 h-16'">
-        <img :src="normalizeUrl(img)" class="w-full h-full object-cover" />
-        <SlimTooltip text="Remove attachment" placement="top">
-          <button 
-            @click.stop="removeAttachment(idx)"
-            class="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-lg"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-            </svg>
+        <img :src="normalizeUrl(img)" class="w-full h-full object-cover rounded-xl" />
+
+        <!-- Remove Button: Positioned absolute relative to thumbnail, avoids overflow-hidden clipping -->
+        <div
+          class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-all z-30 scale-75 group-hover:scale-100 origin-center pointer-events-auto">
+
+          <button @click.stop="removeAttachment(idx)"
+            class="flex items-center justify-center w-4 h-4 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 active:scale-90 transition-all">
+            <Icon name="iconify tabler--x" class="w-2.5 h-2.5" />
           </button>
-        </SlimTooltip>
+
+        </div>
       </div>
     </div>
 
@@ -39,15 +40,19 @@
       </div>
 
       <!-- Results Count -->
-      <div class="flex items-center bg-zinc-100 dark:bg-white/5 rounded-xl px-2.5 py-1.5 mb-1 border border-black/5 dark:border-white/10 group/count hover:border-primary/30 transition-colors"
+      <div
+        class="flex items-center bg-zinc-100 dark:bg-white/5 rounded-xl px-2.5 py-1.5 mb-1 border border-black/5 dark:border-white/10 group/count hover:border-primary/30 transition-colors"
         :class="compact ? 'scale-90 origin-right' : ''">
-        <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover/count:text-primary/70 transition-colors mr-1.5 select-none">Count</span>
-        <select v-model="resultsCount" class="bg-transparent border-none text-[11px] font-black text-zinc-700 dark:text-zinc-300 focus:ring-0 p-0 pr-4 cursor-pointer hover:text-primary transition-colors">
+        <span
+          class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover/count:text-primary/70 transition-colors mr-1.5 select-none">Count</span>
+        <select v-model="resultsCount"
+          class="bg-transparent border-none text-[11px] font-black text-zinc-700 dark:text-zinc-300 focus:ring-0 p-0 pr-4 cursor-pointer hover:text-primary transition-colors">
           <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
         </select>
       </div>
 
-      <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'" :placement="compact ? 'top' : 'bottom'">
+      <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'"
+        :placement="compact ? 'top' : 'bottom'">
         <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
           :disabled="!internalText.trim() && attachedImages.length === 0" />
       </SlimTooltip>
@@ -59,7 +64,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
-import { IconButton } from 'pilotui/elements'
+import { Icon, IconButton } from 'pilotui/elements'
 import SlimTooltip from '../SlimTooltip.vue'
 import AttachmentModal from './AttachmentModal.vue'
 
