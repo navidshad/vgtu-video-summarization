@@ -109,13 +109,13 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
             isLocked,
             onUpdate: (fid: string, updates: any) => videoStore.updateNodeMetadata(fid, updates),
             onDelete: async () => {
-              const confirmed = await (window as any).api.showConfirmation({
+              const result = await (window as any).api.showConfirmation({
                 title: 'Delete Frame',
                 message: 'Are you sure you want to delete this frame?',
                 detail: 'Children nodes will be ungrouped but NOT deleted.',
                 type: 'warning'
               })
-              if (confirmed === 1) {
+              if (result.response === 1) {
                 // We use the store method for deletion logic
                 await videoStore.deleteFrame(id)
               }
@@ -137,10 +137,10 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
         filename: videoStore.currentVideoName,
         videoPath: videoStore.currentVideoPath,
         showDetails: savedMetadata['root-media']?.showDetails || false,
-        onSubmit: async (val: string, attachedImages?: string[]) => {
+        onSubmit: async (val: string, attachedImages?: string[], count?: number) => {
           const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
           if (newMsgId && videoStore.currentThreadId) {
-            await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+            await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count)
           }
         }
       }
@@ -217,12 +217,12 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
             progress: null,
             steps: [{ name: msg.content || 'Processing...', status: 'active' }],
             onDelete: async () => {
-              const confirmed = await (window as any).api.showConfirmation({
+              const result = await (window as any).api.showConfirmation({
                 title: 'Delete Task Node',
                 message: 'Are you sure you want to delete this running task and all its branches?',
                 type: 'warning'
               })
-              if (confirmed === 1) {
+              if (result.response === 1) {
                 await videoStore.removeMessageBranch(strand.id)
               }
             },
@@ -248,19 +248,19 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
             cost: msg.cost,
             showDetails: videoStore.currentThread?.nodePositions?.[strand.id]?.showDetails || false,
             onDelete: async () => {
-              const confirmed = await (window as any).api.showConfirmation({
+              const result = await (window as any).api.showConfirmation({
                 title: 'Delete Node',
                 message: 'Are you sure you want to delete this result and all its branches?',
                 type: 'warning'
               })
-              if (confirmed === 1) {
+              if (result.response === 1) {
                 await videoStore.removeMessageBranch(strand.id)
               }
             },
-            onSubmit: async (val: string, attachedImages?: string[]) => {
+            onSubmit: async (val: string, attachedImages?: string[], count?: number) => {
               const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id, attachedImages)
               if (newMsgId && videoStore.currentThreadId) {
-                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count)
               }
             }
           }
@@ -285,19 +285,19 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
             hasInputInitially: (childMap[lastId] || []).length === 0,
             width: videoStore.currentThread?.nodePositions?.[strand.id]?.width || 380,
             onDelete: async () => {
-              const confirmed = await (window as any).api.showConfirmation({
+              const result = await (window as any).api.showConfirmation({
                 title: 'Delete Node',
                 message: 'Are you sure you want to delete this conversation and all its branches?',
                 type: 'warning'
               })
-              if (confirmed === 1) {
+              if (result.response === 1) {
                 await videoStore.removeMessageBranch(strand.id)
               }
             },
-            onSubmit: async (val: string, attachedImages?: string[]) => {
+            onSubmit: async (val: string, attachedImages?: string[], count?: number) => {
               const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId, attachedImages)
               if (newMsgId && videoStore.currentThreadId) {
-                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId)
+                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count)
               }
             }
           }

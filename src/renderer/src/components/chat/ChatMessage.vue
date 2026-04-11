@@ -171,7 +171,7 @@ const handleSaveEdit = async () => {
 }
 
 const handleRemove = async () => {
-	const response = await (window as any).api.showConfirmation({
+	const result = await (window as any).api.showConfirmation({
 		title: 'Remove Message',
 		message: 'Are you sure you want to remove this message?',
 		detail: 'This will permanently remove this message and its associated generated artifacts. Subsequent messages in this thread will be preserved.',
@@ -181,14 +181,14 @@ const handleRemove = async () => {
 		cancelId: 0
 	})
 
-	if (response === 1) {
+	if (result.response === 1) {
 		await videoStore.removeSingleMessage(props.message.id)
 		emit('remove', props.message.id)
 	}
 }
 
 const handleRetry = async () => {
-	const response = await (window as any).api.showConfirmation({
+	const result = await (window as any).api.showConfirmation({
 		title: 'Retry Generation',
 		message: 'Are you sure you want to retry?',
 		detail: 'All subsequent AI responses will be removed and the generation will restart from this message.',
@@ -198,7 +198,7 @@ const handleRetry = async () => {
 		cancelId: 0
 	})
 
-	if (response === 1) {
+	if (result.response === 1) {
 		emit('retry', props.message.id)
 	}
 }

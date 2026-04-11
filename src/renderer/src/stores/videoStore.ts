@@ -136,8 +136,8 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const startProcessing = async (threadId: string, editReferenceMessageId?: string) => {
-		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId })
+	const startProcessing = async (threadId: string, editReferenceMessageId?: string, count: number = 1) => {
+		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId, count })
 		if (!threadId) {
 			;(window as any).api.debugLog('startProcessing ABORTED: !threadId')
 			return
@@ -147,52 +147,54 @@ export const useVideoStore = defineStore('video', () => {
 			return
 		}
 
-		// Add initial AI status message
-		;(window as any).api.debugLog('startProcessing adding AI Message...')
-		const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId);
-		;(window as any).api.debugLog('startProcessing AI Message Pushed! ID:', newAiMessageId)
+		for (let i = 0; i < count; i++) {
+			// Add initial AI status message
+			;(window as any).api.debugLog(`startProcessing adding AI Message ${i + 1}/${count}...`)
+			const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId);
+			;(window as any).api.debugLog('startProcessing AI Message Pushed! ID:', newAiMessageId)
 
-		if ((window as any).api) {
-			// Setup listener
-			const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
-				if (data.id === newAiMessageId || data.messageId === newAiMessageId) {
-					if (data.type === 'status' || data.status) {
-						// Only update status if the message is still pending
-						const msg = currentThread.value?.messages.find(m => m.id === newAiMessageId)
-						if (msg && msg.isPending) {
-							updateMessage(newAiMessageId, { content: data.status || data.content, isPending: true })
+			if ((window as any).api) {
+				// Setup listener
+				const cleanup = (window as any).api.onPipelineUpdate((data: any) => {
+					if (data.id === newAiMessageId || data.messageId === newAiMessageId) {
+						if (data.type === 'status' || data.status) {
+							// Only update status if the message is still pending
+							const msg = currentThread.value?.messages.find(m => m.id === newAiMessageId)
+							if (msg && msg.isPending) {
+								updateMessage(newAiMessageId, { content: data.status || data.content, isPending: true })
+							}
+						} else if (data.type === 'finish') {
+							updateMessage(newAiMessageId, {
+								content: data.content,
+								isPending: false,
+								files: data.files || (data.video ? [{ url: data.video.path, type: data.video.type }] : []),
+								timeline: data.timeline,
+								version: data.version,
+								resultType: data.resultType
+							})
+							cleanup() // Remove listener when done
+						} else if (data.type === 'usage') {
+							updateMessage(newAiMessageId, {
+								usage: data.usage,
+								cost: data.cost
+							})
 						}
-					} else if (data.type === 'finish') {
-						updateMessage(newAiMessageId, {
-							content: data.content,
-							isPending: false,
-							files: data.files || (data.video ? [{ url: data.video.path, type: data.video.type }] : []),
-							timeline: data.timeline,
-							version: data.version,
-							resultType: data.resultType
-						})
-						cleanup() // Remove listener when done
-					} else if (data.type === 'usage') {
-						updateMessage(newAiMessageId, {
-							usage: data.usage,
-							cost: data.cost
-						})
 					}
-				}
-			})
-
-			;(window as any).api.debugLog('startProcessing dispatching startPipeline IPC...')
-			try {
-				await (window as any).api.startPipeline({
-					threadId,
-					newAiMessageId
 				})
-				;(window as any).api.debugLog('startProcessing startPipeline IPC completed.')
-			} catch (e) {
-				;(window as any).api.debugLog('startProcessing startPipeline IPC FAILED:', e)
+
+				;(window as any).api.debugLog('startProcessing dispatching startPipeline IPC...')
+				try {
+					await (window as any).api.startPipeline({
+						threadId,
+						newAiMessageId
+					})
+					;(window as any).api.debugLog('startProcessing startPipeline IPC completed.')
+				} catch (e) {
+					;(window as any).api.debugLog('startProcessing startPipeline IPC FAILED:', e)
+				}
+			} else {
+				console.error('API not found attached to window.')
 			}
-		} else {
-			console.error('API not found attached to window.')
 		}
 	}
 
@@ -326,7 +328,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const retryMessage = async (messageId: string) => {
+	const retryMessage = async (messageId: string, shouldRemoveBranch: boolean = true) => {
 		if (!currentThreadId.value || !currentThread.value) return
 
 		const index = currentThread.value.messages.findIndex(m => m.id === messageId)
@@ -335,10 +337,12 @@ export const useVideoStore = defineStore('video', () => {
 		const message = currentThread.value.messages[index]
 		if (message.role !== MessageRole.User) return
 
-		// Remove any messages that branch from this one
-		const children = currentThread.value.messages.filter(m => m.editRefId === messageId)
-		for (const child of children) {
-			await removeMessageBranch(child.id)
+		if (shouldRemoveBranch) {
+			// Remove any messages that branch from this one
+			const children = currentThread.value.messages.filter(m => m.editRefId === messageId)
+			for (const child of children) {
+				await removeMessageBranch(child.id)
+			}
 		}
 
 		// Re-trigger processing attaching to the user message

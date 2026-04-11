@@ -277,13 +277,13 @@ const onPaneMouseUp = async (event: MouseEvent) => {
       title: 'New Group',
       isFrame: true,
       onDelete: async () => {
-        const confirmed = await (window as any).api.showConfirmation({
+        const result = await (window as any).api.showConfirmation({
           title: 'Delete Frame',
           message: 'Are you sure you want to delete this frame?',
           detail: 'Children nodes will be ungrouped but NOT deleted.',
           type: 'warning'
         })
-        if (confirmed === 1) {
+        if (result.response === 1) {
           await videoStore.deleteFrame(frameId)
         }
       }

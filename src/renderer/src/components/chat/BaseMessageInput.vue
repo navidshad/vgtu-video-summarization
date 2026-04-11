@@ -38,6 +38,15 @@
           @keydown.enter="handleEnter"></textarea>
       </div>
 
+      <!-- Results Count -->
+      <div class="flex items-center bg-zinc-100 dark:bg-white/5 rounded-xl px-2.5 py-1.5 mb-1 border border-black/5 dark:border-white/10 group/count hover:border-primary/30 transition-colors"
+        :class="compact ? 'scale-90 origin-right' : ''">
+        <span class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover/count:text-primary/70 transition-colors mr-1.5 select-none">Count</span>
+        <select v-model="resultsCount" class="bg-transparent border-none text-[11px] font-black text-zinc-700 dark:text-zinc-300 focus:ring-0 p-0 pr-4 cursor-pointer hover:text-primary transition-colors">
+          <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+        </select>
+      </div>
+
       <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'" :placement="compact ? 'top' : 'bottom'">
         <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
           :disabled="!internalText.trim() && attachedImages.length === 0" />
@@ -70,6 +79,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send'])
 
 const internalText = ref(props.modelValue)
+const resultsCount = ref(1)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showAttachmentModal = ref(false)
 
@@ -114,7 +124,7 @@ const removeAttachment = (index: number) => {
 
 const handleSend = () => {
   if (!internalText.value.trim() && props.attachedImages.length === 0) return
-  emit('send', internalText.value, [...props.attachedImages])
+  emit('send', internalText.value, [...props.attachedImages], resultsCount.value)
 
   // Clear local state if parent doesn't reset via props (standard pattern)
   internalText.value = ''

@@ -376,9 +376,9 @@ app.whenReady().then(() => {
 		return await threadManager.toggleThreadReferenceFrame(threadId, filePath)
 	})
 
-	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
+	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0, checkboxLabel }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
-		if (!focusedWindow) return cancelId
+		if (!focusedWindow) return { response: cancelId, checkboxChecked: false }
 
 		const result = await dialog.showMessageBox(focusedWindow, {
 			type: type as any,
@@ -387,10 +387,14 @@ app.whenReady().then(() => {
 			cancelId,
 			title,
 			message,
-			detail
+			detail,
+			checkboxLabel
 		})
 
-		return result.response
+		return {
+			response: result.response,
+			checkboxChecked: result.checkboxChecked
+		}
 	})
 
 	ipcMain.handle('save-video', async (_event, sourcePath: string) => {

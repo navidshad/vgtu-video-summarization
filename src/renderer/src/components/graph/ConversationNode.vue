@@ -395,23 +395,24 @@ const saveEdit = async () => {
 }
 
 const confirmRetry = async (messageId: string) => {
-  const confirmed = await (window as any).api.showConfirmation({
+  const result = await (window as any).api.showConfirmation({
     title: 'Retry Generation',
     message: 'Are you sure you want to retry?',
-    detail: 'All subsequent AI responses in this branch will be removed and the generation will restart from this message.',
+    detail: 'The generation will restart from this message.',
     type: 'question',
     buttons: ['Cancel', 'Retry'],
     defaultId: 1,
-    cancelId: 0
+    cancelId: 0,
+    checkboxLabel: 'Remove subsequent messages in this branch'
   })
 
-  if (confirmed === 1) {
-    await videoStore.retryMessage(messageId)
+  if (result.response === 1) {
+    await videoStore.retryMessage(messageId, result.checkboxChecked)
   }
 }
 
 const removeMessage = async (messageId: string) => {
-  const confirmed = await (window as any).api.showConfirmation({
+  const result = await (window as any).api.showConfirmation({
     title: 'Remove Message',
     message: 'Are you sure you want to remove this message from the conversation?',
     detail: 'This will delete the message and its artifacts. Subsequent messages in this node will be preserved.',
@@ -421,7 +422,7 @@ const removeMessage = async (messageId: string) => {
     cancelId: 0
   })
 
-  if (confirmed === 1) {
+  if (result.response === 1) {
     await videoStore.removeSingleMessage(messageId)
   }
 }
@@ -435,9 +436,9 @@ const copyMessage = (id: string, content: string) => {
   })
 }
 
-const submit = (text: string, images: string[]) => {
+const submit = (text: string, images: string[], count: number) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images)
+    props.data.onSubmit(text, images, count)
     input.value = ''
     attachedImages.value = []
     showInput.value = false
