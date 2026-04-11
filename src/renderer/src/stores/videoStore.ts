@@ -328,7 +328,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const retryMessage = async (messageId: string, shouldRemoveBranch: boolean = true) => {
+	const retryMessage = async (messageId: string, shouldRemoveBranch: boolean = true, count: number = 1) => {
 		if (!currentThreadId.value || !currentThread.value) return
 
 		const index = currentThread.value.messages.findIndex(m => m.id === messageId)
@@ -346,7 +346,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 
 		// Re-trigger processing attaching to the user message
-		await startProcessing(currentThreadId.value, message.id)
+		await startProcessing(currentThreadId.value, message.id, count)
 	}
 
 	const deleteFrame = async (frameId: string) => {

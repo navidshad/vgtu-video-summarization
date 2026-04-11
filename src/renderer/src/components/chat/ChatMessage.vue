@@ -126,6 +126,8 @@
 				</div>
 			</div>
 		</Modal>
+		
+		<RetryModal v-model="isRetryModalOpen" :message-id="currentRetryMessageId" @confirm="handleRetryConfirmed" />
 	</div>
 </template>
 
@@ -139,6 +141,7 @@ import VideoResult from './VideoResult.vue'
 import TimelineResult from './TimelineResult.vue'
 import { useVideoStore } from '../../stores/videoStore'
 import markdownit from 'markdown-it'
+import RetryModal from './RetryModal.vue'
 
 const props = defineProps<{
 	message: Message,
@@ -187,20 +190,17 @@ const handleRemove = async () => {
 	}
 }
 
-const handleRetry = async () => {
-	const result = await (window as any).api.showConfirmation({
-		title: 'Retry Generation',
-		message: 'Are you sure you want to retry?',
-		detail: 'All subsequent AI responses will be removed and the generation will restart from this message.',
-		type: 'question',
-		buttons: ['Cancel', 'Retry'],
-		defaultId: 1,
-		cancelId: 0
-	})
+const isRetryModalOpen = ref(false)
+const currentRetryMessageId = ref<string | null>(null)
 
-	if (result.response === 1) {
-		emit('retry', props.message.id)
-	}
+const handleRetry = async () => {
+	currentRetryMessageId.value = props.message.id
+	isRetryModalOpen.value = true
+}
+
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number) => {
+	await videoStore.retryMessage(messageId, shouldRemoveBranch, count)
+	emit('retry', messageId)
 }
 
 const referencedVersion = computed(() => {

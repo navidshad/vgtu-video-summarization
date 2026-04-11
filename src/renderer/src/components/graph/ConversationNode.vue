@@ -229,6 +229,8 @@
       :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
       class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan" @send="submit" />
 
+    <RetryModal v-model="isRetryModalOpen" :message-id="currentRetryMessageId" @confirm="handleRetryConfirmed" />
+
     <Handle type="source" :position="Position.Bottom"
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
 
@@ -281,6 +283,7 @@ import { Modal } from 'pilotui/complex'
 import { TextArea } from 'pilotui/form'
 import { renderMarkdown } from '../../utils/markdown'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
+import RetryModal from '../chat/RetryModal.vue'
 
 const props = defineProps<{ data: any }>()
 const emit = defineEmits(['node-resize-stop'])
@@ -394,21 +397,16 @@ const saveEdit = async () => {
   }
 }
 
-const confirmRetry = async (messageId: string) => {
-  const result = await (window as any).api.showConfirmation({
-    title: 'Retry Generation',
-    message: 'Are you sure you want to retry?',
-    detail: 'The generation will restart from this message.',
-    type: 'question',
-    buttons: ['Cancel', 'Retry'],
-    defaultId: 1,
-    cancelId: 0,
-    checkboxLabel: 'Remove subsequent messages in this branch'
-  })
+const isRetryModalOpen = ref(false)
+const currentRetryMessageId = ref<string | null>(null)
 
-  if (result.response === 1) {
-    await videoStore.retryMessage(messageId, result.checkboxChecked)
-  }
+const confirmRetry = async (messageId: string) => {
+  currentRetryMessageId.value = messageId
+  isRetryModalOpen.value = true
+}
+
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number) => {
+  await videoStore.retryMessage(messageId, shouldRemoveBranch, count)
 }
 
 const removeMessage = async (messageId: string) => {
