@@ -28,12 +28,15 @@ export class GeminiAdapter {
 	}
 
 	private extractUsage(response: any): Usage {
+		if (!response) {
+			return { promptTokens: 0, candidatesTokens: 0, thinkingTokens: 0, totalTokens: 0 };
+		}
 		const usage = response.usageMetadata || { promptTokenCount: 0, candidatesTokenCount: 0, totalTokenCount: 0, thoughtsTokenCount: 0 };
 		return {
-			promptTokens: usage.promptTokenCount!,
-			candidatesTokens: usage.candidatesTokenCount!,
-			thinkingTokens: usage.thoughtsTokenCount,
-			totalTokens: usage.totalTokenCount!
+			promptTokens: usage.promptTokenCount || 0,
+			candidatesTokens: usage.candidatesTokenCount || 0,
+			thinkingTokens: usage.thoughtsTokenCount || 0,
+			totalTokens: usage.totalTokenCount || 0
 		};
 	}
 
@@ -126,26 +129,49 @@ export class GeminiAdapter {
 		modelName: string,
 		userPrompt: string,
 		systemInstruction?: string,
-		signal?: AbortSignal
+		signal?: AbortSignal,
+		imagePaths?: string[]
 	): Promise<{ text: string, record: UsageRecord }> {
-		const request: GenerateContentParameters = {
+		const parts: any[] = []
+
+		// Add image parts if provided
+		const validImagePaths: string[] = []
+		if (imagePaths && imagePaths.length > 0) {
+			for (const imgPath of imagePaths) {
+				if (fs.existsSync(imgPath)) {
+					const data = fs.readFileSync(imgPath).toString('base64')
+					parts.push({
+						inlineData: {
+							data,
+							mimeType: 'image/jpeg'
+						}
+					})
+					validImagePaths.push(imgPath)
+				}
+			}
+		}
+
+		// Add text part LAST
+		parts.push({ text: userPrompt })
+
+		const request: any = {
 			model: modelName,
-			contents: [{ role: 'user', parts: [{ text: userPrompt }] }]
+			contents: [{ role: 'user', parts }]
 		};
 
 		if (systemInstruction) {
-			request.config = {
-				systemInstruction: systemInstruction
+			request.systemInstruction = {
+				parts: [{ text: systemInstruction }]
 			};
 		}
 
 		try {
 			const response = await this.withRetry(
-				() => (this.client.models as any).generateContent(request, { signal }) as Promise<any>,
+				() => (this.client as any).models.generateContent(request, { signal }),
 				signal
 			);
 			const usage = this.extractUsage(response);
-			const cost = GeminiAdapter.calculateCost(modelName, usage);
+			const cost = GeminiAdapter.calculateCost(modelName, usage, 0, validImagePaths.length);
 
 			return {
 				text: this.extractResultText(response),

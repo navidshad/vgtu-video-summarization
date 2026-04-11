@@ -67,7 +67,10 @@ const api = {
 	getVideoMetadata: (filePath: string) => ipcRenderer.invoke('get-video-metadata', filePath),
 	showOpenDialog: (options: any) => ipcRenderer.invoke('show-open-dialog', options),
 	upscaleImage: (data: { threadId: string, messageId: string, imagePath: string, upscaleFactor: string }) => 
-		ipcRenderer.invoke('upscale-image', data)
+		ipcRenderer.invoke('upscale-image', data),
+	improviseMessage: (threadId: string, messageId: string) =>
+		ipcRenderer.invoke('improvise-message', { threadId, messageId }),
+	getModelMetadata: () => ipcRenderer.invoke('get-model-metadata')
 }
 
 if (process.contextIsolated) {

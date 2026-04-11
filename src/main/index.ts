@@ -22,6 +22,7 @@ import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { THREAD_DIRS } from './constants/paths'
+import { GEMINI_MODEL_2_5_FLASH, MODEL_METADATA } from './constants/gemini'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -310,6 +311,10 @@ app.whenReady().then(() => {
 		return settingsManager.resetModelSettings()
 	})
 
+	ipcMain.handle('get-model-metadata', () => {
+		return MODEL_METADATA
+	})
+
 	// Thread Management
 	ipcMain.handle('create-thread', async (_event, { videoPath, videoName, imagePaths }) => {
 		const newThread = await threadManager.createThread(videoPath, videoName, imagePaths)
@@ -375,9 +380,9 @@ app.whenReady().then(() => {
 		return await threadManager.toggleThreadReferenceFrame(threadId, filePath)
 	})
 
-	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0 }) => {
+	ipcMain.handle('show-confirmation', async (_event, { title, message, detail, type = 'question', buttons = ['Cancel', 'Yes'], defaultId = 1, cancelId = 0, checkboxLabel }) => {
 		const focusedWindow = BrowserWindow.getFocusedWindow()
-		if (!focusedWindow) return cancelId
+		if (!focusedWindow) return { response: cancelId, checkboxChecked: false }
 
 		const result = await dialog.showMessageBox(focusedWindow, {
 			type: type as any,
@@ -386,10 +391,14 @@ app.whenReady().then(() => {
 			cancelId,
 			title,
 			message,
-			detail
+			detail,
+			checkboxLabel
 		})
 
-		return result.response
+		return {
+			response: result.response,
+			checkboxChecked: result.checkboxChecked
+		}
 	})
 
 	ipcMain.handle('save-video', async (_event, sourcePath: string) => {
@@ -455,6 +464,47 @@ app.whenReady().then(() => {
 		}
 
 		return result.path
+	})
+
+	ipcMain.handle('improvise-message', async (_event, { threadId, messageId }) => {
+		console.log(`[DEBUG IPC] improvise-message called: threadId=${threadId}, messageId=${messageId}`)
+		
+		const thread = threadManager.getThread(threadId)
+		if (!thread) throw new Error('Thread not found')
+
+		const message = thread.messages.find(m => m.id === messageId)
+		if (!message) throw new Error('Message not found')
+
+		// Get the history leading up to this message (including the message itself)
+		const { text: context } = threadManager.getBranchContext(threadId, messageId)
+		
+		// Collect attached images from THIS message only for visual context in improvisation
+		const attachedImages = message.attachedImages || []
+		
+		const modelSettings = settingsManager.getModelSettings()
+		const modelName = modelSettings.selection['intent'] || GEMINI_MODEL_2_5_FLASH
+		const adapter = GeminiAdapter.create()
+
+		const systemInstruction = `You are a high-level Prompt Engineer. Your task is to IMPROVISE and REWRITE a user's latest prompt to be much more descriptive, detailed, and effective for high-fidelity AI generation.
+- The conversation history is provided ONLY for context. You MUST NOT improve the history, only the latest prompt.
+- Use the attached images for visual context to make the prompt more vivid and accurate.
+- Maintain the original intent exactly.
+- USE natural, descriptive, and professional language.
+- DO NOT return JSON, technical metadata, coordinates, bounding boxes, or "box_2d" tags.
+- DO NOT return object detection results.
+- DO NOT include any explanations, labels like "Improvised:", or surrounding quotes.
+- Return ONLY the clean, improved prompt text itself.`
+
+		const userPrompt = `[CONTEXT/HISTORY]:\n${context}\n\n[TASK]: Based on the context above and the attached images, rewrite the user's latest message to be a high-performance, descriptive generation prompt. Return only the improved text.`
+
+		const result = await adapter.generateText(modelName, userPrompt, systemInstruction, undefined, attachedImages)
+		
+		// Track usage for the message that initiated it
+		if (result.record) {
+			await threadManager.updateMessageUsage(threadId, messageId, result.record)
+		}
+
+		return result.text
 	})
 
 	app.on('activate', function () {

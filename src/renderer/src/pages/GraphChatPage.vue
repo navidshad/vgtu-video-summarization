@@ -126,7 +126,7 @@ const router = useRouter()
 useGraphLayout(videoStore, graphStore)
 
 const totalCost = computed(() => {
-  return videoStore.messages.reduce((acc, msg) => acc + (msg.cost || 0), 0)
+  return (videoStore.currentThread?.usageHistory || []).reduce((acc, record) => acc + (record.cost || 0), 0)
 })
 
 const onPaneReady = () => {
@@ -137,23 +137,26 @@ const onNodeDragStop = (event: any) => {
   const { nodes: draggedNodes } = event
   const newPositions: any = {}
 
-  // Current graph state
+  // Current graph state - get live instances for accurate positions/dimensions
   const allNodes = getNodes.value
   const frames = allNodes.filter(n => n.type === 'frame')
 
-  draggedNodes.forEach((node: any) => {
-    // We MUST use computedPosition (absolute) for detection logic
+  draggedNodes.forEach((nodeSnapshot: any) => {
+    // Get live node from internal state to ensure computedPosition is absolute
+    const node = findNode(nodeSnapshot.id)
+    if (!node) return
+
     const nx = node.computedPosition?.x ?? node.position.x
     const ny = node.computedPosition?.y ?? node.position.y
-    const nw = node.dimensions?.width || 380
-    const nh = node.dimensions?.height || 200
+    const nw = node.dimensions?.width || nodeSnapshot.dimensions?.width || 380
+    const nh = node.dimensions?.height || nodeSnapshot.dimensions?.height || 200
 
     const nodeCenter = {
       x: nx + nw / 2,
       y: ny + nh / 2
     }
 
-    // If it's a frame, only update its own absolute position
+    // If it's a frame, update its absolute world coordinates
     if (node.type === 'frame') {
       const currentMeta = videoStore.currentThread?.nodePositions?.[node.id] || {}
       newPositions[node.id] = { 
@@ -166,12 +169,12 @@ const onNodeDragStop = (event: any) => {
 
     let parentFrameId: string | undefined = undefined
     
-    // Check against all frames using their absolute positions
+    // Scan all frames using their absolute positions
     for (const frame of frames) {
       const fx = frame.computedPosition?.x ?? frame.position.x
       const fy = frame.computedPosition?.y ?? frame.position.y
-      const fw = frame.data.width || 400
-      const fh = frame.data.height || 300
+      const fw = frame.dimensions?.width || frame.data.width || 400
+      const fh = frame.dimensions?.height || frame.data.height || 300
 
       if (nodeCenter.x >= fx && nodeCenter.x <= fx + fw &&
           nodeCenter.y >= fy && nodeCenter.y <= fy + fh) {
@@ -185,7 +188,8 @@ const onNodeDragStop = (event: any) => {
     if (parentFrameId) {
       const frameNode = findNode(parentFrameId)
       if (frameNode) {
-        // Correct conversion: (Global Node) - (Global Frame) = Local Offset
+        // Correct conversion to local frame coordinates:
+        // Absolute Node Pos - Absolute Frame Pos = Relative Local Offset
         const fx = frameNode.computedPosition?.x ?? frameNode.position.x
         const fy = frameNode.computedPosition?.y ?? frameNode.position.y
         
@@ -197,12 +201,12 @@ const onNodeDragStop = (event: any) => {
         }
       }
     } else {
-      // Return to absolute world coordinates
+      // Return to absolute world coordinates if not over any frame
       newPositions[node.id] = { 
         ...currentMeta,
         x: nx, 
         y: ny, 
-        parentNode: undefined 
+        parentNode: null 
       }
     }
   })
@@ -273,13 +277,13 @@ const onPaneMouseUp = async (event: MouseEvent) => {
       title: 'New Group',
       isFrame: true,
       onDelete: async () => {
-        const confirmed = await (window as any).api.showConfirmation({
+        const result = await (window as any).api.showConfirmation({
           title: 'Delete Frame',
           message: 'Are you sure you want to delete this frame?',
           detail: 'Children nodes will be ungrouped but NOT deleted.',
           type: 'warning'
         })
-        if (confirmed === 1) {
+        if (result.response === 1) {
           await videoStore.deleteFrame(frameId)
         }
       }

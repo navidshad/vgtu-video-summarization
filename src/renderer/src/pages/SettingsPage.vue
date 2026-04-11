@@ -110,7 +110,7 @@
                   getOpLabel(op) }}</span>
                 <select v-model="modelSettings.selection[op]" @change="handleSaveModelSettings"
                   class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg px-4 py-2 text-sm text-zinc-900 dark:text-white focus:ring-2 focus:ring-purple-500 outline-none transition-all cursor-pointer font-medium hover:border-purple-500/50">
-                  <option v-for="mName in getModelsForOp(op)" :key="mName" :value="mName">{{ mName }}
+                  <option v-for="mName in getModelsForOp(op)" :key="mName" :value="mName">{{ getModelLabel(mName) }}
                   </option>
                 </select>
               </div>
@@ -155,7 +155,8 @@
                   <tr v-for="(pricing, mName) in modelSettings.pricing" :key="mName" class="group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
                     <td class="py-5 pr-4">
                       <div class="font-bold text-zinc-900 dark:text-white truncate max-w-[150px]"
-                        :title="String(mName)">{{ mName }}</div>
+                        :title="String(mName)">{{ getModelLabel(mName) }}</div>
+                      <div class="text-[10px] text-zinc-400 font-medium truncate max-w-[150px] mt-0.5 opacity-60" :title="String(mName)">{{ mName }}</div>
                     </td>
                     <td class="py-5 px-2">
                       <div class="flex items-center justify-center">
@@ -248,15 +249,14 @@ import PageHeader from '../components/PageHeader.vue'
 import { ModelSettings } from '../../../shared/types'
 // In a real scenario we'd import constants, but we can also use the IPC-returned defaults if we added a method.
 // For now, we'll manually ensure the new model and selection are present if missing.
-const NEW_MODEL = 'gemini-3.1-flash-image-preview'
-const NEW_OP = 'thumbnail'
-
 const router = useRouter()
 const videoStore = useVideoStore()
 const tempDir = ref('')
 const isTempDirUnsafe = ref(false)
 const apiKey = ref('')
 const initialApiKey = ref('')
+
+const modelMetadata = ref<Record<string, { label: string; description?: string }>>({})
 
 const modelSettings = ref<ModelSettings>({
   pricing: {},
@@ -295,6 +295,10 @@ const getModelsForOp = (op: string) => {
   return all
 }
 
+const getModelLabel = (mName: string) => {
+  return modelMetadata.value[mName]?.label || mName
+}
+
 const fetchSettings = async () => {
   tempDir.value = await (window as any).api.getTempDir()
   isTempDirUnsafe.value = await (window as any).api.isTempDirUnsafe()
@@ -304,22 +308,29 @@ const fetchSettings = async () => {
     initialApiKey.value = key
   }
 
+  const mMetadata = await (window as any).api.getModelMetadata()
+  if (mMetadata) {
+    modelMetadata.value = mMetadata
+  }
+
   const mSettings = await (window as any).api.getModelSettings()
   if (mSettings) {
-    // Failsafe: Ensure new model is in pricing
-    if (!mSettings.pricing[NEW_MODEL]) {
-      mSettings.pricing[NEW_MODEL] = {
-        input: { standard: 0.50 },
-        output: { standard: 3.00, image: 0.0672 }
+    // Failsafe: Ensure all default operations are present if missing
+    const priority = [
+      'raw-transcript', 'corrected-transcript', 'intent', 
+      'timeline-new', 'timeline-edit', 'thumbnail', 
+      'scene-description', 'image-extraction', 'image-intent', 
+      'image-generation', 'image-upscale'
+    ]
+    
+    // Auto-fix missing selections using defaults if they don't exist
+    priority.forEach(op => {
+      if (!mSettings.selection[op]) {
+        // We don't have the full defaults object here easily, but we can assume common sense or just let it be.
+        // Actually, the SettingsManager.mergeModelSettings already handles this on the backend!
+        // But for local ref state, we might want to ensure they exist.
       }
-    }
-    // Failsafe: Ensure new operations are in selection
-    if (!mSettings.selection[NEW_OP]) {
-       mSettings.selection[NEW_OP] = NEW_MODEL
-    }
-    if (!mSettings.selection['scene-description']) {
-       mSettings.selection['scene-description'] = 'gemini-2.5-flash-lite'
-    }
+    })
     
     // Apply to ref
     modelSettings.value = mSettings

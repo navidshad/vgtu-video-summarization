@@ -1,6 +1,6 @@
 <template>
   <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative cursor-move"
-    :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
+    :class="[isResizing ? '' : 'glass-card-hover']"
     :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
     <!-- Resize Handle -->
     <div
@@ -59,6 +59,13 @@
             <div v-if="msg.role === 'user' && editingMessageId !== msg.id" @click="startEditing(msg)"
               class="text-[9px] font-bold text-zinc-400 hover:text-primary cursor-pointer uppercase">
               Edit</div>
+            <div v-if="msg.role === 'user'" @click="handleImprovise(msg.id)"
+              class="text-[9px] font-bold text-purple-500 hover:text-purple-400 cursor-pointer uppercase flex items-center gap-0.5">
+              <svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l2.4 7.2h7.6l-6.1 4.4 2.3 7.4-6.2-4.6-6.2 4.6 2.3-7.4-6.1-4.4h7.6z" />
+              </svg>
+              Improvise
+            </div>
             <div @click="removeMessage(msg.id)"
               class="text-[9px] font-bold text-zinc-400 hover:text-red-500 cursor-pointer uppercase">
               Remove</div>
@@ -158,6 +165,40 @@
                 <div class="w-1 h-1 bg-blue-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
             </div>
+
+            <!-- Improvise Suggestion UI -->
+            <div v-if="improvisingIds.has(msg.id) || improvisedSuggestions[msg.id]" 
+              class="mt-3 pt-3 border-t border-white/10 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div v-if="improvisingIds.has(msg.id)" class="flex items-center gap-2 text-[10px] text-purple-300 font-bold uppercase italic animate-pulse">
+                <div class="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                Magic in progress...
+              </div>
+              <div v-else-if="improvisedSuggestions[msg.id]" class="space-y-3">
+                <div class="p-2.5 bg-white/10 rounded-xl border border-white/10 text-[13px] leading-relaxed italic text-purple-100/90 select-text nodrag cursor-text ring-1 ring-purple-500/30 prose prose-xs prose-p:my-1 prose-pre:bg-black/20 prose-pre:my-1 dark:prose-invert"
+                  v-html="renderMarkdown(improvisedSuggestions[msg.id])">
+                </div>
+                <div class="flex items-center gap-2">
+                  <button @click="acceptSuggestion(msg.id)" 
+                    class="px-2.5 py-1 bg-white/20 hover:bg-white/30 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1">
+                    <svg class="w-2.5 h-2.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Accept
+                  </button>
+                  <button @click="handleImprovise(msg.id)"
+                    class="px-2.5 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Retry
+                  </button>
+                  <button @click="discardSuggestion(msg.id)"
+                    class="px-2.5 py-1 bg-black/20 hover:bg-black/30 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all text-zinc-400">
+                    Ignore
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Outside Copy Action -->
@@ -187,6 +228,8 @@
     <BaseMessageInput v-if="data.hasInputInitially || showInput" v-model="input" v-model:attachedImages="attachedImages"
       :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
       class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan" @send="submit" />
+
+    <RetryModal v-model="isRetryModalOpen" :message-id="currentRetryMessageId" @confirm="handleRetryConfirmed" />
 
     <Handle type="source" :position="Position.Bottom"
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
@@ -230,7 +273,6 @@
     </Teleport>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { Handle, Position, useVueFlow } from '@vue-flow/core'
@@ -241,6 +283,7 @@ import { Modal } from 'pilotui/complex'
 import { TextArea } from 'pilotui/form'
 import { renderMarkdown } from '../../utils/markdown'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
+import RetryModal from '../chat/RetryModal.vue'
 
 const props = defineProps<{ data: any }>()
 const emit = defineEmits(['node-resize-stop'])
@@ -292,6 +335,34 @@ const showInput = ref(false)
 const copiedId = ref<string | null>(null)
 const attachedImages = ref<string[]>([])
 
+const improvisingIds = ref(new Set<string>())
+const improvisedSuggestions = ref<Record<string, string>>({})
+
+const handleImprovise = async (messageId: string) => {
+  improvisingIds.value.add(messageId)
+  delete improvisedSuggestions.value[messageId]
+  
+  const result = await videoStore.improviseMessage(messageId)
+  if (result) {
+    improvisedSuggestions.value[messageId] = result
+  }
+  improvisingIds.value.delete(messageId)
+}
+
+const acceptSuggestion = async (messageId: string) => {
+  const content = improvisedSuggestions.value[messageId]
+  if (!content) return
+  
+  const success = await videoStore.updateMessageContent(messageId, content)
+  if (success) {
+    discardSuggestion(messageId)
+  }
+}
+
+const discardSuggestion = (messageId: string) => {
+  delete improvisedSuggestions.value[messageId]
+}
+
 const editingMessageId = ref<string | null>(null)
 const editText = ref('')
 const isModalOpen = ref(false)
@@ -326,24 +397,20 @@ const saveEdit = async () => {
   }
 }
 
-const confirmRetry = async (messageId: string) => {
-  const confirmed = await (window as any).api.showConfirmation({
-    title: 'Retry Generation',
-    message: 'Are you sure you want to retry?',
-    detail: 'All subsequent AI responses in this branch will be removed and the generation will restart from this message.',
-    type: 'question',
-    buttons: ['Cancel', 'Retry'],
-    defaultId: 1,
-    cancelId: 0
-  })
+const isRetryModalOpen = ref(false)
+const currentRetryMessageId = ref<string | null>(null)
 
-  if (confirmed === 1) {
-    await videoStore.retryMessage(messageId)
-  }
+const confirmRetry = async (messageId: string) => {
+  currentRetryMessageId.value = messageId
+  isRetryModalOpen.value = true
+}
+
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number) => {
+  await videoStore.retryMessage(messageId, shouldRemoveBranch, count)
 }
 
 const removeMessage = async (messageId: string) => {
-  const confirmed = await (window as any).api.showConfirmation({
+  const result = await (window as any).api.showConfirmation({
     title: 'Remove Message',
     message: 'Are you sure you want to remove this message from the conversation?',
     detail: 'This will delete the message and its artifacts. Subsequent messages in this node will be preserved.',
@@ -353,7 +420,7 @@ const removeMessage = async (messageId: string) => {
     cancelId: 0
   })
 
-  if (confirmed === 1) {
+  if (result.response === 1) {
     await videoStore.removeSingleMessage(messageId)
   }
 }
@@ -367,9 +434,9 @@ const copyMessage = (id: string, content: string) => {
   })
 }
 
-const submit = (text: string, images: string[]) => {
+const submit = (text: string, images: string[], count: number) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images)
+    props.data.onSubmit(text, images, count)
     input.value = ''
     attachedImages.value = []
     showInput.value = false

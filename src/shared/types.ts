@@ -49,6 +49,8 @@ export interface Usage {
 export interface UsageRecord {
 	usage: Usage;
 	cost: number;
+	timestamp?: number;
+	messageId?: string;
 }
 
 export interface Message {
@@ -153,6 +155,7 @@ export interface Thread {
 	}>
 	versionCounter?: number
 	videoMetadata?: VideoMetadata
+	usageHistory?: UsageRecord[]
 	missing?: boolean
 	createdAt: number
 	updatedAt: number

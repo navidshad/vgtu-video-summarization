@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300 cursor-move">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group cursor-move">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Media Container with Overlays -->
@@ -242,9 +242,9 @@ const handleSave = async () => {
   }
 }
 
-const submit = (text: string, images: string[]) => {
+const submit = (text: string, images: string[], count: number) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images)
+    props.data.onSubmit(text, images, count)
     input.value = ''
     attachedImages.value = []
   }
