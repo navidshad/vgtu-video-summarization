@@ -1,9 +1,9 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300 cursor-move">
     <Handle v-if="data.hasInput !== false" type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Video Preview Section -->
-    <div class="relative aspect-video bg-black overflow-hidden group/player">
+    <div class="relative aspect-video bg-black overflow-hidden group/player cursor-move">
       <video 
         v-if="videoUrl"
         ref="videoRef"
@@ -48,8 +48,8 @@
     </div>
 
     <!-- Metadata Details Section -->
-    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-2 animate-in slide-in-from-top duration-300">
-      <div class="grid grid-cols-2 gap-3">
+    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-2 animate-in slide-in-from-top duration-300 nodrag cursor-text">
+      <div class="grid grid-cols-2 gap-3 select-text">
         <div class="flex flex-col gap-0.5">
           <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
           <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
@@ -78,8 +78,8 @@
     </div>
 
     <!-- Background Tasks Progress -->
-    <div v-if="activeTasks.length > 0" class="p-3 bg-white/5 border-b border-white/5 space-y-2">
-      <div v-for="task in activeTasks" :key="task.id" class="text-[10px]">
+    <div v-if="activeTasks.length > 0" class="p-3 bg-white/5 border-b border-white/5 space-y-2 nodrag cursor-text">
+      <div v-for="task in activeTasks" :key="task.id" class="text-[10px] select-text">
         <div class="flex justify-between items-center mb-1 text-zinc-400">
           <span class="truncate pr-2 font-bold uppercase tracking-tight">{{ task.status || task.name }}</span>
           <span>{{ task.progress !== undefined ? `${task.progress}%` : '' }}</span>
@@ -95,7 +95,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Start a new analysis..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
       @send="submit"
     />
 

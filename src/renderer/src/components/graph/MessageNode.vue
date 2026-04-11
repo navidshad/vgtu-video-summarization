@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="glass-card glass-card-hover p-4 rounded-2xl min-w-[200px] max-w-[300px]"
+    class="glass-card glass-card-hover p-4 rounded-2xl min-w-[200px] max-w-[300px] cursor-move"
     :class="[
       data.sender === 'user' 
         ? 'bg-primary/10 border-primary/20 text-primary-dark shadow-sm shadow-primary/5' 
@@ -14,12 +14,12 @@
       <button 
         v-if="data.sender === 'user'"
         @click.stop="videoStore.retryMessage(id)"
-        class="bg-blue-100 dark:bg-zinc-700/50 hover:bg-blue-200 dark:hover:bg-zinc-600 rounded px-1.5 py-0.5 text-[9px] uppercase font-bold transition-colors cursor-pointer pointer-events-auto"
+        class="bg-blue-100 dark:bg-zinc-700/50 hover:bg-blue-200 dark:hover:bg-zinc-600 rounded px-1.5 py-0.5 text-[9px] uppercase font-bold transition-colors cursor-pointer pointer-events-auto nodrag"
       >
         Retry
       </button>
     </div>
-    <div class="text-sm whitespace-pre-wrap leading-snug">{{ data.text }}</div>
+    <div class="text-sm whitespace-pre-wrap leading-snug nodrag select-text cursor-text">{{ data.text }}</div>
     
     <Handle type="source" :position="Position.Bottom" class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />
   </div>

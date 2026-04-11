@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative"
+  <div class="glass-card p-0 rounded-3xl min-w-[320px] overflow-hidden flex flex-col group relative cursor-move"
     :class="[isResizing ? '' : 'glass-card-hover transition-all duration-500']"
     :style="{ width: nodeWidth + 'px', maxWidth: '800px' }">
     <!-- Resize Handle -->
@@ -12,8 +12,8 @@
 
     <!-- Header with Actions -->
     <div
-      class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
+      class="px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-black/5 dark:border-white/5 flex items-center justify-between cursor-move">
+      <div class="flex items-center space-x-2 cursor-move">
         <div class="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.5)]"></div>
         <span
           class="text-[10px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">Conversation</span>
@@ -87,16 +87,16 @@
             </div>
             <template v-else>
               <div v-html="renderMarkdown(msg.content)"
-                class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto"
+                class="prose prose-sm max-w-none prose-p:my-0 prose-ul:my-2 prose-ol:my-2 prose-li:my-0 shadow-none border-none pointer-events-auto nodrag select-text cursor-text"
                 :class="msg.role === 'user' ? 'prose-invert text-white' : 'dark:prose-invert'"></div>
             </template>
 
             <!-- Attached Images -->
-            <div v-if="msg.attachedImages && msg.attachedImages.length > 0" class="mt-2 mb-1 flex flex-wrap gap-1.5">
+            <div v-if="msg.attachedImages && msg.attachedImages.length > 0" class="mt-2 mb-1 flex flex-wrap gap-1.5 nodrag">
               <div v-for="(img, idx) in msg.attachedImages" :key="idx"
                 class="relative w-10 h-10 rounded-lg overflow-hidden group/img cursor-pointer transition-all duration-300 hover:scale-[1.1] shadow-sm border border-black/5 dark:border-white/10"
                 @click="openPreview(img)">
-                <img :src="mediaUrl(img)" class="w-full h-full object-cover" />
+                <img :src="mediaUrl(img)" class="w-full h-full object-cover" draggable="false" />
                 <div
                   class="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                   <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,13 +109,13 @@
 
             <!-- Files -->
             <div v-if="msg.files && msg.files.filter((f: any) => f.type !== 'original').length > 0"
-              class="mt-3 space-y-2">
+              class="mt-3 space-y-2 nodrag">
               <div v-for="file in msg.files.filter((f: any) => f.type !== 'original')" :key="file.url"
-                class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden">
+                class="group/file p-2 bg-black/5 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10 hover:border-primary/30 transition-all overflow-hidden cursor-default">
                 <div v-if="file.url.match(/\.(jpg|jpeg|png|webp)$/i) || file.type === 'preview' || file.type === 'actual'"
                   class="mb-2 rounded-lg overflow-hidden border border-black/10 dark:border-white/10 aspect-video bg-black/20">
                   <img :src="mediaUrl(file.url)"
-                    class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" />
+                    class="w-full h-full object-cover group-hover/file:scale-110 transition-transform duration-500" draggable="false" />
                 </div>
 
                 <div class="flex items-center justify-between gap-2">
@@ -186,7 +186,7 @@
     <!-- Input Section -->
     <BaseMessageInput v-if="data.hasInputInitially || showInput" v-model="input" v-model:attachedImages="attachedImages"
       :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]" @send="submit" />
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag" @send="submit" />
 
     <Handle type="source" :position="Position.Bottom"
       class="w-3 h-3 bg-blue-500 border-2 border-white dark:border-zinc-800" />

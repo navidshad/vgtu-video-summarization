@@ -1,9 +1,9 @@
 <template>
-  <div class="glass-card glass-card-hover p-4 rounded-2xl min-w-[250px]">
+  <div class="glass-card glass-card-hover p-4 rounded-2xl min-w-[250px] cursor-move">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-800" />
     
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center space-x-2">
+    <div class="flex items-center justify-between mb-3 cursor-move">
+      <div class="flex items-center space-x-2 cursor-move">
         <div v-if="data.status === 'running'" class="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin"></div>
         <div v-else-if="data.status === 'completed'" class="text-green-500">✓</div>
         <div v-else-if="data.status === 'failed'" class="text-red-500">✗</div>
@@ -17,7 +17,7 @@
         <SlimTooltip v-if="data.onStop && data.status === 'running'" :text="isConfirmingStop ? 'Click again to confirm' : 'Stop process'" placement="top">
           <button 
             @click="handleStop" 
-            class="flex items-center space-x-1.5 px-2 py-1 rounded-lg transition-all border group/stop"
+            class="flex items-center space-x-1.5 px-2 py-1 rounded-lg transition-all border group/stop nodrag"
             :class="isConfirmingStop ? 'bg-orange-500/20 text-orange-500 border-orange-500' : 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border-red-500/20 hover:border-red-500/40'"
           >
             <div class="w-2 h-2 rounded-sm" :class="isConfirmingStop ? 'bg-orange-500 animate-pulse' : 'bg-red-500'"></div>
@@ -28,7 +28,7 @@
         </SlimTooltip>
 
         <SlimTooltip v-if="data.onDelete" text="Delete task node" placement="top">
-          <button @click="data.onDelete" class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors">
+          <button @click="data.onDelete" class="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-500 transition-colors nodrag">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
           </button>
         </SlimTooltip>
@@ -36,7 +36,7 @@
     </div>
 
     <!-- Progress Steps -->
-    <div class="space-y-2">
+    <div class="space-y-2 nodrag cursor-text">
       <div v-for="(step, index) in data.steps" :key="index" class="flex items-center space-x-2 text-xs">
         <div 
           class="w-2 h-2 rounded-full"
