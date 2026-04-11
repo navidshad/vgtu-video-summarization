@@ -5,6 +5,22 @@ export const GEMINI_MODEL_2_5_FLASH = 'gemini-2.5-flash'
 export const GEMINI_MODEL_2_5_FLASH_LITE = 'gemini-2.5-flash-lite'
 export const GEMINI_MODEL_3_FLASH_PREVIEW = 'gemini-3-flash-preview'
 export const GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW = 'gemini-3.1-flash-image-preview'
+export const GEMINI_MODEL_3_PRO_IMAGE_PREVIEW = 'gemini-3-pro-image-preview'
+
+export const MODEL_METADATA: Record<string, { label: string; description?: string }> = {
+	[GEMINI_MODEL_2_5_PRO]: { label: 'Gemini 2.5 Pro' },
+	[GEMINI_MODEL_2_5_FLASH]: { label: 'Gemini 2.5 Flash' },
+	[GEMINI_MODEL_2_5_FLASH_LITE]: { label: 'Gemini 2.5 Flash Lite' },
+	[GEMINI_MODEL_3_FLASH_PREVIEW]: { label: 'Gemini 3 Flash Preview' },
+	[GEMINI_MODEL_3_1_FLASH_IMAGE_PREVIEW]: {
+		label: 'Nano Banana 2',
+		description: 'Pro-level visual intelligence with Flash-speed efficiency and reality-grounded generation capabilities.'
+	},
+	[GEMINI_MODEL_3_PRO_IMAGE_PREVIEW]: {
+		label: 'Nano Banana Pro',
+		description: 'State-of-the-art image generation and editing model.'
+	}
+}
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 	pricing: {
@@ -24,7 +40,7 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 			input: {
 				text: 0.30,
 				audio: 1.00,
-				standard: 0.30 // Fallback for simple calc
+				standard: 0.30
 			},
 			output: {
 				standard: 2.50
@@ -57,6 +73,15 @@ export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
 			output: {
 				standard: 3.00,
 				image: 0.0672
+			}
+		},
+		[GEMINI_MODEL_3_PRO_IMAGE_PREVIEW]: {
+			input: {
+				standard: 2.00
+			},
+			output: {
+				standard: 12.00,
+				image: 0.134
 			}
 		}
 	},

@@ -69,7 +69,8 @@ const api = {
 	upscaleImage: (data: { threadId: string, messageId: string, imagePath: string, upscaleFactor: string }) => 
 		ipcRenderer.invoke('upscale-image', data),
 	improviseMessage: (threadId: string, messageId: string) =>
-		ipcRenderer.invoke('improvise-message', { threadId, messageId })
+		ipcRenderer.invoke('improvise-message', { threadId, messageId }),
+	getModelMetadata: () => ipcRenderer.invoke('get-model-metadata')
 }
 
 if (process.contextIsolated) {

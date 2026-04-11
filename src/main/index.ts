@@ -22,7 +22,7 @@ import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
 import { THREAD_DIRS } from './constants/paths'
-import { GEMINI_MODEL_2_5_FLASH } from './constants/gemini'
+import { GEMINI_MODEL_2_5_FLASH, MODEL_METADATA } from './constants/gemini'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 const activePipelines = new Map<string, Pipeline>()
@@ -309,6 +309,10 @@ app.whenReady().then(() => {
 
 	ipcMain.handle('reset-model-settings', () => {
 		return settingsManager.resetModelSettings()
+	})
+
+	ipcMain.handle('get-model-metadata', () => {
+		return MODEL_METADATA
 	})
 
 	// Thread Management
