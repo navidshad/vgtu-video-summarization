@@ -481,15 +481,17 @@ app.whenReady().then(() => {
 		const modelName = modelSettings.selection['intent'] || GEMINI_MODEL_2_5_FLASH
 		const adapter = GeminiAdapter.create()
 
-		const systemInstruction = `You are a prompt improviser. Your goal is to take a user's prompt (potentially with images) and its conversation history, then rewrite the user's LATEST prompt to be more clear, descriptive, and effective for an AI to understand and act upon. 
+		const systemInstruction = `You are a high-level Prompt Engineer. Your task is to IMPROVISE and REWRITE a user's latest prompt to be much more descriptive, detailed, and effective for high-fidelity AI generation.
+- The conversation history is provided ONLY for context. You MUST NOT improve the history, only the latest prompt.
+- Use the attached images for visual context to make the prompt more vivid and accurate.
 - Maintain the original intent exactly.
-- Enhance the wording for better AI performance.
-- Use natural, professional language.
-- Return ONLY the improvised prompt text. 
-- Do NOT include any explanations, tags, or surrounding quotes.
-- The history is provided for context only so you understand the flow.`
+- USE natural, descriptive, and professional language.
+- DO NOT return JSON, technical metadata, coordinates, bounding boxes, or "box_2d" tags.
+- DO NOT return object detection results.
+- DO NOT include any explanations, labels like "Improvised:", or surrounding quotes.
+- Return ONLY the clean, improved prompt text itself.`
 
-		const userPrompt = `History and Prompt:\n${context}`
+		const userPrompt = `[CONTEXT/HISTORY]:\n${context}\n\n[TASK]: Based on the context above and the attached images, rewrite the user's latest message to be a high-performance, descriptive generation prompt. Return only the improved text.`
 
 		const result = await adapter.generateText(modelName, userPrompt, systemInstruction, undefined, attachedImages)
 		
