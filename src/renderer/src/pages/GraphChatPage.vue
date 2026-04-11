@@ -375,12 +375,8 @@ onUnmounted(() => {
   border-radius: 0;
 }
 
-/* Ensure normal cursor in selection mode */
+/* Ensure normal pane cursor in selection mode */
 .vue-flow-custom:not(.pan-mode) .vue-flow__pane {
-  cursor: default !important;
-}
-
-.vue-flow-custom:not(.pan-mode) .cursor-move {
   cursor: default !important;
 }
 
