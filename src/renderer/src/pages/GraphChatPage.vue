@@ -23,9 +23,12 @@
     >
       <GraphToolbar v-model="graphMode" />
 
-      <VueFlow :nodes="graphStore.nodes" :edges="graphStore.edges" class="vue-flow-custom" @pane-ready="onPaneReady"
+      <VueFlow :nodes="graphStore.nodes" :edges="graphStore.edges" 
+        :class="['vue-flow-custom', { 'pan-mode': graphMode === 'pan' }]" 
+        @pane-ready="onPaneReady"
         @node-drag-stop="onNodeDragStop" :min-zoom="0.01" :max-zoom="4"
         :pan-on-drag="graphMode === 'pan'" 
+        :nodes-draggable="graphMode !== 'pan'"
         :selection-key-code="graphMode === 'select' ? true : null" 
         :pan-on-scroll="true"
         :zoom-on-scroll="true"
@@ -79,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { VueFlow, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -106,7 +109,8 @@ import { useGraphLayout } from '../composables/useGraphLayout'
 import GraphHeader from '../components/graph/GraphHeader.vue'
 import GraphToolbar from '../components/graph/GraphToolbar.vue'
 
-const graphMode = ref<'pan' | 'select' | 'frame'>('pan')
+const graphMode = ref<'pan' | 'select' | 'frame'>('select')
+const isTemporaryPan = ref(false)
 const containerRef = ref<HTMLElement | null>(null)
 const frameCreationRect = ref<{ x: number, y: number, width: number, height: number } | null>(null)
 const frameCreationStart = ref<{ x: number, y: number } | null>(null)
@@ -316,12 +320,46 @@ const onPaneMouseUp = async (event: MouseEvent) => {
   frameCreationRect.value = null
 }
 
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.code === 'Space' && !isTemporaryPan.value) {
+    const activeElement = document.activeElement
+    const isInput = activeElement && (
+      activeElement.tagName === 'INPUT' || 
+      activeElement.tagName === 'TEXTAREA' || 
+      (activeElement as HTMLElement).isContentEditable
+    )
+    
+    if (!isInput) {
+      e.preventDefault()
+      if (graphMode.value !== 'pan') {
+        graphMode.value = 'pan'
+        isTemporaryPan.value = true
+      }
+    }
+  }
+}
+
+const handleKeyUp = (e: KeyboardEvent) => {
+  if (e.code === 'Space' && isTemporaryPan.value) {
+    graphMode.value = 'select'
+    isTemporaryPan.value = false
+  }
+}
+
 onMounted(async () => {
   const videoId = route.params.id as string || 'default'
 
   if (videoId !== 'default') {
     await videoStore.selectThread(videoId)
   }
+
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
 })
 </script>
 
@@ -335,5 +373,50 @@ onMounted(async () => {
   background: transparent;
   padding: 0;
   border-radius: 0;
+}
+
+/* Ensure normal pane cursor in selection mode */
+.vue-flow-custom:not(.pan-mode) .vue-flow__pane {
+  cursor: default !important;
+}
+
+/* Pan Mode Interactions - Simplified for maximum navigation reliability */
+.pan-mode.vue-flow-custom {
+  cursor: grab !important;
+  user-select: none !important;
+}
+
+.pan-mode.vue-flow-custom .vue-flow__pane {
+  cursor: grab !important;
+}
+
+.pan-mode.vue-flow-custom .vue-flow__pane.dragging {
+  cursor: grabbing !important;
+}
+
+/* Force grab cursor on EVERYTHING in pan mode */
+.pan-mode.vue-flow-custom * {
+  cursor: inherit !important;
+}
+
+/* Exception: allow text cursor ONLY when typing in a focused input */
+.pan-mode.vue-flow-custom input:focus,
+.pan-mode.vue-flow-custom textarea:focus {
+  cursor: text !important;
+  user-select: auto !important;
+}
+
+/* Disable interaction on graph elements to allow perfect click-through panning */
+.pan-mode.vue-flow-custom .vue-flow__node,
+.pan-mode.vue-flow-custom .vue-flow__edge,
+.pan-mode.vue-flow-custom .vue-flow__handle,
+.pan-mode.vue-flow-custom .vue-flow__edge-path {
+  pointer-events: none !important;
+}
+
+/* Re-enable interaction specifically for chat inputs */
+.pan-mode.vue-flow-custom .interactive-in-pan {
+  pointer-events: auto !important;
+  user-select: auto !important;
 }
 </style>

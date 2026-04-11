@@ -1,9 +1,9 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[300px] max-w-[340px] overflow-hidden flex flex-col group transition-all duration-300">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[300px] max-w-[340px] overflow-hidden flex flex-col group transition-all duration-300 cursor-move">
     <Handle v-if="data.hasInput !== false" type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Gallery Section -->
-    <div class="p-4 bg-zinc-950/5 dark:bg-black/40 border-b border-black/5 dark:border-white/5">
+    <div class="p-4 bg-zinc-950/5 dark:bg-black/40 border-b border-black/5 dark:border-white/5 cursor-move">
       <div class="flex items-center justify-between mb-3">
         <div class="flex flex-col">
           <div class="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-black leading-none mb-1">Source Collection</div>
@@ -19,10 +19,10 @@
         <div 
           v-for="(img, idx) in visibleImages" 
           :key="idx"
-          class="relative aspect-square rounded-xl overflow-hidden border border-black/5 dark:border-white/10 group/img cursor-pointer"
+          class="relative aspect-square rounded-xl overflow-hidden border border-black/5 dark:border-white/10 group/img cursor-pointer nodrag"
           @click="openLightbox(idx)"
         >
-          <img :src="mediaUrl(img)" class="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
+          <img :src="mediaUrl(img)" class="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" draggable="false" />
           <div v-if="idx === 5 && sourceImages.length > 6" class="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center text-white text-xs font-bold font-mono">
             +{{ sourceImages.length - 6 }}
           </div>
@@ -31,8 +31,8 @@
     </div>
 
     <!-- Active Tasks Progress -->
-    <div v-if="activeTasks.length > 0" class="p-3 bg-white/5 border-b border-white/5 space-y-2">
-      <div v-for="task in activeTasks" :key="task.id" class="text-[10px]">
+    <div v-if="activeTasks.length > 0" class="p-3 bg-white/5 border-b border-white/5 space-y-2 nodrag cursor-text">
+      <div v-for="task in activeTasks" :key="task.id" class="text-[10px] select-text">
         <div class="flex justify-between items-center mb-1 text-zinc-400">
           <span class="truncate pr-2 font-bold uppercase tracking-tight">{{ task.status || task.name }}</span>
           <span>{{ task.progress !== undefined ? `${task.progress}%` : '' }}</span>
@@ -48,7 +48,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Start a new analysis..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
       @send="submit"
     />
 

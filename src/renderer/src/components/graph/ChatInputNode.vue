@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card glass-card-hover input-focus-ring p-3 rounded-2xl min-w-[320px]">
+  <div class="glass-card glass-card-hover input-focus-ring p-3 rounded-2xl min-w-[320px] cursor-move">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-300 dark:bg-zinc-600 border-2 border-white dark:border-zinc-800" />
     
     <BaseMessageInput 
@@ -7,6 +7,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Ask for summary, cover, etc..."
       compact
+      class="nodrag interactive-in-pan"
       @send="submit"
     />
   </div>
