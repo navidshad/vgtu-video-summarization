@@ -1,6 +1,6 @@
 {
   "name": "frameflow",
-  "version": "1.1.7",
+  "version": "1.1.11",
   "type": "module",
   "description": "AI-powered multimodal video and image processing platform.",
   "main": "./out/main/index.js",
@@ -72,7 +72,7 @@
       {
         "provider": "github",
         "owner": "navidshad",
-        "repo": "vgtu-video-summarization"
+        "repo": "frameflow"
       }
     ]
   }
