@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300 cursor-move">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Media Container with Overlays -->
@@ -29,7 +29,7 @@
       </div>
 
       <!-- Video Content -->
-      <div class="w-full h-full relative">
+      <div class="w-full h-full relative cursor-move">
         <video 
           ref="videoRef"
           :src="mediaContentUrl" 
@@ -45,7 +45,7 @@
     </div>
     
     <!-- Node Info Tags (Unified Variation) -->
-    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3">
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3 cursor-move">
       <!-- Version -->
       <div v-if="data.version" class="text-[10px] font-bold text-primary dark:text-primary-light font-mono leading-none">
          {{ data.version }}
@@ -67,34 +67,34 @@
     </div>
 
     <!-- Details Metadata Section -->
-    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
+    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300 nodrag cursor-text">
       <div v-if="metadata || isMetadataLoading" class="grid grid-cols-2 gap-3 pb-4 border-b border-white/5">
         <div v-if="isMetadataLoading" class="col-span-2 py-4 flex items-center justify-center space-x-2">
            <div class="w-3 h-3 border-2 border-primary border-t-transparent animate-spin rounded-full"></div>
            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Loading Media Info...</span>
         </div>
         <template v-else-if="metadata">
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Duration</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatDurationSeconds(metadata?.duration) }}</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Frame Rate</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.fps }} FPS</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">File Size</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Format</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.format?.split(',')[0] }}</span>
           </div>
-          <div v-if="metadata?.codec && metadata.codec !== 'unknown'" class="flex flex-col gap-0.5">
+          <div v-if="metadata?.codec && metadata.codec !== 'unknown'" class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Codec</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono capitalize">{{ metadata?.codec }}</span>
           </div>
@@ -108,9 +108,9 @@
            Timeline Segments Map
            <div class="h-px flex-1 bg-black/5 dark:bg-white/5"></div>
         </div>
-        <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+        <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2.5 pr-1 cursor-default">
           <div v-for="(segment, idx) in props.data.timeline" :key="idx" 
-               class="p-3 bg-black/[0.03] dark:bg-black/40 rounded-2xl border border-black/5 dark:border-white/5 hover:border-primary/30 transition-all flex flex-col gap-2 group/segment shadow-sm hover:shadow-md">
+               class="p-3 bg-black/[0.03] dark:bg-black/40 rounded-2xl border border-black/5 dark:border-white/5 hover:border-primary/30 transition-all flex flex-col gap-2 group/segment shadow-sm hover:shadow-md select-text cursor-text">
              <div class="flex justify-between items-center">
                <span class="text-[9px] font-black font-mono text-primary dark:text-blue-400 bg-primary/10 dark:bg-blue-400/10 px-1.5 py-0.5 rounded">
                  [{{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}]
@@ -135,7 +135,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Adjust or follow up..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
       @send="submit"
     />
 

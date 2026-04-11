@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300">
+  <div class="glass-card glass-card-hover p-0 rounded-3xl min-w-[280px] max-w-[320px] overflow-hidden flex flex-col group transition-all duration-300 cursor-move">
     <Handle type="target" :position="Position.Top" class="w-3 h-3 bg-zinc-500 border-2 border-white dark:border-zinc-800" />
     
     <!-- Main Image Container -->
@@ -37,13 +37,14 @@
       <!-- Image Content -->
       <img 
         :src="mediaContentUrl" 
-        class="w-full h-full object-contain cursor-pointer transition-transform duration-500 hover:scale-105" 
+        class="w-full h-full object-contain cursor-move transition-transform duration-500 hover:scale-105" 
         @click="isFullScreen = true"
+        draggable="false"
       />
     </div>
 
     <!-- Node Info Tags (Unified Variation) -->
-    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3">
+    <div class="px-4 py-2.5 bg-zinc-50/50 dark:bg-white/[0.02] border-b border-black/5 dark:border-white/5 flex items-center gap-3 cursor-move">
       <!-- Version -->
       <div v-if="data.version" class="text-[10px] font-bold text-primary dark:text-primary-light font-mono leading-none">
          {{ data.version }}
@@ -65,7 +66,7 @@
     </div>
 
     <!-- Reference Frames Gallery (Visible by default if present) -->
-    <div v-if="referenceFrames.length > 0" class="px-3 py-2 bg-black/10 dark:bg-black/40 border-b border-black/5 dark:border-white/5">
+    <div v-if="referenceFrames.length > 0" class="px-3 py-2 bg-black/10 dark:bg-black/40 border-b border-black/5 dark:border-white/5 nodrag">
         <div class="flex items-center justify-between mb-2">
             <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">{{ displayReferenceLabel }}</span>
             <span class="text-[8px] font-bold text-zinc-400">{{ referenceFrames.length }} detected</span>
@@ -95,12 +96,12 @@
     </div>
 
     <!-- Details Metadata Section -->
-    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300">
+    <div v-if="showDetails" class="px-4 py-3 bg-white/5 border-b border-white/5 space-y-4 animate-in slide-in-from-top duration-300 nodrag cursor-text">
       <!-- Model Content / Explanation -->
       <div v-if="data.content" class="pb-4 border-b border-white/5">
           <div class="text-[8px] font-black uppercase tracking-widest text-primary-light mb-2">Model Feedback</div>
           <div 
-              class="prose prose-xs dark:prose-invert prose-p:my-0 prose-pre:my-2 prose-ul:my-1 text-zinc-800 dark:text-zinc-300/90 leading-relaxed font-medium"
+              class="prose prose-xs dark:prose-invert prose-p:my-0 prose-pre:my-2 prose-ul:my-1 text-zinc-800 dark:text-zinc-300/90 leading-relaxed font-medium select-text"
               v-html="renderMarkdown(data.content)"
           ></div>
       </div>
@@ -111,15 +112,15 @@
            <span class="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Loading Media Info...</span>
         </div>
         <template v-else-if="metadata">
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Resolution</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ metadata?.width }}x{{ metadata?.height }}</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">File Size</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono">{{ formatFileSize(metadata?.size) }}</span>
           </div>
-          <div class="flex flex-col gap-0.5">
+          <div class="flex flex-col gap-0.5 select-text">
             <span class="text-[9px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-widest">Format</span>
             <span class="text-[11px] text-zinc-700 dark:text-zinc-200 font-mono uppercase">{{ (metadata?.format?.split(',')[0] || 'Image').replace('image2', 'PNG') }}</span>
           </div>
@@ -127,7 +128,7 @@
       </div>
 
       <!-- High-Res Upscaling Section -->
-      <div v-if="!isMetadataLoading" class="pt-4 border-t border-white/5 space-y-3">
+      <div v-if="!isMetadataLoading" class="pt-4 border-t border-white/5 space-y-3 nodrag cursor-default">
           <div class="flex items-center justify-between">
               <span class="text-[9px] font-black uppercase tracking-widest text-primary-light">High-Res Upscaling</span>
               <span class="text-[8px] font-bold text-zinc-500 italic">Nano Banana</span>
@@ -179,7 +180,7 @@
       v-model:attachedImages="attachedImages"
       placeholder="Adjust or follow up..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
       @send="submit"
     />
 
