@@ -43,6 +43,8 @@
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
+    "@iconify-json/tabler": "^1.2.33",
+    "@iconify/tailwind": "^1.2.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.2.3",
     "@types/uuid": "^10.0.0",
