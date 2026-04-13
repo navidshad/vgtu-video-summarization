@@ -21,6 +21,7 @@ import { GeminiAdapter } from './gemini/adapter'
 import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
+import { dependencyManager } from './dependencies/manager'
 import { THREAD_DIRS } from './constants/paths'
 import { GEMINI_MODEL_2_5_FLASH, MODEL_METADATA } from './constants/gemini'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -137,8 +138,21 @@ app.whenReady().then(() => {
 			ffmpegAvailable,
 			scenedetectAvailable,
 			ytDlpAvailable,
+			ytDlpStatus: dependencyManager.getStatus('yt-dlp'),
 			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
 		}
+	})
+
+	ipcMain.handle('install-dependency', async (_event, name: string) => {
+		if (name === 'yt-dlp') {
+			await dependencyManager.installYtDlp()
+			return await checkYtDlpAvailability()
+		}
+		return false
+	})
+
+	ipcMain.handle('get-dependency-status', (_event, name: string) => {
+		return dependencyManager.getStatus(name)
 	})
 
 	ipcMain.handle('get-video-metadata', async (_event, filePath: string) => {

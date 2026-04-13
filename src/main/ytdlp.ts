@@ -1,21 +1,68 @@
 import path, { join } from 'path'
 import { YtDlp } from 'ytdlp-nodejs'
 import fs from 'fs'
+import { app } from 'electron'
 import { getFFmpegBinaryPath } from './ffmpeg'
+import { dependencyManager } from './dependencies/manager'
 
-const ytdlp = new YtDlp()
+/**
+ * Returns the absolute path to the yt-dlp binary.
+ * 1. Checks for a manually downloaded version in userData.
+ * 2. Checks for a bundled version in app.asar.unpacked.
+ * 3. Falls back to the default node_modules path (dev).
+ */
+export function getYtDlpBinaryPath(): string {
+	// 1. Check for downloaded version in userData/bin
+	const downloadedPath = dependencyManager.getDownloadedYtDlpPath()
+	if (downloadedPath && fs.existsSync(downloadedPath)) {
+		return downloadedPath
+	}
+
+	// 2. Check for bundled version in node_modules (handling asar unpack)
+	const platform = process.platform
+	const filename = platform === 'darwin' ? 'yt-dlp_macos' : (platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp')
+
+	// This assumes 'asarUnpack' was configured for **/node_modules/ytdlp-nodejs/bin/*
+	let bundledPath = join(app.getAppPath(), 'node_modules/ytdlp-nodejs/bin', filename)
+
+	// Fix for production path in asar
+	if (bundledPath.includes('app.asar')) {
+		bundledPath = bundledPath.replace('app.asar', 'app.asar.unpacked')
+	}
+
+	if (fs.existsSync(bundledPath)) {
+		return bundledPath
+	}
+
+	// 3. Fallback to node_modules relative to this file (dev)
+	// In dev with electron-vite, this file is in src/main/ytdlp.ts
+	return join(process.cwd(), 'node_modules/ytdlp-nodejs/bin', filename)
+}
+
+const ytdlp = new YtDlp({
+	binaryPath: getYtDlpBinaryPath(),
+	ffmpegPath: getFFmpegBinaryPath()
+})
 
 export async function checkYtDlpAvailability(): Promise<boolean> {
 	try {
-		const isInstalled = await ytdlp.checkInstallationAsync()
-		if (!isInstalled) {
-			// Try to update/download if not present
-			await ytdlp.updateYtDlpAsync()
-			return await ytdlp.checkInstallationAsync()
+		// Create a fresh instance to ensure path changes (like after a download) are picked up
+		const checker = new YtDlp({
+			binaryPath: getYtDlpBinaryPath(),
+			ffmpegPath: getFFmpegBinaryPath()
+		})
+		const isInstalled = await checker.checkInstallationAsync()
+		
+		if (isInstalled) {
+			dependencyManager.updateStatus('yt-dlp', { status: 'ready', progress: 100 })
+		} else {
+			dependencyManager.updateStatus('yt-dlp', { status: 'missing' })
 		}
-		return true
+		
+		return isInstalled
 	} catch (error) {
-		console.error('Failed to check or install yt-dlp:', error)
+		console.error('Failed to check yt-dlp availability:', error)
+		dependencyManager.updateStatus('yt-dlp', { status: 'error', error: 'Check failed' })
 		return false
 	}
 }
@@ -53,14 +100,14 @@ export async function getVideoFormats(url: string): Promise<string[]> {
 }
 
 export async function downloadVideo(
-	url: string, 
-	tempFolder: string, 
+	url: string,
+	tempFolder: string,
 	resolution?: string,
 	onProgress?: (percent: number) => void
 ): Promise<{ path: string; name: string }> {
 	// Output template: tempFolder / videoTitle.ext
 	const outputTemplate = join(tempFolder, '%(title)s.%(ext)s')
-	
+
 	const builder = ytdlp.download(url)
 		.output(outputTemplate)
 		.addArgs('--no-playlist')
@@ -85,9 +132,9 @@ export async function downloadVideo(
 
 	try {
 		const result = await builder.run()
-		
+
 		let downloadedPath = result.filePaths?.[0]
-		
+
 		// 0. Safety: Check if we got anything
 		if (!downloadedPath || !fs.existsSync(downloadedPath)) {
 			// Fallback: scan the temp directory
@@ -117,21 +164,21 @@ export async function downloadVideo(
 			const bestFile = files[0]
 			const newPath = join(tempFolder, bestFile.name)
 			fs.renameSync(bestFile.path, newPath)
-			
+
 			// Cleanup the directory if it's now empty or just temp fragments
-			try { fs.rmSync(downloadedPath, { recursive: true, force: true }) } catch (e) {}
-			
+			try { fs.rmSync(downloadedPath, { recursive: true, force: true }) } catch (e) { }
+
 			downloadedPath = newPath
 		}
 
 		// 2. Normalize filename
 		const dir = path.dirname(downloadedPath)
 		const originalFileName = path.basename(downloadedPath)
-		
+
 		// Robust normalization: strip redundant extensions
 		const ext = path.extname(originalFileName)
 		let base = path.basename(originalFileName, ext)
-		
+
 		// Keep stripping common video extensions from the end of the base name
 		const videoExtensions = ['.mp4', '.m4a', '.webm', '.mov', '.mkv', '.avi', '.f136', '.f140', '.f251']
 		while (true) {
@@ -143,7 +190,7 @@ export async function downloadVideo(
 				break
 			}
 		}
-		
+
 		const newFileName = `${base.trim()}${ext}`
 		let finalPath = downloadedPath
 		let finalName = originalFileName
