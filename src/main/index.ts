@@ -483,17 +483,9 @@ app.whenReady().then(() => {
 	ipcMain.handle('improvise-message', async (_event, { threadId, messageId }) => {
 		console.log(`[DEBUG IPC] improvise-message called: threadId=${threadId}, messageId=${messageId}`)
 		
-		const thread = threadManager.getThread(threadId)
-		if (!thread) throw new Error('Thread not found')
-
-		const message = thread.messages.find(m => m.id === messageId)
-		if (!message) throw new Error('Message not found')
-
-		// Get the history leading up to this message (including the message itself)
-		const { text: context } = threadManager.getBranchContext(threadId, messageId)
-		
-		// Collect attached images from THIS message only for visual context in improvisation
-		const attachedImages = message.attachedImages || []
+		// Get the history and images leading up to this message in a single call
+		const { text: context, attachedImages } = threadManager.getBranchContext(threadId, messageId)
+		if (!context && !attachedImages.length) throw new Error('Message context not found')
 		
 		const modelSettings = settingsManager.getModelSettings()
 		const modelName = modelSettings.selection['intent'] || GEMINI_MODEL_2_5_FLASH

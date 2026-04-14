@@ -549,11 +549,28 @@ class ThreadManager {
 		const thread = this.getThread(threadId)
 		if (!thread) return { text: '', attachedImages: [] }
 
+		const standardize = (p: string) => {
+			if (!p) return ''
+			// 1. Remove protocols
+			let clean = p.replace(/^(media|file):\/*|^(?!\/)/i, '/')
+			// 2. Normalize slashes for the current OS
+			clean = clean.replace(/[\/\\]+/g, path.sep)
+			// 3. Absolute normalization (resolves . and ..)
+			try {
+				return path.normalize(clean)
+			} catch {
+				return clean
+			}
+		}
+
 		if (!messageId) {
 			const text = this.getThreadContext(threadId)
 			// For full thread context, collect ALL attached images from ALL messages
 			const attachedImages = Array.from(new Set(
-				thread.messages.flatMap(m => m.attachedImages || [])
+				thread.messages
+					.flatMap(m => m.attachedImages || [])
+					.map(standardize)
+					.filter(p => !!p)
 			))
 			return { text, attachedImages }
 		}
@@ -581,8 +598,12 @@ class ThreadManager {
 			return content
 		}).join('\n\n')
 
+		// Take attachedImages ONLY FROM THE LEAF MESSAGE for graph-node refinement accuracy
+		const leafMsg = branchMessages[branchMessages.length - 1]
 		const attachedImages = Array.from(new Set(
-			branchMessages.flatMap(m => m.attachedImages || [])
+			(leafMsg?.attachedImages || [])
+				.map(standardize)
+				.filter(p => !!p)
 		))
 
 		return { text, attachedImages }

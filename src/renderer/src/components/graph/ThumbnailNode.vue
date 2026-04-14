@@ -21,6 +21,11 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3m-1 7l-4 4-4-4m4 4V10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </SlimTooltip>
+        <SlimTooltip key="refine" text="Refine using all references" placement="left">
+          <button @click="addReferencesToInput" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-primary/80 text-white transition-all shadow-lg group-hover:scale-110 active:scale-95">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11l-5 5" /><path d="M17 6l-5 5" /><path d="M5 20l14 -14" /><path d="M19 19v-11" /><path d="M11 19h8" /></svg>
+          </button>
+        </SlimTooltip>
         <SlimTooltip key="attachment" :text="isAvailableForAttachment ? 'Remove from attachments' : 'Add to available attachments'" placement="left">
           <button @click="toggleAttachment" class="p-1.5 bg-black/50 backdrop-blur-md rounded-lg hover:bg-black/80 transition-all shadow-lg" :class="{'text-primary-light': isAvailableForAttachment, 'text-white': !isAvailableForAttachment}">
             <svg v-if="isAvailableForAttachment" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01" /><path d="M11.5 21h-5.5a3 3 0 0 1 -3 -3v-12a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v5" /><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l3 3" /><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l0 0" /><path d="M15 19l2 2l4 -4" /></svg>
@@ -68,7 +73,12 @@
     <!-- Reference Frames Gallery (Visible by default if present) -->
     <div v-if="referenceFrames.length > 0" class="px-3 py-2 bg-black/10 dark:bg-black/40 border-b border-black/5 dark:border-white/5 nodrag">
         <div class="flex items-center justify-between mb-2">
-            <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">{{ displayReferenceLabel }}</span>
+            <div class="flex items-center gap-2">
+                <span class="text-[8px] font-black uppercase tracking-widest text-zinc-500">{{ displayReferenceLabel }}</span>
+                <button @click="addReferencesToInput" class="p-1 rounded bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-primary transition-all shadow-sm" title="Use as refinement attachments">
+                    <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+            </div>
             <span class="text-[8px] font-bold text-zinc-400">{{ referenceFrames.length }} detected</span>
         </div>
         <div class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar scroll-smooth">
@@ -176,11 +186,13 @@
     </div>
     
     <BaseMessageInput 
+      v-if="showInput"
+      ref="messageInput"
       v-model="input"
       v-model:attachedImages="attachedImages"
       placeholder="Adjust or follow up..."
       compact
-      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan"
+      class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan animate-in slide-in-from-bottom duration-300"
       @send="submit"
     />
 
@@ -200,7 +212,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import SlimTooltip from '../SlimTooltip.vue'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
@@ -230,6 +242,8 @@ const isMetadataLoading = ref(false)
 const previewUrl = ref<string | null>(null)
 const videoStore = useVideoStore()
 const isUpscaling = ref<string | null>(null)
+const showInput = ref(false)
+const messageInput = ref<any>(null)
 
 const files = computed(() => props.data.files || [])
 const actualFile = computed(() => files.value.find((f: any) => f.type === 'actual'))
@@ -296,6 +310,25 @@ const toggleAttachment = async () => {
   const path = actualFile.value?.url
   if (!path) return
   await videoStore.toggleReferenceFrame(path.replace('media://', ''))
+}
+
+const addReferencesToInput = async () => {
+  showInput.value = true
+  
+  const urlsToAdd = []
+  if (actualFile.value?.url) urlsToAdd.push(mediaUrl(actualFile.value.url))
+  referenceFrames.value.forEach(f => {
+    if (f.url) urlsToAdd.push(mediaUrl(f.url))
+  })
+
+  // Merge without duplicates
+  const currentSet = new Set(attachedImages.value)
+  urlsToAdd.forEach(url => currentSet.add(url))
+  attachedImages.value = Array.from(currentSet)
+
+  // Focus input
+  await nextTick()
+  messageInput.value?.focus()
 }
 
 const fetchMetadata = async () => {

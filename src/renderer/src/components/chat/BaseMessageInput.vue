@@ -154,6 +154,10 @@ const handleSend = () => {
 onMounted(() => {
   adjustTextarea()
 })
+
+defineExpose({
+  focus: () => textareaRef.value?.focus()
+})
 </script>
 
 <style scoped>
