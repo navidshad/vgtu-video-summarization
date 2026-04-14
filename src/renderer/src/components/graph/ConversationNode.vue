@@ -405,8 +405,8 @@ const confirmRetry = async (messageId: string) => {
   isRetryModalOpen.value = true
 }
 
-const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number) => {
-  await videoStore.retryMessage(messageId, shouldRemoveBranch, count)
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number, isThinkingMode: boolean) => {
+  await videoStore.retryMessage(messageId, shouldRemoveBranch, count, isThinkingMode)
 }
 
 const removeMessage = async (messageId: string) => {
@@ -434,9 +434,9 @@ const copyMessage = (id: string, content: string) => {
   })
 }
 
-const submit = (text: string, images: string[], count: number) => {
+const submit = (text: string, images: string[], count: number, isThinkingMode: boolean) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images, count)
+    props.data.onSubmit(text, images, count, isThinkingMode)
     input.value = ''
     attachedImages.value = []
     showInput.value = false

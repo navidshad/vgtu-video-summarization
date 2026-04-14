@@ -181,8 +181,8 @@ app.whenReady().then(() => {
 		console.log('[FRONTEND LOG]', ...args)
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
-		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}`)
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, isThinkingMode }) => {
+		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}, isThinkingMode=${isThinkingMode}`)
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) {
 			console.log(`[DEBUG IPC] FAILED: window not found`)
@@ -206,7 +206,7 @@ app.whenReady().then(() => {
 		// Prepare the base timeline
 		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages, isThinkingMode)
 
 		// Ensure background processing is running (will resume/retry if tasks are missing/failed)
 		if (thread.type === 'image') {

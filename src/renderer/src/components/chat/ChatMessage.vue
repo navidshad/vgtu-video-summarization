@@ -198,8 +198,8 @@ const handleRetry = async () => {
 	isRetryModalOpen.value = true
 }
 
-const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number) => {
-	await videoStore.retryMessage(messageId, shouldRemoveBranch, count)
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number, isThinkingMode: boolean) => {
+	await videoStore.retryMessage(messageId, shouldRemoveBranch, count, isThinkingMode)
 	emit('retry', messageId)
 }
 

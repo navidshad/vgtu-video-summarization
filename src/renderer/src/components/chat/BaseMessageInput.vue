@@ -51,6 +51,18 @@
         </select>
       </div>
 
+      <!-- Thinking Mode Toggle -->
+      <SlimTooltip text="Thinking Mode (CoT)" :placement="compact ? 'top' : 'bottom'">
+        <button @click="isThinkingMode = !isThinkingMode"
+          class="flex items-center justify-center p-2 rounded-xl border transition-all active:scale-95 mb-1" :class="[
+            isThinkingMode
+              ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/10'
+              : 'bg-zinc-100 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+          ]">
+          <Icon name="iconify tabler--brain" class="w-4 h-4" :class="isThinkingMode ? 'animate-pulse' : ''" />
+        </button>
+      </SlimTooltip>
+
       <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'"
         :placement="compact ? 'top' : 'bottom'">
         <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
@@ -85,6 +97,7 @@ const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send'])
 
 const internalText = ref(props.modelValue)
 const resultsCount = ref(1)
+const isThinkingMode = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showAttachmentModal = ref(false)
 
@@ -129,7 +142,7 @@ const removeAttachment = (index: number) => {
 
 const handleSend = () => {
   if (!internalText.value.trim() && props.attachedImages.length === 0) return
-  emit('send', internalText.value, [...props.attachedImages], resultsCount.value)
+  emit('send', internalText.value, [...props.attachedImages], resultsCount.value, isThinkingMode.value)
 
   // Clear local state if parent doesn't reset via props (standard pattern)
   internalText.value = ''

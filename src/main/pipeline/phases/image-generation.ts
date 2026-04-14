@@ -76,7 +76,7 @@ CRITICAL RULES:
 			allReferenceImages,
 			systemInstruction,
 			context.signal,
-			{ includeThinking: true }
+			{ includeThinking: !!context.isThinkingMode }
 		)
 
 		await context.recordUsage(record)
