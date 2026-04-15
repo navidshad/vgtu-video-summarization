@@ -79,16 +79,16 @@ watch(() => videoStore.messages, (newMessages) => {
   }
 }, { deep: true })
 
-const handleSendMessage = async (userPrompt: string) => {
+const handleSendMessage = async (userPrompt: string, images: string[], count: number, isThinkingMode: boolean) => {
   // Capture the context ID (which we now persist)
   const editRefId = editingMessageId.value
 
   // The store action handles adding to current thread
-  await videoStore.addMessage(userPrompt, MessageRole.User, editRefId || undefined)
+  await videoStore.addMessage(userPrompt, MessageRole.User, editRefId || undefined, images)
 
   if (videoStore.currentThreadId) {
-    // Pass the captured context ID (if any) to startProcessing
-    await videoStore.startProcessing(videoStore.currentThreadId, editRefId || undefined)
+    // Pass the captured context ID (if any) and options to startProcessing
+    await videoStore.startProcessing(videoStore.currentThreadId, editRefId || undefined, count, isThinkingMode)
   }
 }
 

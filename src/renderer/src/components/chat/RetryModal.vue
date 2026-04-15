@@ -44,6 +44,22 @@
             </select>
           </div>
         </div>
+
+        <!-- Thinking Mode -->
+        <div
+          class="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5 transition-all hover:border-primary/20 group">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-sm font-bold text-zinc-900 dark:text-zinc-100 font-heading tracking-wide uppercase text-[10px]">Experimental</span>
+            <span class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Thinking Mode</span>
+            <span class="text-[11px] text-zinc-500 font-medium">Activate Chain of Thought (CoT)</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" v-model="isThinkingMode" class="sr-only peer">
+            <div
+              class="w-10 h-5 bg-zinc-200 dark:bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500">
+            </div>
+          </label>
+        </div>
       </div>
     </template>
 
@@ -77,10 +93,11 @@ const emit = defineEmits(['update:modelValue', 'confirm'])
 
 const shouldRemoveBranch = ref(true)
 const resultsCount = ref(1)
+const isThinkingMode = ref(false)
 
 const handleConfirm = () => {
   if (props.messageId) {
-    emit('confirm', props.messageId, shouldRemoveBranch.value, resultsCount.value)
+    emit('confirm', props.messageId, shouldRemoveBranch.value, resultsCount.value, isThinkingMode.value)
     emit('update:modelValue', false)
   }
 }

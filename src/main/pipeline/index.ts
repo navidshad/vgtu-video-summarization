@@ -24,6 +24,7 @@ export interface PipelineContext {
 	editRefId?: string; // ID of the message being edited/referenced
 	intentResult?: import('../../shared/types').IntentResult;
 	attachedImages?: string[];
+	isThinkingMode?: boolean;
 }
 
 import { backgroundTaskManager } from '../tasks'
@@ -39,10 +40,11 @@ export class Pipeline {
 	private baseTimeline?: EnrichedTimelineSegment[]
 	private intentResult?: import('../../shared/types').IntentResult
 	private attachedImages?: string[]
+	private isThinkingMode: boolean = false
 	private isFinished: boolean = false
 	private abortController: AbortController = new AbortController()
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string, attachedImages?: string[]) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string, attachedImages?: string[], isThinkingMode: boolean = false) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
@@ -50,6 +52,7 @@ export class Pipeline {
 		this.baseTimeline = baseTimeline
 		this.editRefId = editRefId
 		this.attachedImages = attachedImages
+		this.isThinkingMode = isThinkingMode
 	}
 
 	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
@@ -146,6 +149,7 @@ export class Pipeline {
 			editRefId: this.editRefId,
 			baseTimeline: this.baseTimeline,
 			attachedImages: this.attachedImages,
+			isThinkingMode: this.isThinkingMode,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
 			signal: this.abortController.signal,

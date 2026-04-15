@@ -8,7 +8,8 @@ export const supplyController: PipelineFunction = async (data, context) => {
 	// Rule: If user provide frames, then none for auto select.
 	if (context.attachedImages && context.attachedImages.length > 0) {
 		console.log(`[SUPPLY] User provided ${context.attachedImages.length} attachments. Skipping auto-selection from video.`)
-		context.next({ ...data, selectedReferenceImages: context.attachedImages })
+		const cleanedPaths = context.attachedImages.map(url => url.replace(/^media:\/+/i, '/'))
+		context.next({ ...data, selectedReferenceImages: cleanedPaths })
 		return
 	}
 

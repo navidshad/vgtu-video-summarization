@@ -21,6 +21,7 @@ import { GeminiAdapter } from './gemini/adapter'
 import { checkFFmpegAvailability, getVideoMetadata } from './ffmpeg'
 import { checkScenedetectAvailability } from './scenedetect'
 import { checkYtDlpAvailability, downloadVideo, getVideoFormats } from './ytdlp'
+import { dependencyManager } from './dependencies/manager'
 import { THREAD_DIRS } from './constants/paths'
 import { GEMINI_MODEL_2_5_FLASH, MODEL_METADATA } from './constants/gemini'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -137,8 +138,21 @@ app.whenReady().then(() => {
 			ffmpegAvailable,
 			scenedetectAvailable,
 			ytDlpAvailable,
+			ytDlpStatus: dependencyManager.getStatus('yt-dlp'),
 			isTempDirUnsafe: settingsManager.isTempDirUnsafe()
 		}
+	})
+
+	ipcMain.handle('install-dependency', async (_event, name: string) => {
+		if (name === 'yt-dlp') {
+			await dependencyManager.installYtDlp()
+			return await checkYtDlpAvailability()
+		}
+		return false
+	})
+
+	ipcMain.handle('get-dependency-status', (_event, name: string) => {
+		return dependencyManager.getStatus(name)
 	})
 
 	ipcMain.handle('get-video-metadata', async (_event, filePath: string) => {
@@ -167,8 +181,8 @@ app.whenReady().then(() => {
 		console.log('[FRONTEND LOG]', ...args)
 	})
 
-	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId }) => {
-		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}`)
+	ipcMain.handle('start-pipeline', async (event, { threadId, newAiMessageId, isThinkingMode }) => {
+		console.log(`\n===============\n[DEBUG IPC] start-pipeline called: threadId=${threadId}, newAiMessageId=${newAiMessageId}, isThinkingMode=${isThinkingMode}`)
 		const window = BrowserWindow.fromWebContents(event.sender)
 		if (!window) {
 			console.log(`[DEBUG IPC] FAILED: window not found`)
@@ -192,7 +206,7 @@ app.whenReady().then(() => {
 		// Prepare the base timeline
 		const baseTimeline = userMsgId ? thread.messages.find(m => m.id === userMsgId)?.timeline : undefined;
 
-		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages)
+		const pipeline = new Pipeline(window, newAiMessageId, threadId, context, baseTimeline, userMsgId, attachedImages, isThinkingMode)
 
 		// Ensure background processing is running (will resume/retry if tasks are missing/failed)
 		if (thread.type === 'image') {
@@ -469,17 +483,9 @@ app.whenReady().then(() => {
 	ipcMain.handle('improvise-message', async (_event, { threadId, messageId }) => {
 		console.log(`[DEBUG IPC] improvise-message called: threadId=${threadId}, messageId=${messageId}`)
 		
-		const thread = threadManager.getThread(threadId)
-		if (!thread) throw new Error('Thread not found')
-
-		const message = thread.messages.find(m => m.id === messageId)
-		if (!message) throw new Error('Message not found')
-
-		// Get the history leading up to this message (including the message itself)
-		const { text: context } = threadManager.getBranchContext(threadId, messageId)
-		
-		// Collect attached images from THIS message only for visual context in improvisation
-		const attachedImages = message.attachedImages || []
+		// Get the history and images leading up to this message in a single call
+		const { text: context, attachedImages } = threadManager.getBranchContext(threadId, messageId)
+		if (!context && !attachedImages.length) throw new Error('Message context not found')
 		
 		const modelSettings = settingsManager.getModelSettings()
 		const modelName = modelSettings.selection['intent'] || GEMINI_MODEL_2_5_FLASH

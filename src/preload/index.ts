@@ -26,6 +26,13 @@ const api = {
 		ipcRenderer.on('background-task-update', listener)
 		return () => ipcRenderer.removeListener('background-task-update', listener)
 	},
+	installDependency: (name: string) => ipcRenderer.invoke('install-dependency', name),
+	getDependencyStatus: (name: string) => ipcRenderer.invoke('get-dependency-status', name),
+	onDependencyUpdate: (callback: (data: any) => void) => {
+		const listener = (_event: any, data: any) => callback(data)
+		ipcRenderer.on('dependency-update', listener)
+		return () => ipcRenderer.removeListener('dependency-update', listener)
+	},
 	onThreadUpdated: (callback: (thread: any) => void) => {
 		const listener = (_event: any, thread: any) => callback(thread)
 		ipcRenderer.on('thread-updated', listener)

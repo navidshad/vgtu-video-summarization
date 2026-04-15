@@ -152,17 +152,68 @@
               <!-- URL Input -->
               <div v-else-if="uploadMode === 'link'"
                 class="w-full h-full min-h-[320px] rounded-lg flex flex-col items-center justify-center space-y-6 p-8 animate-in fade-in zoom-in-95">
-                <div v-if="!ytDlpAvailable"
-                  class="w-full max-w-md text-left flex items-start gap-3 px-4 py-3 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 text-sm mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path
-                      d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                  <span><strong>yt-dlp is not installed.</strong> Downloading videos from links requires yt-dlp to be
-                    installed on your system. Please install it and restart the application.</span>
+                <!-- yt-dlp Setup / Missing -->
+                <div
+                  v-if="!ytDlpAvailable || ytDlpStatus?.status === 'downloading' || ytDlpStatus?.status === 'error'"
+                  class="w-full max-w-md p-5 rounded-xl border backdrop-blur-md transition-all duration-500 mb-6"
+                  :class="{
+                    'bg-amber-500/10 border-amber-500/20 text-amber-900 dark:text-amber-400': ytDlpStatus?.status === 'missing' || !ytDlpStatus || (!ytDlpAvailable && ytDlpStatus?.status !== 'downloading'),
+                    'bg-blue-500/10 border-blue-500/20 text-blue-900 dark:text-blue-400': ytDlpStatus?.status === 'downloading',
+                    'bg-red-500/10 border-red-500/20 text-red-900 dark:text-red-400': ytDlpStatus?.status === 'error'
+                  }">
+
+                  <div class="flex items-start gap-4">
+                    <div class="p-2 rounded-lg shrink-0" :class="{
+                      'bg-amber-500/20': ytDlpStatus?.status === 'missing' || !ytDlpStatus || (!ytDlpAvailable && ytDlpStatus?.status !== 'downloading'),
+                      'bg-blue-500/20': ytDlpStatus?.status === 'downloading',
+                      'bg-red-500/20': ytDlpStatus?.status === 'error'
+                    }">
+                      <svg v-if="ytDlpStatus?.status === 'downloading'" class="animate-spin w-5 h-5"
+                        xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                      </svg>
+                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 shrink-0" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                      <h4 class="font-bold text-base">
+                        {{ ytDlpStatus?.status === 'downloading' ? 'Setting up downloader...' : (ytDlpStatus?.status ===
+                          'error' ? 'Installation Failed' : 'yt-dlp Required') }}
+                      </h4>
+                      <p class="text-sm opacity-80 mt-1 leading-relaxed">
+                        {{ ytDlpStatus?.status === 'downloading' ? 'Please wait while we set up the video processing engine.' : 'Downloading videos from links requires additional components.' }}
+                      </p>
+
+                      <!-- Progress Bar -->
+                      <div v-if="ytDlpStatus?.status === 'downloading'" class="mt-4 space-y-2">
+                        <div class="h-2 w-full bg-blue-500/20 rounded-full overflow-hidden">
+                          <div class="h-full bg-blue-500 transition-all duration-300"
+                            :style="{ width: `${ytDlpStatus.progress}%` }"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-60">
+                          <span>Downloading engine</span>
+                          <span>{{ ytDlpStatus.progress }}%</span>
+                        </div>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div v-if="ytDlpStatus?.status !== 'downloading'" class="mt-4">
+                        <Button @click="handleInstallYtDlp" size="sm" :color="ytDlpStatus?.status === 'error' ? 'red' : 'amber'"
+                          :label="ytDlpStatus?.status === 'error' ? 'Retry Installation' : 'Install Now'"
+                          class="!rounded-lg shadow-sm" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div
@@ -328,6 +379,7 @@ const requirementsChecked = ref(false)
 const ffmpegAvailable = ref(true)
 const scenedetectAvailable = ref(true)
 const ytDlpAvailable = ref(true)
+const ytDlpStatus = ref<any>(null)
 const isTempDirUnsafe = ref(false)
 
 onMounted(async () => {
@@ -343,7 +395,8 @@ onMounted(async () => {
     if (result) {
       ffmpegAvailable.value = result.ffmpegAvailable
       scenedetectAvailable.value = result.scenedetectAvailable
-      ytDlpAvailable.value = result.ytDlpAvailable !== false // default true just in case
+      ytDlpAvailable.value = result.ytDlpAvailable !== false
+      ytDlpStatus.value = result.ytDlpStatus
       isTempDirUnsafe.value = result.isTempDirUnsafe
     }
   } catch (e) {
@@ -351,7 +404,27 @@ onMounted(async () => {
   } finally {
     requirementsChecked.value = true
   }
+
+  // Listen for dependency updates
+  if ((window as any).api?.onDependencyUpdate) {
+    (window as any).api.onDependencyUpdate((status: any) => {
+      if (status.name === 'yt-dlp') {
+        ytDlpStatus.value = status
+        if (status.status === 'ready') {
+          ytDlpAvailable.value = true
+        }
+      }
+    })
+  }
 })
+
+const handleInstallYtDlp = async () => {
+  try {
+    await (window as any).api?.installDependency('yt-dlp')
+  } catch (e) {
+    console.error('Manual install failed:', e)
+  }
+}
 
 // Can only submit if ffmpeg is available, a file + prompt are ready, and download is finished
 const canSubmit = computed(() => !isDownloading.value && ffmpegAvailable.value && !!prompt.value.trim() && !isCreating.value)

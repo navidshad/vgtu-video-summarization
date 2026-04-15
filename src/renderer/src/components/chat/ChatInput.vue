@@ -53,8 +53,8 @@ const branchedVersion = computed(() => {
   return `v.${version}${type}`
 })
 
-const handleSend = (text: string, images: string[]) => {
-  emit('send', text, images)
+const handleSend = (text: string, images: string[], count: number, isThinkingMode: boolean) => {
+  emit('send', text, images, count, isThinkingMode)
   userPrompt.value = ''
   attachedImages.value = []
 }

@@ -16,44 +16,10 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 		return context.next(data)
 	}
 
-	// 1.5. Check for previous context if this is an edit/adjustment
-	let previousFiles: string[] = []
-	let isIteration = false
-	if (context.editRefId) {
-		const thread = threadManager.getThread(context.threadId)
-		let refMsg = thread?.messages.find(m => m.id === context.editRefId)
-
-		// If the immediate parent is a User message, the files are in its parent (the previous AI result)
-		if (refMsg && refMsg.role === MessageRole.User && refMsg.editRefId) {
-			const grandParentId = refMsg.editRefId
-			console.log(`[THUMBNAIL] Current ref node ${context.editRefId} is a User message. Jumping to grandparent ${grandParentId}`)
-			refMsg = thread?.messages.find(m => m.id === grandParentId)
-		}
-
-		if (refMsg && refMsg.files && refMsg.files.length > 0) {
-			isIteration = true
-			previousFiles = refMsg.files
-				.filter(f => f.type === FileType.Actual || f.type === FileType.Preview)
-				.map(f => {
-					// Normalize: remove media:// and ensure no double slashes or cross-platform issues
-					let raw = f.url.replace('media://', '')
-					return path.normalize(raw)
-				})
-			console.log(`[THUMBNAIL] Iteration detected. Found ${previousFiles.length} files from message ${refMsg.id}:`, previousFiles)
-		} else {
-			console.warn(`[THUMBNAIL] Iteration check: No files found in ref message ${refMsg?.id || context.editRefId}`)
-		}
-	}
-
 	const adapter = GeminiAdapter.create()
 
-	// 2. Identify all reference images
-	// a. From previous results (if iteration)
-	// b. From supply controller (which manages auto-select vs user-attachments)
-
-	const selectedFromSupply = data.selectedReferenceImages || []
-
-	context.updateStatus(`Preparing reference material: ${selectedFromSupply.length} images...`)
+	const allReferenceImages = data.selectedReferenceImages || []
+	context.updateStatus(`Preparing reference material: ${allReferenceImages.length} images...`)
 
 	// 2. Generate the Thumbnail Asset
 	context.updateStatus('Generating thumbnail image with Gemini...')
@@ -61,7 +27,6 @@ export const generateThumbnail: PipelineFunction = async (data, context) => {
 	const modelName = currentModelSettings.selection['thumbnail']
 
 	const resultPath = path.join(context.tempDir, THREAD_DIRS.GENERATED_IMAGES, `thumbnail_${context.messageId}.png`)
-	context.updateStatus(`Generating thumbnail image with Gemini...`)
 
 	const systemInstruction = `You are a professional video thumbnail designer.
 Your goal is to create a high-impact, cinematic thumbnail for a video based on a user's request and provided reference frames.
@@ -71,25 +36,10 @@ CRITICAL RULES:
 2. SOURCE MATERIAL: The provided reference frames are your primary baseline. Your output should look like it was professionally edited from these actual video frames.
 3. COMPOSITION: Use principles of good graphic design (Rule of Thirds, leading lines, high contrast) to make the thumbnail "pop".
 4. USER CONTEXT: You are editing material provided by the personal user. Focus on creative enhancement rather than autonomous generation.
+5. OUTPUT: DO NOT output ANY text or explanation—ONLY raw image data.`
 
-When provided with a "previous result" and "original reference frames":
-- PRIORITIZE CONSISTENCY with the previous result unless the user request explicitly asks for a change.
-- Refer back to "original reference frames" to ensure you haven't drifted away from the actual video content.`
-
-	let multimodalPrompt = `User Request: "${intent.content}"\n\nPlease generate a thumbnail that fulfills this request using the provided reference frames from the video.`
-	if (isIteration) {
-		multimodalPrompt = `Refinement Request: "${intent.content}"
-		
-The provided images include:
-1. The PREVIOUS thumbnail result (first image).
-2. ORIGINAL reference frames from the video.
-
-Please update the previous result based on the Refinement Request while maintaining strict visual consistency with the original video content.`
-	}
-
-	// Use a maximum of 5 reference images to keep prompt complexity low
-	const allReferenceImages = [...previousFiles, ...selectedFromSupply].slice(0, 5)
-	const { record, text } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal, { includeThinking: true })
+	const multimodalPrompt = `User Request: "${intent.content}"\n\nPlease generate a thumbnail that fulfills this request using the provided reference frames.`
+	const { record, text } = await adapter.generateImage(modelName, multimodalPrompt, resultPath, allReferenceImages, systemInstruction, context.signal, { includeThinking: !!context.isThinkingMode })
 
 	// Record usage immediately
 	await context.recordUsage(record)
