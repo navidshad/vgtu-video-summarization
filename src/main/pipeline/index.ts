@@ -25,6 +25,7 @@ export interface PipelineContext {
 	intentResult?: import('../../shared/types').IntentResult;
 	attachedImages?: string[];
 	isThinkingMode?: boolean;
+	autoUseImages?: boolean;
 }
 
 import { backgroundTaskManager } from '../tasks'
@@ -41,10 +42,11 @@ export class Pipeline {
 	private intentResult?: import('../../shared/types').IntentResult
 	private attachedImages?: string[]
 	private isThinkingMode: boolean = false
+	private autoUseImages: boolean = false
 	private isFinished: boolean = false
 	private abortController: AbortController = new AbortController()
 
-	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string, attachedImages?: string[], isThinkingMode: boolean = false) {
+	constructor(browserWindow: BrowserWindow, messageId: string, threadId: string, context: string, baseTimeline?: EnrichedTimelineSegment[], editRefId?: string, attachedImages?: string[], isThinkingMode: boolean = false, autoUseImages: boolean = false) {
 		this.browserWindow = browserWindow
 		this.messageId = messageId
 		this.threadId = threadId
@@ -53,6 +55,7 @@ export class Pipeline {
 		this.editRefId = editRefId
 		this.attachedImages = attachedImages
 		this.isThinkingMode = isThinkingMode
+		this.autoUseImages = autoUseImages
 	}
 
 	register(fn: PipelineFunction, options?: { skipIf?: (context: PipelineContext) => boolean }): this {
@@ -150,6 +153,7 @@ export class Pipeline {
 			baseTimeline: this.baseTimeline,
 			attachedImages: this.attachedImages,
 			isThinkingMode: this.isThinkingMode,
+			autoUseImages: this.autoUseImages,
 			get intentResult() { return self.intentResult },
 			set intentResult(val) { self.intentResult = val },
 			signal: this.abortController.signal,

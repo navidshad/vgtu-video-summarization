@@ -4,12 +4,21 @@ import fs from 'fs'
 export const supplyController: PipelineFunction = async (data, context) => {
 	context.updateStatus('Managing reference images...')
 
+	// Determine if we can use project images
+	const isImageAccessEnabled = context.autoUseImages || (context.attachedImages && context.attachedImages.length > 0)
+
 	// Case 1: User provided attachments
-	// Rule: If user provide frames, then none for auto select.
 	if (context.attachedImages && context.attachedImages.length > 0) {
 		console.log(`[SUPPLY] User provided ${context.attachedImages.length} attachments. Skipping auto-selection from video.`)
 		const cleanedPaths = context.attachedImages.map(url => url.replace(/^media:\/+/i, '/'))
 		context.next({ ...data, selectedReferenceImages: cleanedPaths })
+		return
+	}
+
+	// Case 2: No attachments, handle auto-selection ONLY if image access is enabled
+	if (!isImageAccessEnabled) {
+		console.log('[SUPPLY] Image access disabled and no attachments. Providing empty image list.')
+		context.next({ ...data, selectedReferenceImages: [] })
 		return
 	}
 

@@ -93,6 +93,7 @@
     <BaseMessageInput 
       v-model="input"
       v-model:attachedImages="attachedImages"
+      v-model:autoUseImages="localAutoUseImages"
       placeholder="Start a new analysis..."
       compact
       class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag"
@@ -142,6 +143,7 @@ const toggleDetails = () => {
 
 const videoRef = ref<HTMLVideoElement | null>(null)
 const attachedImages = ref<string[]>([])
+const localAutoUseImages = ref(false)
 
 const metadata = computed(() => videoStore.currentThread?.videoMetadata)
 
@@ -173,9 +175,9 @@ const mediaUrl = (url: string) => {
   return url.startsWith('media://') ? url : `media://${url}`
 }
 
-const submit = (text: string, images: string[], count: number, isThinkingMode: boolean) => {
+const submit = (text: string, images: string[], count: number, isThinkingMode: boolean, autoUseImages: boolean) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images, count, isThinkingMode)
+    props.data.onSubmit(text, images, count, isThinkingMode, autoUseImages)
     input.value = ''
     attachedImages.value = []
   }

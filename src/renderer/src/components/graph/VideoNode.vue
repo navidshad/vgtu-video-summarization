@@ -133,6 +133,7 @@
     <BaseMessageInput 
       v-model="input"
       v-model:attachedImages="attachedImages"
+      v-model:autoUseImages="localAutoUseImages"
       placeholder="Adjust or follow up..."
       compact
       class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan"
@@ -158,10 +159,12 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import SlimTooltip from '../SlimTooltip.vue'
+import { useVideoStore } from '../../stores/videoStore'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
 const emit = defineEmits(['toggle-details'])
+const videoStore = useVideoStore()
 const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isFullScreen = ref(false)
@@ -180,6 +183,7 @@ const toggleDetails = () => {
 
 const input = ref('')
 const attachedImages = ref<string[]>([])
+const localAutoUseImages = ref(false)
 const metadata = ref<any>(null)
 const isMetadataLoading = ref(false)
 
@@ -231,6 +235,15 @@ const fetchMetadata = async () => {
   }
 }
 
+watch(() => props.data.id, (msgId) => {
+  if (msgId) {
+    const msg = videoStore.messages.find(m => m.id === msgId)
+    if (msg && msg.autoUseImages !== undefined) {
+      localAutoUseImages.value = msg.autoUseImages
+    }
+  }
+}, { immediate: true })
+
 watch(showDetails, (newVal) => {
   if (newVal) fetchMetadata()
 }, { immediate: true })
@@ -242,9 +255,9 @@ const handleSave = async () => {
   }
 }
 
-const submit = (text: string, images: string[], count: number, isThinkingMode: boolean) => {
+const submit = (text: string, images: string[], count: number, isThinkingMode: boolean, autoUseImages: boolean) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images, count, isThinkingMode)
+    props.data.onSubmit(text, images, count, isThinkingMode, autoUseImages)
     input.value = ''
     attachedImages.value = []
   }

@@ -21,17 +21,12 @@
     </div>
 
     <!-- Main Input area -->
-    <div class="flex items-end transition-all duration-300" :class="[
+    <div class="flex flex-col transition-all duration-300" :class="[
       compact
-        ? 'space-x-1.5'
-        : 'space-x-4 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/20 backdrop-blur-xl shadow-lg focus-within:ring-2 focus-within:ring-primary/20'
+        ? 'space-y-1 bg-zinc-50/50 dark:bg-white/[0.02] p-2 rounded-xl border border-black/5 dark:border-white/5'
+        : 'space-y-4 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/20 backdrop-blur-xl shadow-lg focus-within:ring-2 focus-within:ring-primary/20'
     ]">
-      <!-- Attachment Toggle -->
-      <SlimTooltip text="Add Attachments" :placement="compact ? 'top' : 'bottom'">
-        <IconButton @click="showAttachmentModal = true" icon="IconPlus" :size="compact ? 'sm' : 'md'" rounded="full"
-          variant="ghost" class="mb-0.5 text-zinc-400 hover:text-primary transition-all active:scale-95" />
-      </SlimTooltip>
-
+      <!-- Row 1: Textarea -->
       <div class="flex-1 min-w-0">
         <textarea v-model="internalText" ref="textareaRef" :placeholder="placeholder" :rows="1"
           class="w-full bg-transparent border-none focus:ring-0 focus:outline-none text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 resize-none py-2 px-1 leading-relaxed custom-scrollbar"
@@ -39,35 +34,66 @@
           @keydown.enter="handleEnter"></textarea>
       </div>
 
-      <!-- Results Count -->
-      <div
-        class="flex items-center bg-zinc-100 dark:bg-white/5 rounded-xl px-2.5 py-1.5 mb-1 border border-black/5 dark:border-white/10 group/count hover:border-primary/30 transition-colors"
-        :class="compact ? 'scale-90 origin-right' : ''">
-        <span
-          class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover/count:text-primary/70 transition-colors mr-1.5 select-none">Count</span>
-        <select v-model="resultsCount"
-          class="bg-transparent border-none text-[11px] font-black text-zinc-700 dark:text-zinc-300 focus:ring-0 p-0 pr-4 cursor-pointer hover:text-primary transition-colors">
-          <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-        </select>
+      <!-- Row 2: Actions -->
+      <div class="flex items-center justify-between gap-2 border-t border-black/5 dark:border-white/5 pt-1.5 mt-1">
+        <div class="flex items-center gap-1.5">
+          <!-- Attachment Toggle -->
+          <SlimTooltip text="Add Attachments" :placement="compact ? 'top' : 'bottom'">
+            <IconButton @click="showAttachmentModal = true" icon="IconPlus" :size="compact ? 'sm' : 'md'" rounded="full"
+              variant="ghost" class="text-zinc-400 hover:text-primary transition-all active:scale-95" />
+          </SlimTooltip>
+
+          <!-- Auto Use Images Toggle -->
+          <SlimTooltip text="Smart Auto-References: Include project images as context" :placement="compact ? 'top' : 'bottom'">
+             <button 
+              @click="toggleAutoUseImages"
+              type="button"
+              class="flex items-center justify-center p-1.5 rounded-lg border transition-all active:scale-95"
+              :class="[
+                props.autoUseImages
+                  ? 'bg-primary/10 border-primary/30 text-primary shadow-sm shadow-primary/10'
+                  : 'bg-zinc-100 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+              ]"
+            >
+              <Icon name="iconify tabler--blade-filled" class="w-3.5 h-3.5" :class="{ 'animate-pulse': props.autoUseImages }" />
+            </button>
+          </SlimTooltip>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <!-- Results Count -->
+          <SlimTooltip text="Number of result variations to generate" :placement="compact ? 'top' : 'bottom'">
+            <div
+              class="flex items-center bg-zinc-100 dark:bg-white/5 rounded-xl px-2 py-1 border border-black/5 dark:border-white/10 group/count hover:border-primary/30 transition-colors"
+              :class="compact ? 'scale-90 origin-right' : ''">
+              <span
+                class="text-[9px] font-black uppercase tracking-widest text-zinc-400 group-hover/count:text-primary/70 transition-colors mr-1.5 select-none pl-1">Samples</span>
+              <select v-model="resultsCount"
+                class="bg-transparent border-none text-[11px] font-black text-zinc-700 dark:text-zinc-300 focus:ring-0 p-0 pr-4 cursor-pointer hover:text-primary transition-colors">
+                <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+              </select>
+            </div>
+          </SlimTooltip>
+
+          <!-- Thinking Mode Toggle -->
+          <SlimTooltip text="Thinking Mode (CoT)" :placement="compact ? 'top' : 'bottom'">
+            <button @click="isThinkingMode = !isThinkingMode"
+              class="flex items-center justify-center p-2 rounded-xl border transition-all active:scale-95" :class="[
+                isThinkingMode
+                  ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/10'
+                  : 'bg-zinc-100 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
+              ]">
+              <Icon name="iconify tabler--brain" class="w-4 h-4" :class="isThinkingMode ? 'animate-pulse' : ''" />
+            </button>
+          </SlimTooltip>
+
+          <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'"
+            :placement="compact ? 'top' : 'bottom'">
+            <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
+              :disabled="!internalText.trim() && attachedImages.length === 0" />
+          </SlimTooltip>
+        </div>
       </div>
-
-      <!-- Thinking Mode Toggle -->
-      <SlimTooltip text="Thinking Mode (CoT)" :placement="compact ? 'top' : 'bottom'">
-        <button @click="isThinkingMode = !isThinkingMode"
-          class="flex items-center justify-center p-2 rounded-xl border transition-all active:scale-95 mb-1" :class="[
-            isThinkingMode
-              ? 'bg-purple-500/10 border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-sm shadow-purple-500/10'
-              : 'bg-zinc-100 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
-          ]">
-          <Icon name="iconify tabler--brain" class="w-4 h-4" :class="isThinkingMode ? 'animate-pulse' : ''" />
-        </button>
-      </SlimTooltip>
-
-      <SlimTooltip :text="submitIcon === 'IconSend' ? 'Send Message (Enter)' : 'Execute Task'"
-        :placement="compact ? 'top' : 'bottom'">
-        <IconButton @click="handleSend" :icon="submitIcon" color="primary" :size="compact ? 'xs' : 'sm'" rounded="lg"
-          :disabled="!internalText.trim() && attachedImages.length === 0" />
-      </SlimTooltip>
     </div>
 
     <AttachmentModal v-model="showAttachmentModal" @select="handleImagesSelected" />
@@ -86,14 +112,16 @@ const props = withDefaults(defineProps<{
   attachedImages?: string[]
   compact?: boolean
   submitIcon?: string
+  autoUseImages?: boolean
 }>(), {
   placeholder: 'Type a message...',
   attachedImages: () => [],
   compact: false,
-  submitIcon: 'IconSend'
+  submitIcon: 'IconSend',
+  autoUseImages: false
 })
 
-const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send'])
+const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send', 'update:autoUseImages'])
 
 const internalText = ref(props.modelValue)
 const resultsCount = ref(1)
@@ -113,6 +141,10 @@ watch(internalText, (newVal) => {
 const normalizeUrl = (url: string) => {
   if (!url) return ''
   return url.startsWith('media://') ? url : `media://${url}`
+}
+
+const toggleAutoUseImages = () => {
+  emit('update:autoUseImages', !props.autoUseImages)
 }
 
 const adjustTextarea = () => {
@@ -142,7 +174,7 @@ const removeAttachment = (index: number) => {
 
 const handleSend = () => {
   if (!internalText.value.trim() && props.attachedImages.length === 0) return
-  emit('send', internalText.value, [...props.attachedImages], resultsCount.value, isThinkingMode.value)
+  emit('send', internalText.value, [...props.attachedImages], resultsCount.value, isThinkingMode.value, props.autoUseImages)
 
   // Clear local state if parent doesn't reset via props (standard pattern)
   internalText.value = ''

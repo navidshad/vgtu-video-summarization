@@ -137,10 +137,10 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
         filename: videoStore.currentVideoName,
         videoPath: videoStore.currentVideoPath,
         showDetails: savedMetadata['root-media']?.showDetails || false,
-        onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean) => {
-          const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages)
+        onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean, autoUseImages: boolean = false) => {
+          const newMsgId = await videoStore.addMessage(val, MessageRole.User, undefined, attachedImages, autoUseImages)
           if (newMsgId && videoStore.currentThreadId) {
-            await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode)
+            await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode, autoUseImages)
           }
         }
       }
@@ -257,10 +257,10 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
                 await videoStore.removeMessageBranch(strand.id)
               }
             },
-            onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean) => {
-              const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id, attachedImages)
+            onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean, autoUseImages: boolean = false) => {
+              const newMsgId = await videoStore.addMessage(val, MessageRole.User, strand.id, attachedImages, autoUseImages)
               if (newMsgId && videoStore.currentThreadId) {
-                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode)
+                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode, autoUseImages)
               }
             }
           }
@@ -294,10 +294,10 @@ export function useGraphLayout(videoStore: any, graphStore: any) {
                 await videoStore.removeMessageBranch(strand.id)
               }
             },
-            onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean) => {
-              const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId, attachedImages)
+            onSubmit: async (val: string, attachedImages?: string[], count?: number, isThinkingMode?: boolean, autoUseImages: boolean = false) => {
+              const newMsgId = await videoStore.addMessage(val, MessageRole.User, lastId, attachedImages, autoUseImages)
               if (newMsgId && videoStore.currentThreadId) {
-                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode)
+                await videoStore.startProcessing(videoStore.currentThreadId, newMsgId, count, isThinkingMode, autoUseImages)
               }
             }
           }
