@@ -5,6 +5,7 @@
     <BaseMessageInput 
       v-model="input"
       v-model:attachedImages="attachedImages"
+      v-model:autoUseImages="localAutoUseImages"
       placeholder="Ask for summary, cover, etc..."
       compact
       class="nodrag interactive-in-pan"
@@ -21,6 +22,7 @@ import BaseMessageInput from '../chat/BaseMessageInput.vue'
 const props = defineProps<{ data: any }>()
 const input = ref('')
 const attachedImages = ref<string[]>([])
+const localAutoUseImages = ref(false)
 
 const submit = (text: string, images: string[], count: number, isThinkingMode: boolean, autoUseImages: boolean) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {

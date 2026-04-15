@@ -60,6 +60,7 @@ export interface Message {
 	isPending: boolean;
 	files?: Attachment[];
 	attachedImages?: string[]; // New: base64/paths of attached images
+	autoUseImages?: boolean; // New: whether to automatically use project images as references
 	timeline?: EnrichedTimelineSegment[];
 	usage?: Usage;
 	cost?: number;

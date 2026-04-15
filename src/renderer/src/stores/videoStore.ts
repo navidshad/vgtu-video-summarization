@@ -71,14 +71,14 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const addMessage = async (content: string, role: MessageRole, editRefId?: string, attachedImages?: string[]) => {
+	const addMessage = async (content: string, role: MessageRole, editRefId?: string, attachedImages?: string[], autoUseImages: boolean = false) => {
 		if (!currentThreadId.value) return
-
 		const message = {
 			role,
 			content,
 			editRefId,
 			attachedImages,
+			autoUseImages,
 			isPending: role === 'ai'
 		}
 
@@ -136,8 +136,8 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const startProcessing = async (threadId: string, editReferenceMessageId?: string, count: number = 1, isThinkingMode: boolean = false) => {
-		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId, count, isThinkingMode })
+	const startProcessing = async (threadId: string, editReferenceMessageId?: string, count: number = 1, isThinkingMode: boolean = false, autoUseImages: boolean = false) => {
+		;(window as any).api.debugLog('startProcessing initiated', { threadId, editReferenceMessageId, count, isThinkingMode, autoUseImages })
 		if (!threadId) {
 			;(window as any).api.debugLog('startProcessing ABORTED: !threadId')
 			return
@@ -150,7 +150,7 @@ export const useVideoStore = defineStore('video', () => {
 		for (let i = 0; i < count; i++) {
 			// Add initial AI status message
 			;(window as any).api.debugLog(`startProcessing adding AI Message ${i + 1}/${count}...`)
-			const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId);
+			const newAiMessageId = await addMessage('Initializing pipeline...', MessageRole.AI, editReferenceMessageId, undefined, autoUseImages);
 			;(window as any).api.debugLog('startProcessing AI Message Pushed! ID:', newAiMessageId)
 
 			if ((window as any).api) {
@@ -187,7 +187,8 @@ export const useVideoStore = defineStore('video', () => {
 					await (window as any).api.startPipeline({
 						threadId,
 						newAiMessageId,
-						isThinkingMode
+						isThinkingMode,
+						autoUseImages
 					})
 					;(window as any).api.debugLog('startProcessing startPipeline IPC completed.')
 				} catch (e) {
@@ -329,7 +330,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 	}
 
-	const retryMessage = async (messageId: string, shouldRemoveBranch: boolean = true, count: number = 1, isThinkingMode: boolean = false) => {
+	const retryMessage = async (messageId: string, shouldRemoveBranch: boolean = true, count: number = 1, isThinkingMode: boolean = false, autoUseImages?: boolean) => {
 		if (!currentThreadId.value || !currentThread.value) return
 
 		const index = currentThread.value.messages.findIndex(m => m.id === messageId)
@@ -337,6 +338,13 @@ export const useVideoStore = defineStore('video', () => {
 
 		const message = currentThread.value.messages[index]
 		if (message.role !== MessageRole.User) return
+
+		// Update the setting if provided, otherwise preserve original
+		if (autoUseImages !== undefined) {
+			message.autoUseImages = autoUseImages
+			// Persist the change to disk
+			await (window as any).api.updateMessage(currentThreadId.value, messageId, { autoUseImages })
+		}
 
 		if (shouldRemoveBranch) {
 			// Remove any messages that branch from this one
@@ -347,7 +355,7 @@ export const useVideoStore = defineStore('video', () => {
 		}
 
 		// Re-trigger processing attaching to the user message
-		await startProcessing(currentThreadId.value, message.id, count, isThinkingMode)
+		await startProcessing(currentThreadId.value, message.id, count, isThinkingMode, message.autoUseImages)
 	}
 
 	const deleteFrame = async (frameId: string) => {

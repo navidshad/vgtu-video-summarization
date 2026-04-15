@@ -32,6 +32,7 @@ Rules (STRICT ENFORCEMENT):
     b) Create a DETAILED technical prompt for a creative image generator (like Gemini Image 3). 
     c) This prompt should specify style, composition, lighting, and how to merge the elements from the selected images AND any provided ATTACHED IMAGES.
     d) PERSON NAMES: DO NOT mention specific real-world names (e.g., 'Olga Loiek') in the 'content' field. Instead, refer to them using generic descriptors based on the images, such as 'the speaker', 'the subject', 'the person in the video', or 'the main figure'. This is to avoid triggering safety/privacy filters. You can refer to 'Image X' or 'Image index Y' to point to specific people.
+    e) IMAGE ACCESS RESTRICTION: If the system note indicates "IMAGE ACCESS DISABLED", you CANNOT return 'selectedIndices' or trigger visual generation actions that require specific project images. In this case, use 'type': 'text' and ask the user to enable 'Smart Auto-References' (the blade icon).
 
 Respond ONLY with a JSON object following this schema:
 {
@@ -81,6 +82,10 @@ ${context.context}
 
 User Prompt:
 ${lastUserPrompt}
+
+${context.autoUseImages || (context.attachedImages && context.attachedImages.length > 0) 
+	? "[SYSTEM NOTE]: IMAGE ACCESS IS ENABLED. You can select project images as references." 
+	: "[SYSTEM NOTE]: IMAGE ACCESS IS DISABLED. You can see visual descriptions but cannot access actual image files. To perform visual tasks, ask the user to enable 'Smart Auto-References'."}
 
 (Note: If the user provided any attached images, they are passed as visual context to you.)
 `

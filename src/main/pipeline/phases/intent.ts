@@ -59,7 +59,8 @@ Specific rules for 'content' field:
 - If type is 'generate-timeline': This is a COMPREHENSIVE and DETAILED technical description for the timeline builder agent.
 - If type is 'generate-thumbnail': This is a COMPREHENSIVE and DETAILED technical description for the thumbnail generator. Include visual elements, frames to extract (YOU MUST list specific timestamps in [HH:MM:SS] format for at least 2-3 relevant scenes), and any overlay text.
 - CRITICAL: When editing an existing timeline or thumbnail, specify EXACTLY which parts to keep, remove, or replace. The goal is maximum consistency with the REFERENCE TIMELINE except for the requested changes. It will NOT be shown to the user. 'content' for 'generate-thumbnail' MUST be technical and precise.
-- PERSON NAMES: DO NOT mention specific real-world names (e.g., 'Olga Loiek') in the 'content' field for 'generate-thumbnail'. Instead, refer to them using generic descriptors based on the reference frames, such as 'the speaker', 'the subject', 'the person in the video', or 'the main figure'. This is to avoid triggering safety/privacy filters. You can refer to 'Scene X' or 'Image Y' to point to specific people.`
+- PERSON NAMES: DO NOT mention specific real-world names (e.g., 'Olga Loiek') in the 'content' field for 'generate-thumbnail'. Instead, refer to them using generic descriptors based on the reference frames, such as 'the speaker', 'the subject', 'the person in the video', or 'the main figure'. This is to avoid triggering safety/privacy filters. You can refer to 'Scene X' or 'Image Y' to point to specific people.
+- IMAGE ACCESS RESTRICTION: If the system note indicates "IMAGE ACCESS DISABLED", you CANNOT return 'selectedIndices' or trigger visual generation actions that require specific project frames. In this case, use 'type': 'text' and ask the user to enable 'Smart Auto-References' (the blade icon).`
 
 const INTENT_SCHEMA = {
 	type: 'object',
@@ -116,6 +117,10 @@ ${baseTimelineContext}
 
 Conversation History:
 ${context.context}
+
+${context.autoUseImages || (context.attachedImages && context.attachedImages.length > 0) 
+	? "[SYSTEM NOTE]: IMAGE ACCESS IS ENABLED. You can use project images as references and return 'selectedIndices'." 
+	: "[SYSTEM NOTE]: IMAGE ACCESS IS DISABLED. You can see visual descriptions but cannot access actual image files. To perform visual tasks, ask the user to enable 'Smart Auto-References'."}
 `
 
 	// 5. Limit and Deduplicate Images (Base64 is expensive, limit to last 8)

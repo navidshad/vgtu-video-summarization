@@ -226,6 +226,7 @@
 
     <!-- Input Section -->
     <BaseMessageInput v-if="data.hasInputInitially || showInput" v-model="input" v-model:attachedImages="attachedImages"
+      v-model:autoUseImages="localAutoUseImages"
       :placeholder="data.hasInputInitially ? 'Ask a follow-up...' : 'Branch from here...'" compact submitIcon="IconSend"
       class="p-2 border-t border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] nodrag interactive-in-pan" @send="submit" />
 
@@ -337,6 +338,15 @@ const attachedImages = ref<string[]>([])
 
 const improvisingIds = ref(new Set<string>())
 const improvisedSuggestions = ref<Record<string, string>>({})
+const localAutoUseImages = ref(false)
+
+// Inherit image access setting from last message in branch
+watch(() => props.data.messages, (msgs) => {
+  if (msgs && msgs.length > 0) {
+    const lastMsg = msgs[msgs.length - 1]
+    localAutoUseImages.value = lastMsg.autoUseImages || false
+  }
+}, { immediate: true })
 
 const handleImprovise = async (messageId: string) => {
   improvisingIds.value.add(messageId)
@@ -405,8 +415,8 @@ const confirmRetry = async (messageId: string) => {
   isRetryModalOpen.value = true
 }
 
-const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number, isThinkingMode: boolean) => {
-  await videoStore.retryMessage(messageId, shouldRemoveBranch, count, isThinkingMode)
+const handleRetryConfirmed = async (messageId: string, shouldRemoveBranch: boolean, count: number, isThinkingMode: boolean, autoUseImages: boolean) => {
+  await videoStore.retryMessage(messageId, shouldRemoveBranch, count, isThinkingMode, autoUseImages)
 }
 
 const removeMessage = async (messageId: string) => {

@@ -44,17 +44,18 @@
           </SlimTooltip>
 
           <!-- Auto Use Images Toggle -->
-          <SlimTooltip text="Smart Auto-References: Automatically includes project images as context" :placement="compact ? 'top' : 'bottom'">
+          <SlimTooltip text="Smart Auto-References: Include project images as context" :placement="compact ? 'top' : 'bottom'">
              <button 
-              @click="autoUseImages = !autoUseImages"
+              @click="toggleAutoUseImages"
+              type="button"
               class="flex items-center justify-center p-1.5 rounded-lg border transition-all active:scale-95"
               :class="[
-                autoUseImages
+                props.autoUseImages
                   ? 'bg-primary/10 border-primary/30 text-primary shadow-sm shadow-primary/10'
                   : 'bg-zinc-100 dark:bg-white/5 border-black/5 dark:border-white/10 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'
               ]"
             >
-              <Icon name="iconify tabler--blade-filled" class="w-3.5 h-3.5" :class="autoUseImages ? 'animate-pulse' : ''" />
+              <Icon name="iconify tabler--blade-filled" class="w-3.5 h-3.5" :class="{ 'animate-pulse': props.autoUseImages }" />
             </button>
           </SlimTooltip>
         </div>
@@ -111,19 +112,20 @@ const props = withDefaults(defineProps<{
   attachedImages?: string[]
   compact?: boolean
   submitIcon?: string
+  autoUseImages?: boolean
 }>(), {
   placeholder: 'Type a message...',
   attachedImages: () => [],
   compact: false,
-  submitIcon: 'IconSend'
+  submitIcon: 'IconSend',
+  autoUseImages: false
 })
 
-const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send'])
+const emit = defineEmits(['update:modelValue', 'update:attachedImages', 'send', 'update:autoUseImages'])
 
 const internalText = ref(props.modelValue)
 const resultsCount = ref(1)
 const isThinkingMode = ref(false)
-const autoUseImages = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const showAttachmentModal = ref(false)
 
@@ -139,6 +141,10 @@ watch(internalText, (newVal) => {
 const normalizeUrl = (url: string) => {
   if (!url) return ''
   return url.startsWith('media://') ? url : `media://${url}`
+}
+
+const toggleAutoUseImages = () => {
+  emit('update:autoUseImages', !props.autoUseImages)
 }
 
 const adjustTextarea = () => {
@@ -168,7 +174,7 @@ const removeAttachment = (index: number) => {
 
 const handleSend = () => {
   if (!internalText.value.trim() && props.attachedImages.length === 0) return
-  emit('send', internalText.value, [...props.attachedImages], resultsCount.value, isThinkingMode.value, autoUseImages.value)
+  emit('send', internalText.value, [...props.attachedImages], resultsCount.value, isThinkingMode.value, props.autoUseImages)
 
   // Clear local state if parent doesn't reset via props (standard pattern)
   internalText.value = ''
