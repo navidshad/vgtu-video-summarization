@@ -159,10 +159,12 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Handle, Position } from '@vue-flow/core'
 import SlimTooltip from '../SlimTooltip.vue'
+import { useVideoStore } from '../../stores/videoStore'
 import BaseMessageInput from '../chat/BaseMessageInput.vue'
 
 const props = defineProps<{ data: any }>()
 const emit = defineEmits(['toggle-details'])
+const videoStore = useVideoStore()
 const videoRef = ref<HTMLVideoElement | null>(null)
 const isPlaying = ref(false)
 const isFullScreen = ref(false)
