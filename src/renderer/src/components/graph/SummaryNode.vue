@@ -45,9 +45,9 @@ const props = defineProps<{ data: any }>()
 const input = ref('')
 const attachedImages = ref<string[]>([])
 
-const submit = (text: string, images: string[], count: number, isThinkingMode: boolean) => {
+const submit = (text: string, images: string[], count: number, isThinkingMode: boolean, autoUseImages: boolean) => {
   if ((text.trim() || images.length > 0) && props.data.onSubmit) {
-    props.data.onSubmit(text, images, count, isThinkingMode)
+    props.data.onSubmit(text, images, count, isThinkingMode, autoUseImages)
     input.value = ''
     attachedImages.value = []
   }
